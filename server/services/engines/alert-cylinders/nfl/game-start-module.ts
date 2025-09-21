@@ -1,4 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class GameStartModule extends BaseAlertModule {
   alertType = 'NFL_GAME_START';
@@ -112,7 +113,21 @@ export default class GameStartModule extends BaseAlertModule {
       alertKey,
       type: this.alertType,
       priority: 75,
-      message: `🏈 KICKOFF: ${this.getTeamName(gameState.awayTeam)} @ ${this.getTeamName(gameState.homeTeam)} | Prime betting window, weather locked, opening drive props live`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | GAME START`,
+      displayMessage: cleanAlertFormatter.format({
+        type: this.alertType,
+        sport: this.sport,
+        gameState: gameState,
+        context: {
+          gameId: gameState.gameId,
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          quarter: gameState.quarter
+        },
+        riskReward: {
+          probability: 100
+        }
+      }),
       context
     };
   }

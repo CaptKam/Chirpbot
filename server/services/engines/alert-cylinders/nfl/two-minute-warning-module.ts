@@ -1,5 +1,6 @@
 
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class TwoMinuteWarningModule extends BaseAlertModule {
   alertType = 'NFL_TWO_MINUTE_WARNING';
@@ -50,12 +51,31 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     const halfText = isFirstHalf ? '1st Half' : '2nd Half';
     const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining);
 
-    const message = `⏰ Two Minutes Remaining in the ${halfText}! ${this.getScoreDisplay(gameState)}`;
-    
     return {
       alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}_${timeSeconds}`,
       type: this.alertType,
-      message,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | TWO MINUTE WARNING`,
+      displayMessage: cleanAlertFormatter.format({
+        type: this.alertType,
+        sport: this.sport,
+        gameState: gameState,
+        context: {
+          gameId: gameState.gameId,
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          homeScore: gameState.homeScore,
+          awayScore: gameState.awayScore,
+          quarter: gameState.quarter,
+          timeRemaining: gameState.timeRemaining,
+          timeSeconds,
+          halfText,
+          isFirstHalf,
+          twoMinuteWarning: true
+        },
+        riskReward: {
+          probability: 95
+        }
+      }),
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

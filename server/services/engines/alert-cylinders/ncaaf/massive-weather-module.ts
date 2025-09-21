@@ -1,4 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class MassiveWeatherModule extends BaseAlertModule {
   alertType = 'NCAAF_MASSIVE_WEATHER';
@@ -96,21 +97,40 @@ export default class MassiveWeatherModule extends BaseAlertModule {
 
     // Determine impact level
     const impact = this.determineGameImpact(current.severity, currentWeather);
-    
-    // Generate message based on severity
-    const message = this.generateWeatherMessage(
-      current.condition,
-      current.severity,
-      impact,
-      gameState
-    );
 
     const alertKey = `${gameId}_massive_weather_${current.severity}_${Date.now()}`;
 
     return {
       alertKey,
       type: this.alertType,
-      message,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | MASSIVE WEATHER`,
+      displayMessage: cleanAlertFormatter.format({
+        type: this.alertType,
+        sport: this.sport,
+        gameState: gameState,
+        context: {
+          gameId: gameState.gameId,
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          homeScore: gameState.homeScore,
+          awayScore: gameState.awayScore,
+          quarter: gameState.quarter,
+          timeRemaining: gameState.timeRemaining,
+          down: gameState.down || null,
+          yardsToGo: gameState.yardsToGo || null,
+          fieldPosition: gameState.fieldPosition || null,
+          possession: gameState.possession || null,
+          weatherCondition: current.condition,
+          weatherSeverity: current.severity,
+          gameImpact: impact,
+          temperature: currentWeather.temperature,
+          windSpeed: currentWeather.windSpeed,
+          situationType: 'MASSIVE_WEATHER'
+        },
+        riskReward: {
+          probability: 85
+        }
+      }),
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

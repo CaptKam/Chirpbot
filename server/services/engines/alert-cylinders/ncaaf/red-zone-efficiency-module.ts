@@ -1,4 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class RedZoneEfficiencyModule extends BaseAlertModule {
   alertType = 'NCAAF_RED_ZONE_EFFICIENCY';
@@ -57,7 +58,31 @@ export default class RedZoneEfficiencyModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_red_zone_efficiency_${gameState.down}_${gameState.yardsToGo}_${gameState.fieldPosition}`,
       type: this.alertType,
-      message: `🎯 ${possessionTeam} Red Zone Drive - ${situationDescription} - TD probability: ${Math.round(touchdownProbability)}%`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | RED ZONE EFFICIENCY`,
+      displayMessage: cleanAlertFormatter.format({
+        type: this.alertType,
+        sport: this.sport,
+        gameState: gameState,
+        context: {
+          gameId: gameState.gameId,
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          homeScore: gameState.homeScore,
+          awayScore: gameState.awayScore,
+          quarter: gameState.quarter,
+          timeRemaining: gameState.timeRemaining,
+          down: gameState.down,
+          yardsToGo: gameState.yardsToGo,
+          fieldPosition: gameState.fieldPosition,
+          possession: gameState.possession || possessionTeam,
+          possessionTeam,
+          touchdownProbability: Math.round(touchdownProbability),
+          situationDescription
+        },
+        riskReward: {
+          probability: touchdownProbability
+        }
+      }),
       context: {
         gameId: gameState.gameId,
         sport: this.sport,

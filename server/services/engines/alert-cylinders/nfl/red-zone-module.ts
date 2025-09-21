@@ -1,5 +1,6 @@
 
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class RedZoneModule extends BaseAlertModule {
   alertType = 'NFL_RED_ZONE';
@@ -22,7 +23,29 @@ export default class RedZoneModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_NFL_RED_ZONE_${down}_${yardsToGo}`,
       type: this.alertType,
-      message: `🎯 NFL RED ZONE! ${gameState.awayTeam} vs ${gameState.homeTeam} - ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo}, ${gameState.fieldPosition} yard line`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | RED ZONE`,
+      displayMessage: cleanAlertFormatter.format({
+        type: this.alertType,
+        sport: this.sport,
+        gameState: gameState,
+        context: {
+          gameId: gameState.gameId,
+          sport: gameState.sport,
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          homeScore: gameState.homeScore,
+          awayScore: gameState.awayScore,
+          down: gameState.down,
+          yardsToGo: gameState.yardsToGo,
+          fieldPosition: gameState.fieldPosition,
+          quarter: gameState.quarter,
+          timeRemaining: gameState.timeRemaining,
+          probability
+        },
+        riskReward: {
+          probability: probability
+        }
+      }),
       context: {
         gameId: gameState.gameId,
         sport: gameState.sport,

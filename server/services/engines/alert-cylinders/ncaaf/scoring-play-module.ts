@@ -1,4 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class ScoringPlayModule extends BaseAlertModule {
   alertType = 'NCAAF_SCORING_PLAY';
@@ -61,12 +62,29 @@ export default class ScoringPlayModule extends BaseAlertModule {
       }
     }
     
-    const message = `🏈 TOUCHDOWN! ${scoringTeam} scores ${points} points! | ${gameState.awayTeam} ${awayScore} - ${homeScore} ${gameState.homeTeam} | Q${gameState.quarter} ${gameState.timeRemaining || ''}`;
-    
     return {
       alertKey: `${gameState.gameId}_scoring_${homeScore}_${awayScore}_${Date.now()}`,
       type: this.alertType,
-      message,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | SCORING PLAY`,
+      displayMessage: cleanAlertFormatter.format({
+        type: this.alertType,
+        sport: this.sport,
+        gameState: gameState,
+        context: {
+          gameId: gameState.gameId,
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          homeScore,
+          awayScore,
+          quarter: gameState.quarter,
+          timeRemaining: gameState.timeRemaining,
+          scoringTeam,
+          points
+        },
+        riskReward: {
+          probability: 95
+        }
+      }),
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

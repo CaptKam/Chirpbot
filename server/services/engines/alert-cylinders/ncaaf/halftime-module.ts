@@ -1,4 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class HalftimeModule extends BaseAlertModule {
   alertType = 'NCAAF_HALFTIME';
@@ -37,30 +38,27 @@ export default class HalftimeModule extends BaseAlertModule {
     const awayScore = gameState.awayScore || 0;
     const scoreDiff = Math.abs(homeScore - awayScore);
     
-    let message = `🏈 HALFTIME! `;
-    
-    if (scoreDiff === 0) {
-      message += `Game tied ${homeScore}-${awayScore}`;
-    } else {
-      const leadingTeam = homeScore > awayScore ? gameState.homeTeam : gameState.awayTeam;
-      const leadingScore = Math.max(homeScore, awayScore);
-      const trailingScore = Math.min(homeScore, awayScore);
-      message += `${leadingTeam} leads ${leadingScore}-${trailingScore}`;
-    }
-    
-    message += ` | ${gameState.awayTeam} @ ${gameState.homeTeam}`;
-    
-    // Add analysis for second half
-    if (scoreDiff <= 7) {
-      message += ` | Close game! Second half will be crucial.`;
-    } else if (scoreDiff > 21) {
-      message += ` | Can the trailing team mount a comeback?`;
-    }
-    
     return {
       alertKey: `${gameState.gameId}_halftime`,
       type: this.alertType,
-      message,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | HALFTIME`,
+      displayMessage: cleanAlertFormatter.format({
+        type: this.alertType,
+        sport: this.sport,
+        gameState: gameState,
+        context: {
+          gameId: gameState.gameId,
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          homeScore,
+          awayScore,
+          scoreDifference: scoreDiff,
+          isCloseGame: scoreDiff <= 14
+        },
+        riskReward: {
+          probability: 80
+        }
+      }),
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
