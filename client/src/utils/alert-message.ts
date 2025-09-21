@@ -3,6 +3,35 @@
  * Ensures consistent display across all alert card components
  */
 
+/**
+ * Extract the first sentence from a long text for concise display
+ * Handles multiple sentence ending patterns (. ! ? :)
+ */
+export function extractFirstSentence(text: string): string {
+  if (!text || typeof text !== 'string') return text;
+  
+  // Clean up extra whitespace
+  const cleaned = text.trim();
+  if (!cleaned) return text;
+  
+  // Find the first sentence ending
+  const sentenceEnding = cleaned.match(/^[^.!?:]*[.!?:]/);
+  if (sentenceEnding) {
+    return sentenceEnding[0].trim();
+  }
+  
+  // If no sentence ending found, try to break at a reasonable length
+  if (cleaned.length > 100) {
+    const spaceIndex = cleaned.indexOf(' ', 80);
+    if (spaceIndex > 0) {
+      return cleaned.substring(0, spaceIndex) + '...';
+    }
+  }
+  
+  // Return original text if it's already short
+  return cleaned;
+}
+
 export interface AlertData {
   message?: string;
   title?: string;
@@ -137,10 +166,11 @@ export function getDisplayContent(alert: any): { content: string; isStructured: 
     };
   }
   
-  // Priority 3: Clean primary message (line-clamped)
+  // Priority 3: Extract first sentence for concise display (recommended by architect)
   const primaryMessage = getPrimaryMessage(alert);
+  const cleanedMessage = cleanMessage(primaryMessage);
   return {
-    content: cleanMessage(primaryMessage),
+    content: extractFirstSentence(cleanedMessage),
     isStructured: false
   };
 }
