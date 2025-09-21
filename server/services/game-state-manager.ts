@@ -11,6 +11,7 @@ import { RUNTIME, GameState as RuntimeGameState, WeatherArmReason } from '../con
 import type { BaseGameData } from './base-sport-api';
 import { GamblingInsightsComposer } from './gambling-insights-composer';
 import type { AlertResult as EngineAlertResult, GameState } from './engines/base-engine';
+import type { AlertResult } from '../../shared/schema';
 import type { WeatherChangeEvent } from './weather-on-live-service';
 
 // === CORE INTERFACES ===
@@ -1008,20 +1009,28 @@ export class GameStateManager {
     try {
       console.log(`🎰 GameStateManager: Enhancing ${alerts.length} ${sport} alerts with gambling insights`);
       
-      // Convert alerts to the format expected by GamblingInsightsComposer
-      const alertResults = alerts.map(alert => ({
-        id: alert.id || `${gameState.gameId}_${alert.type}_${Date.now()}`,
-        sport: sport,
+      // Convert alerts to AlertResult format expected by GamblingInsightsComposer
+      // The AlertResult interface only has: alertKey, type, message, context, priority
+      // EngineAlertResult is the same as AlertResult, so no conversion needed for basic properties
+      // Just ensure all alerts have the required properties with defaults
+      const alertResults: AlertResult[] = alerts.map((alert, index) => ({
+        alertKey: alert.alertKey || `${gameState.gameId}_${alert.type.toLowerCase().replace(/_/g, '')}_${Date.now()}_${index}`,
         type: alert.type,
-        gameId: gameState.gameId,
         message: alert.message,
-        score: alert.score || 0,
-        alertKey: alert.alertKey || `${gameState.gameId}_${alert.type.toLowerCase().replace('_', '')}_${Date.now()}`,
-        payload: alert.payload || {},
-        state: alert.state || 'active',
-        createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 1000 * 60 * 30), // 30 min default
-        weatherContext: undefined // No weather context in GameStateManager path for now
+        context: {
+          // Merge existing context with game state info
+          ...alert.context,
+          sport: sport,
+          gameId: gameState.gameId,
+          homeTeam: gameState.homeTeam,
+          awayTeam: gameState.awayTeam,
+          homeScore: gameState.homeScore,
+          awayScore: gameState.awayScore,
+          createdAt: new Date(),
+          expiresAt: new Date(Date.now() + 1000 * 60 * 30), // 30 min default
+          weatherContext: undefined // No weather context in GameStateManager path for now
+        },
+        priority: alert.priority || 1
       }));
 
       // Use the batch enhancement method from GamblingInsightsComposer
@@ -1030,8 +1039,8 @@ export class GameStateManager {
       console.log(`✅ GameStateManager: Enhanced ${enhancedAlerts.length} alerts with gambling insights`);
       
       // Convert back to EngineAlertResult format
-      return enhancedAlerts.map(enhanced => ({
-        ...alerts.find(orig => orig.type === enhanced.type) || alerts[0],
+      return enhancedAlerts.map((enhanced, index) => ({
+        ...alerts[index], // Keep original alert properties
         gamblingInsights: enhanced.gamblingInsights,
         hasComposerEnhancement: !!enhanced.gamblingInsights
       }));
