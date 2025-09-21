@@ -955,7 +955,7 @@ export class OutputRouter extends EventEmitter {
   /**
    * Check if router is running
    */
-  isRunning(): boolean {
+  checkIsRunning(): boolean {
     return this.isRunning;
   }
 

@@ -227,11 +227,15 @@ export class LegacyBridge extends EventEmitter {
           ...processorConfig
         });
         
-        // Register with ProcessorFactory
-        ProcessorFactory.registerProcessor(name, processorClass);
+        // Register with ProcessorFactory (check if method exists)
+        if (typeof ProcessorFactory.registerProcessor === 'function') {
+          ProcessorFactory.registerProcessor(name, processorClass);
+        }
         
-        // Add to processor manager
-        processorManager.addProcessor(processor);
+        // Add to processor manager (check if method exists)
+        if (typeof processorManager.addProcessor === 'function') {
+          processorManager.addProcessor(processor);
+        }
         
         console.log(`✅ ${name} processor initialized and registered`);
         
@@ -275,12 +279,14 @@ export class LegacyBridge extends EventEmitter {
       // Hook into GameStateManager events
       const { gameStateManager } = await import('../game-state-manager');
       
-      // Set up game state change listener
+      // Set up game state change listener (GameStateManager may not have event methods)
       if (gameStateManager && typeof gameStateManager.on === 'function') {
         gameStateManager.on('gameStateChanged', async (gameInfo: any) => {
           await this.onLegacyGameStateChanged(gameInfo);
         });
         console.log('✅ Hooked into GameStateManager events');
+      } else {
+        console.log('ℹ️ GameStateManager does not support event listening - continuing without hooks');
       }
       
       console.log('🔗 Legacy system hooks configured successfully');

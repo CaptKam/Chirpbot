@@ -110,9 +110,9 @@ export class AlertCleanupService {
       `);
 
       return {
-        total: parseInt(totalResult.rows[0]?.count || '0'),
-        old: parseInt(oldResult.rows[0]?.count || '0'),
-        recent: parseInt(recentResult.rows[0]?.count || '0')
+        total: parseInt(String(totalResult.rows[0]?.count || '0')),
+        old: parseInt(String(oldResult.rows[0]?.count || '0')),
+        recent: parseInt(String(recentResult.rows[0]?.count || '0'))
       };
     } catch (error) {
       console.error('❌ Error getting cleanup stats:', error);
