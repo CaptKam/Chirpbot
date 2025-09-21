@@ -82,7 +82,7 @@ if (!(globalThis as any).__migration_adapter_bootstrapped__) {
       console.log("✅ MIGRATION ADAPTER: STARTED - Both systems under adapter control");
     } catch (e) {
       console.error("❌ MIGRATION ADAPTER: FAILED", e);
-      console.error("❌ MIGRATION ADAPTER: ERROR STACK:", e?.stack);
+      console.error("❌ MIGRATION ADAPTER: ERROR STACK:", e instanceof Error ? e.stack : 'No stack trace available');
     }
   })();
 } else {
@@ -471,14 +471,11 @@ async function startServer() {
 
           // Create and initialize the legacy bridge
           const legacyBridge = new LegacyBridge({
+            enabled: true,
             enableComparison: true,
             logDifferences: true,
             forwardEvents: true,
-            shadowModeConfig: {
-              enabled: true,
-              logLevel: 'detailed',
-              sampleRate: 1.0
-            }
+            comparisonTimeout: 5000
           });
 
           // Initialize the bridge (this will set up the event stream and processors)
