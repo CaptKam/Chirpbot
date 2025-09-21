@@ -84,7 +84,7 @@ export default class ComebackPotentialModule extends BaseAlertModule {
         riskReward: {
           probability: comebackProbability
         }
-      }),
+      }).primary,
       context: {
         gameId: gameState.gameId,
         sport: this.sport,

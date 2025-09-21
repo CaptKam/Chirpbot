@@ -60,7 +60,7 @@ export default class FourthQuarterModule extends BaseAlertModule {
         riskReward: {
           probability: isCloseGame ? 90 : 85
         }
-      }),
+      }).primary,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

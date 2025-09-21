@@ -45,7 +45,7 @@ export default class RedZoneModule extends BaseAlertModule {
         riskReward: {
           probability: probability
         }
-      }),
+      }).primary,
       context: {
         gameId: gameState.gameId,
         sport: gameState.sport,

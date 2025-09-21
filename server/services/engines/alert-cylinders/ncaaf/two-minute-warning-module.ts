@@ -61,7 +61,7 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
         riskReward: {
           probability: 95
         }
-      }),
+      }).primary,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

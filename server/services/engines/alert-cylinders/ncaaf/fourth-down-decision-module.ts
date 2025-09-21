@@ -85,7 +85,7 @@ export default class FourthDownDecisionModule extends BaseAlertModule {
         riskReward: {
           probability: goForItProbability
         }
-      }),
+      }).primary,
       context: {
         gameId: gameState.gameId,
         sport: this.sport,

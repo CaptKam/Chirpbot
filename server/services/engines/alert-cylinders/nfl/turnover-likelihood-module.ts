@@ -85,7 +85,7 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
         riskReward: {
           probability: turnoverRisk
         }
-      }),
+      }).primary,
       context: {
         gameId: gameState.gameId,
         sport: this.sport,

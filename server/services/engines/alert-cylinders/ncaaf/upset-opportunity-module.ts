@@ -79,7 +79,7 @@ export default class UpsetOpportunityModule extends BaseAlertModule {
         riskReward: {
           probability: upsetProbability
         }
-      }),
+      }).primary,
       context: {
         gameId: gameState.gameId,
         sport: this.sport,

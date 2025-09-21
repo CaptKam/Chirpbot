@@ -72,7 +72,7 @@ export default class CloseGameModule extends BaseAlertModule {
         riskReward: {
           probability: scoreDiff === 0 ? 95 : 90 - scoreDiff
         }
-      }),
+      }).primary,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

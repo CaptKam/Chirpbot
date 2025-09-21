@@ -127,7 +127,7 @@ export default class GameStartModule extends BaseAlertModule {
         riskReward: {
           probability: 100
         }
-      }),
+      }).primary,
       context
     };
   }

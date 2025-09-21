@@ -124,7 +124,7 @@ export default class MassiveWeatherModule extends BaseAlertModule {
         riskReward: {
           probability: 85
         }
-      }),
+      }).primary,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

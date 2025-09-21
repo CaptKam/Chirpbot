@@ -35,7 +35,7 @@ export default class SecondHalfKickoffModule extends BaseAlertModule {
         riskReward: {
           probability: 100
         }
-      }),
+      }).primary,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
