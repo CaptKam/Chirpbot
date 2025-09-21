@@ -799,42 +799,45 @@ export class UnifiedAIProcessor {
   }
 
   private buildSportSpecificPrompt(context: CrossSportContext): string {
-    const teams = `${context.awayTeam} vs ${context.homeTeam}`;
-    const score = `${context.awayScore}-${context.homeScore}`;
-    
-    // Balanced middle-ground prompt for concise but informative format
-    const basePrompt = `Generate a concise sports betting insight (150-250 characters). Provide enough detail to be informative but avoid verbose paragraphs. Focus on key game situation and betting implications.
+    const basePrompt = `You are a ${context.sport} expert AI providing contextual insights for sports alerts.
 
-FORMAT: Start with relevant emoji, include key stats/context, end with actionable insight.
-STYLE: Conversational, informative, betting-focused without being overly technical.
+GAME CONTEXT:
+- ${context.awayTeam} @ ${context.homeTeam} (${context.awayScore}-${context.homeScore})
+- Alert: ${context.alertType} (${context.probability}% confidence)
+- Original: ${context.originalMessage}
+${context.playoffImplications ? '- PLAYOFF IMPLICATIONS: High stakes game' : ''}
+${context.championshipContext ? `- CHAMPIONSHIP CONTEXT: ${context.championshipContext}` : ''}
+${context.weather ? `- WEATHER: ${context.weather.temperature}°F, ${context.weather.condition}` : ''}
+`;
 
-GAME: ${teams} (${score})
-ALERT: ${context.alertType}
-ORIGINAL: ${context.originalMessage}`;
-
-    // Add sport-specific middle-ground format examples
+    // Add sport-specific context based on sport type
     switch (context.sport) {
       case 'MLB':
-        return `${basePrompt}
-CONTEXT: Inning ${context.inning || 1}, ${context.outs || 0} outs, Count ${context.balls || 0}-${context.strikes || 0}
-EXAMPLE: "⚾ Runners on 1st & 2nd with 2 outs in the 7th - clutch hitting situation developing. This setup favors aggressive baserunning and could spark a rally."`;
+        return `${basePrompt}BASEBALL SITUATION:
+- ${context.inning}${this.getOrdinal(context.inning || 1)} inning, ${context.outs || 0} outs
+- Count: ${context.balls || 0}-${context.strikes || 0}
+- Runners: ${this.describeBaseRunners(context.baseRunners)}
+Focus on: Run expectancy, leverage situations, clutch hitting.`;
 
       case 'NFL':
       case 'NCAAF':
       case 'CFL':
-        return `${basePrompt}
-CONTEXT: Q${context.quarter || 1}, ${context.timeRemaining || 'Live'}, ${context.down ? `${this.getOrdinal(context.down)} & ${context.yardsToGo}` : 'Live'}
-EXAMPLE: "🏈 3rd & 8 at the 35-yard line with 5:42 left in Q4 - critical conversion attempt. Defense likely expecting pass, creating opportunity for draw play."`;
+        return `${basePrompt}FOOTBALL SITUATION:
+- Q${context.quarter || 1}, ${context.timeRemaining || 'Unknown'} remaining
+${context.down && context.yardsToGo ? `- ${this.getOrdinal(context.down)} & ${context.yardsToGo}` : ''}
+${context.redZone ? '- RED ZONE: High scoring probability' : ''}
+Focus on: Down & distance, field position, clock management.`;
 
       case 'NBA':
       case 'WNBA':
-        return `${basePrompt}
-CONTEXT: ${context.timeLeft || 'Live'} remaining, Score differential
-EXAMPLE: "🏀 Lakers trail by 1 with 2:13 left in Q4 - crunch time possession coming up. Both teams in bonus, expect aggressive defense and potential fouling strategy."`;
+        return `${basePrompt}BASKETBALL SITUATION:
+- ${context.timeLeft || 'Unknown'} remaining
+- Shot clock: ${context.shotClock || 'Unknown'}
+${context.fouls ? `- Team fouls: ${context.fouls.home}-${context.fouls.away}` : ''}
+Focus on: Time management, shooting efficiency, foul situation.`;
 
       default:
-        return `${basePrompt}
-Generate a balanced insight that's informative but concise (150-250 characters).`;
+        return basePrompt;
     }
   }
 
