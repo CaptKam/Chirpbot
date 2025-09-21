@@ -692,7 +692,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
               type: alert.type,
               gameId: gameId,
               context: (alert as any).context || {},
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
+              gamblingInsights: alert.gamblingInsights || null,
+              hasComposerEnhancement: alert.hasComposerEnhancement || false
             })
           });
           
