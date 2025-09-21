@@ -5,25 +5,11 @@ export default class FourthQuarterModule extends BaseAlertModule {
   alertType = 'WNBA_FOURTH_QUARTER';
   sport = 'WNBA';
 
-  // Track triggered games to prevent duplicates
-  private triggeredGames = new Set<string>();
-
   isTriggered(gameState: GameState): boolean {
-    // Check if already triggered for this game
-    if (this.triggeredGames.has(gameState.gameId)) {
-      return false; // Already triggered for this game
-    }
-
     const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-    const shouldTrigger = gameState.quarter === 4 && 
-                         this.parseTimeToSeconds(gameState.timeRemaining) <= 300 && // 5 minutes
-                         scoreDiff <= 12;
-
-    if (shouldTrigger) {
-      this.triggeredGames.add(gameState.gameId);
-    }
-
-    return shouldTrigger;
+    return gameState.quarter === 4 && 
+           this.parseTimeToSeconds(gameState.timeRemaining) <= 300 && // 5 minutes
+           scoreDiff <= 12;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
@@ -32,7 +18,7 @@ export default class FourthQuarterModule extends BaseAlertModule {
     const timeRemaining = gameState.timeRemaining;
     
     return {
-      alertKey: `${gameState.gameId}_wnba_fourth_quarter`,
+      alertKey: `${gameState.gameId}_fourth_quarter_${timeRemaining.replace(/[:\s]/g, '')}`,
       type: this.alertType,
       message: `🏀 WNBA FOURTH QUARTER CRUNCH TIME! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${timeRemaining} left`,
       context: {

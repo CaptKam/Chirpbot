@@ -240,13 +240,10 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
             </div>
           )}
 
-          {/* Alert Message - Show concise when structured insights available */}
+          {/* Alert Message */}
           <div className="mb-4">
             <p className="text-slate-100 text-sm leading-relaxed font-medium" data-testid={`alert-message-${alert.id}`}>
-              {alert.hasComposerEnhancement && alert.gamblingInsights?.structuredTemplate 
-                ? `${sportConfig.icon} ${alert.type.replace(/^(MLB|NFL|NBA|NCAAF|WNBA|CFL)_/, '').replace(/_/g, ' ')} Alert - ${alert.awayTeam} vs ${alert.homeTeam}`
-                : alert.message
-              }
+              {alert.message}
             </p>
           </div>
 

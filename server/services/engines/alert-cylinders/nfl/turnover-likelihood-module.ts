@@ -40,12 +40,8 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
       return false;
     }
 
-    // Calculate turnover risk and only trigger for meaningful risk situations
-    const turnoverRisk = this.calculateTurnoverRisk(gameState);
-    
-    // Only trigger for elevated risk situations (30%+ risk)
-    // This prevents constant firing on routine plays
-    return turnoverRisk >= 30;
+    // Always trigger for potential turnover situations - removed risk barrier
+    return true;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
@@ -57,8 +53,9 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
     const possessionTeam = this.getPossessionTeam(gameState);
     const primaryRiskFactor = riskFactors[0] || 'Unknown';
 
-    // Create stable alert key for deduplication (removed timestamp)
-    const alertKey = `${gameState.gameId}_turnover_risk_${gameState.down}_${gameState.yardsToGo}_${gameState.fieldPosition}`;
+    // Add timestamp to make each alert unique (allows for multiple alerts per game state)
+    const timestamp = Date.now();
+    const alertKey = `${gameState.gameId}_turnover_risk_${gameState.down}_${gameState.yardsToGo}_${gameState.fieldPosition}_${timestamp}`;
     console.log(`🔑 NFL Turnover Alert Key Generated: ${alertKey}`);
     
     return {

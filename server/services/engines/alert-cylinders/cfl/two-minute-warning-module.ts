@@ -5,9 +5,6 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
   alertType = 'CFL_TWO_MINUTE_WARNING';
   sport = 'CFL';
 
-  // Track triggered games to prevent duplicates
-  private triggeredGames = new Set<string>();
-
   private isExactlyTwoMinutes(timeRemaining: string): boolean {
     if (!timeRemaining) return false;
 
@@ -23,12 +20,6 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
 
   isTriggered(gameState: GameState): boolean {
     console.log(`🔍 CFL Two Minute check for ${gameState.gameId}: status=${gameState.status}, Q${gameState.quarter}, time=${gameState.timeRemaining}, scores=${gameState.homeScore}-${gameState.awayScore}`);
-
-    // Check if already triggered for this game/quarter combination
-    const alertKey = `${gameState.gameId}_two_minute_warning_q${gameState.quarter}`;
-    if (this.triggeredGames.has(alertKey)) {
-      return false; // Already triggered for this quarter
-    }
 
     // Must be a live game
     if (gameState.status !== 'live') {
@@ -50,7 +41,6 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     }
 
     console.log(`🎯 CFL Two Minute WARNING TRIGGERED for ${gameState.gameId}`);
-    this.triggeredGames.add(alertKey);
     return true;
   }
 
@@ -63,7 +53,7 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     const message = `⏰ Two Minutes Remaining in the ${halfText}! ${this.getScoreDisplay(gameState)}`;
     
     return {
-      alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}`,
+      alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}_${timeSeconds}`,
       type: this.alertType,
       message,
       context: {

@@ -5,25 +5,11 @@ export default class CFLSecondHalfKickoffModule extends BaseAlertModule {
   alertType = 'CFL_SECOND_HALF_KICKOFF';
   sport = 'CFL';
 
-  // Track triggered games to prevent duplicates
-  private triggeredGames = new Set<string>();
-
   isTriggered(gameState: GameState): boolean {
-    // Check if already triggered for this game
-    if (this.triggeredGames.has(gameState.gameId)) {
-      return false; // Already triggered for this game
-    }
-
     // Second half kickoff - quarter 3 with kickoff time (15:00 or close to it)
-    const shouldTrigger = gameState.status === 'live' && 
-                         gameState.quarter === 3 && 
-                         this.isKickoffTime(gameState.timeRemaining);
-
-    if (shouldTrigger) {
-      this.triggeredGames.add(gameState.gameId);
-    }
-
-    return shouldTrigger;
+    return gameState.status === 'live' && 
+           gameState.quarter === 3 && 
+           this.isKickoffTime(gameState.timeRemaining);
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
