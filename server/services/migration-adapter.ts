@@ -1068,7 +1068,7 @@ export class AutoRollbackGuard extends EventEmitter {
         triggerType: 'manual',
         triggerSeverity: 'critical',
         actionType: 'no_action',
-        reason: `Rollback execution failed: ${error instanceof Error ? error.message : String(error)}`,
+        reason: `Rollback execution failed: ${error.message}`,
         triggeredBreakers: decision.triggeredBreakers || []
       });
     }
@@ -1390,36 +1390,6 @@ export class MigrationAdapter {
         defaultRoute: 'both',
         forceProductionSports: [],
         forceShadowSports: [],
-        productionStreamConfig: {
-          enabled: true,
-          name: 'production',
-          maxBacklog: 10000,
-          batchSize: 100,
-          flushIntervalMs: 1000,
-          retryAttempts: 3,
-          retryDelayMs: 1000
-        },
-        shadowStreamConfig: {
-          enabled: true,
-          name: 'shadow',
-          maxBacklog: 20000,
-          batchSize: 200,
-          flushIntervalMs: 2000,
-          retryAttempts: 3,
-          retryDelayMs: 1000
-        },
-        deduplication: {
-          maxFingerprints: 50000,
-          fingerprintTtlMs: 300000,
-          enableSizeBasedCleanup: true,
-          enableTimeBasedCleanup: true
-        },
-        healthCheck: {
-          intervalMs: 30000,
-          timeoutMs: 5000,
-          maxErrorRate: 0.1,
-          maxBacklogSize: 5000
-        },
         ...config.outputRouter
       },
       rollout: {
@@ -1440,7 +1410,14 @@ export class MigrationAdapter {
           failedChecksBeforeAlert: 3,
           ...(config.health?.alertThresholds || {})
         },
-        ...config.health
+        ...config.health,
+        // Ensure alertThresholds is properly merged after spreading config.health
+        alertThresholds: {
+          errorRatePercent: 10,
+          responseTimeMs: 1_000,
+          failedChecksBeforeAlert: 3,
+          ...(config.health?.alertThresholds || {})
+        }
       },
       enableRolloutController: true,
       enableHealthMonitoring: true,
@@ -1544,10 +1521,7 @@ export class MigrationAdapter {
       }
 
       // Initialize DataIngestionIntegration
-      this.dataIngestionIntegration = new DataIngestionIntegration({
-        shadowMode: this.config.dataIngestion.shadowMode ?? true,
-        ...this.config.dataIngestion
-      });
+      this.dataIngestionIntegration = new DataIngestionIntegration(this.config.dataIngestion);
       await this.dataIngestionIntegration.initialize();
 
       // Initialize comparison system using factory function for proper wiring
@@ -1591,12 +1565,11 @@ export class MigrationAdapter {
         const shadowStream = getUnifiedEventStream(); // For shadow mode
         
         this.outputRouter = new OutputRouter({
+          productionEventStream: productionStream,
+          shadowEventStream: shadowStream,
+          rolloutController: this.rolloutController,
           ...this.config.outputRouter
         });
-        
-        // Connect the streams to OutputRouter
-        this.outputRouter.setProductionStream(productionStream);
-        this.outputRouter.setShadowStream(shadowStream);
         
         // Wire comparison system to OutputRouter
         this.outputRouter.setEventComparator(this.eventComparator);
@@ -1659,18 +1632,17 @@ export class MigrationAdapter {
       // DataIngestionIntegration is already started during initialization
       console.log('✅ MigrationAdapter: DataIngestionIntegration confirmed running');
 
-      // Setup and start OutputRouter if enabled
+      // Start OutputRouter if enabled
       if (this.outputRouter && this.config.enableOutputRouter) {
-        // Connect services to OutputRouter BEFORE starting
-        if (this.calendarSyncService) {
-          this.outputRouter.setCalendarSyncService(this.calendarSyncService);
-        }
-        if (this.dataIngestionIntegration && typeof this.outputRouter.setDataIngestionService === 'function') {
-          this.outputRouter.setDataIngestionService(this.dataIngestionIntegration);
-        }
-        
-        // Now start the OutputRouter with services connected
         await this.outputRouter.start();
+        
+        // Connect services to OutputRouter
+        if (this.calendarSyncService) {
+          this.outputRouter.subscribeToCalendarSync(this.calendarSyncService);
+        }
+        if (this.dataIngestionIntegration) {
+          this.outputRouter.subscribeToDataIngestion(this.dataIngestionIntegration);
+        }
         
         console.log('✅ MigrationAdapter: OutputRouter started and connected to services');
       }
@@ -1856,7 +1828,7 @@ export class MigrationAdapter {
         errorCount: 1,
         lastCheck: new Date(),
         responseTimeMs: Date.now() - startTime,
-        details: { error: error instanceof Error ? error.message : String(error) }
+        details: { error: error.message }
       };
     }
   }
@@ -1898,7 +1870,7 @@ export class MigrationAdapter {
         errorCount: 1,
         lastCheck: new Date(),
         responseTimeMs: Date.now() - startTime,
-        details: { error: error instanceof Error ? error.message : String(error) }
+        details: { error: error.message }
       };
     }
   }
@@ -1980,28 +1952,22 @@ export class MigrationAdapter {
     try {
       console.log('🔄 MigrationAdapter: Resetting metrics and comparison data...');
       
-      // Reset comparison system metrics (if available)
+      // Reset comparison system metrics
       if (this.metricsCollector && typeof this.metricsCollector.reset === 'function') {
         this.metricsCollector.reset();
         console.log('✅ MetricsCollector: Reset complete');
-      } else if (this.metricsCollector) {
-        console.log('⚠️ MetricsCollector: Reset method not available');
       }
       
-      // Reset event comparator data (if available)
+      // Reset event comparator data
       if (this.eventComparator && typeof this.eventComparator.reset === 'function') {
         this.eventComparator.reset();
         console.log('✅ EventComparator: Reset complete');
-      } else if (this.eventComparator) {
-        console.log('⚠️ EventComparator: Reset method not available');
       }
       
-      // Reset output router metrics (if available)
+      // Reset output router metrics
       if (this.outputRouter && typeof this.outputRouter.resetMetrics === 'function') {
         this.outputRouter.resetMetrics();
         console.log('✅ OutputRouter: Metrics reset complete');
-      } else if (this.outputRouter) {
-        console.log('⚠️ OutputRouter: resetMetrics method not available');
       }
       
       // Reset health check counters
@@ -2109,4 +2075,12 @@ export class MigrationAdapter {
 
 // === EXPORTS ===
 
-// Export types are already defined above in the interfaces section
+export type {
+  MigrationAdapterConfig,
+  MigrationAdapterStatus,
+  RolloutConfig,
+  RolloutStatus,
+  HealthConfig,
+  HealthStatus,
+  ServiceStatus
+};

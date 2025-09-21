@@ -706,7 +706,7 @@ export class UnifiedAlertGenerator {
    * V3 Weather Enhancement - Enhance alerts with weather context for live games
    */
   private async enhanceAlertsWithWeatherContext(
-    alerts: any[], 
+    alerts: AlertResult[], 
     gameState: GameState, 
     sport: string
   ): Promise<WeatherEnhancedAlert[]> {
@@ -869,7 +869,7 @@ export class UnifiedAlertGenerator {
       let bulletsTotal = 0;
       enhancedAlerts.forEach(alert => {
         const bullets = alert.gamblingInsights?.bullets || [];
-        const mapperUsed = alert.gamblingInsights?.mapperUsed ?? 'unknown';
+        const mapperUsed = alert.gamblingInsights?.mapperUsed || 'unknown';
         bulletsTotal += bullets.length;
         
         console.log(`🎯 Composer bullets: alertKey=${alert.alertKey}, sport=${sport}, mapper=${mapperUsed}, bullets=${bullets.length}`);
@@ -898,8 +898,8 @@ export class UnifiedAlertGenerator {
     } catch (error) {
       // ENHANCED ERROR HANDLING: Detailed error logging
       console.error(`❌ ERROR in gambling insights enhancement for ${sport}:`, {
-        errorMessage: error instanceof Error ? error.message : String(error),
-        errorStack: error instanceof Error ? error.stack : undefined,
+        errorMessage: error.message,
+        errorStack: error.stack,
         alertsCount: alerts.length,
         gameId: gameState.gameId,
         sport: sport,
