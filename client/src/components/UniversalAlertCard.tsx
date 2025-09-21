@@ -7,6 +7,7 @@ import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
 import { getSportTabColors } from '@shared/season-manager';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { getDisplayContent } from '@/utils/alert-message';
 
 interface UniversalAlertProps {
   id: string;
@@ -41,6 +42,9 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
   const isPriorityHigh = alert.priority >= 80;
   const isConfidenceHigh = alert.confidence >= 75;
   const { user, isAuthenticated } = useAuth();
+
+  // Get optimal display content
+  const { content: displayContent, isStructured } = getDisplayContent(alert);
 
   // Query user settings for gambling insights preference
   const { data: userSettings } = useQuery({
@@ -240,25 +244,36 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
             </div>
           )}
 
-          {/* Alert Message */}
+          {/* Alert Content - Prioritizes Gambling Insights */}
           <div className="mb-4">
-            <p className="text-slate-100 text-sm leading-relaxed font-medium" data-testid={`alert-message-${alert.id}`}>
-              {alert.message}
-            </p>
+            {isStructured ? (
+              <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50" data-testid={`structured-insights-${alert.id}`}>
+                <pre className="text-slate-100 text-sm whitespace-pre-line font-medium leading-relaxed">
+                  {displayContent}
+                </pre>
+              </div>
+            ) : (
+              <p className="text-slate-100 text-sm leading-relaxed font-medium line-clamp-3" data-testid={`basic-message-${alert.id}`}>
+                {displayContent}
+              </p>
+            )}
           </div>
 
-          {/* Gambling Insights Bullet Points */}
-          {(alert.gamblingInsights?.structuredTemplate || alert.gamblingInsights?.bullets) && 
-           alert.hasComposerEnhancement && 
-           (userSettings as any)?.gamblingInsightsEnabled !== false && (
-            <div className="mb-4" data-testid={`gambling-insights-${alert.id}`}>
-              <div className="flex items-center gap-2 mb-3">
-                <div className={`p-1 rounded-md ${sportConfig.iconColor}`}>
-                  <DollarSign className="w-3 h-3" />
+          {/* Additional Gambling Insights Metadata */}
+          {alert.gamblingInsights && (
+            alert.gamblingInsights.confidence || 
+            (alert.gamblingInsights.tags && alert.gamblingInsights.tags.length > 0)
+          ) && (
+            <div className="mb-4" data-testid={`gambling-metadata-${alert.id}`}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className={`p-1 rounded-md ${sportConfig.iconColor}`}>
+                    <DollarSign className="w-3 h-3" />
+                  </div>
+                  <h4 className="text-slate-200 font-semibold text-xs uppercase tracking-wider">
+                    Betting Intelligence
+                  </h4>
                 </div>
-                <h4 className="text-slate-200 font-semibold text-xs uppercase tracking-wider">
-                  Gambling Insights
-                </h4>
                 {alert.gamblingInsights.confidence && (
                   <Badge 
                     variant="secondary" 
@@ -268,38 +283,8 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
                   </Badge>
                 )}
               </div>
-              <div className="space-y-2">
-                {alert.gamblingInsights.structuredTemplate ? (
-                  <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
-                    <pre className="text-slate-100 text-sm whitespace-pre-line font-medium leading-relaxed">
-                      {alert.gamblingInsights.structuredTemplate}
-                    </pre>
-                  </div>
-                ) : (
-                  // Fallback to old bullet points format
-                  alert.gamblingInsights.bullets?.map((bullet, index) => (
-                    <div key={index} className="flex items-start gap-3 group">
-                      <div 
-                        className={`w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0 ${
-                          alert.sport === 'MLB' ? 'bg-green-400' :
-                          alert.sport === 'NFL' ? 'bg-orange-400' :
-                          alert.sport === 'NBA' ? 'bg-purple-400' :
-                          alert.sport === 'NHL' ? 'bg-cyan-400' :
-                          alert.sport === 'NCAAF' ? 'bg-blue-400' :
-                          alert.sport === 'CFL' ? 'bg-red-400' :
-                          alert.sport === 'WNBA' ? 'bg-pink-400' :
-                          'bg-slate-400'
-                        } group-hover:scale-125 transition-transform duration-200`}
-                      />
-                      <p className="text-slate-200 text-sm leading-relaxed flex-1 group-hover:text-slate-100 transition-colors duration-200">
-                        {bullet}
-                      </p>
-                    </div>
-                  ))
-                )}
-              </div>
               {alert.gamblingInsights.tags && alert.gamblingInsights.tags.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1">
                   {alert.gamblingInsights.tags.slice(0, 3).map((tag, index) => (
                     <Badge 
                       key={index}

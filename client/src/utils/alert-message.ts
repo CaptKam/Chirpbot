@@ -104,15 +104,42 @@ export function getSecondaryMessage(alert: AlertData): string {
 }
 
 /**
- * Clean up message text by removing emojis and objects
+ * Clean up message text by removing objects - preserves gambling insights emojis
  */
 export function cleanMessage(message: string): string {
   if (!message || typeof message !== 'string') return '';
   
   return message
-    .replace(/🔥|💎|⚾|💪|⚡|🏠|🎆|⏰|🏈|🏀|🏒/g, '')
     .replace(/\[object Object\]/g, '')
     .trim();
+}
+
+/**
+ * Get display content prioritizing gambling insights structured template
+ */
+export function getDisplayContent(alert: any): { content: string; isStructured: boolean } {
+  // Priority 1: Gambling insights structured template (preserves emojis)
+  if (alert.gamblingInsights?.structuredTemplate?.trim()) {
+    return {
+      content: alert.gamblingInsights.structuredTemplate.trim(),
+      isStructured: true
+    };
+  }
+  
+  // Priority 2: Gambling insights bullets
+  if (alert.gamblingInsights?.bullets?.length > 0) {
+    return {
+      content: alert.gamblingInsights.bullets.join('\n'),
+      isStructured: false
+    };
+  }
+  
+  // Priority 3: Clean primary message (line-clamped)
+  const primaryMessage = getPrimaryMessage(alert);
+  return {
+    content: cleanMessage(primaryMessage),
+    isStructured: false
+  };
 }
 
 /**
