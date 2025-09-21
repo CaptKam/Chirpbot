@@ -799,45 +799,44 @@ export class UnifiedAIProcessor {
   }
 
   private buildSportSpecificPrompt(context: CrossSportContext): string {
-    const basePrompt = `You are a ${context.sport} expert AI providing contextual insights for sports alerts.
+    const teams = `${context.awayTeam} vs ${context.homeTeam}`;
+    const score = `${context.awayScore}-${context.homeScore}`;
+    
+    // Ultra-concise prompt for ONE-LINE output only
+    const basePrompt = `Generate ONE ultra-concise betting insight line only (≤100 chars). Use format: "💎 [key situation] ([probability%]) ${teams} - [context]"
 
-GAME CONTEXT:
-- ${context.awayTeam} @ ${context.homeTeam} (${context.awayScore}-${context.homeScore})
-- Alert: ${context.alertType} (${context.probability}% confidence)
-- Original: ${context.originalMessage}
-${context.playoffImplications ? '- PLAYOFF IMPLICATIONS: High stakes game' : ''}
-${context.championshipContext ? `- CHAMPIONSHIP CONTEXT: ${context.championshipContext}` : ''}
-${context.weather ? `- WEATHER: ${context.weather.temperature}°F, ${context.weather.condition}` : ''}
-`;
+CRITICAL: Output exactly ONE line only. No explanations, no paragraphs, no multiple sentences.
 
-    // Add sport-specific context based on sport type
+GAME: ${teams} (${score})
+ALERT: ${context.alertType}
+ORIGINAL: ${context.originalMessage}`;
+
+    // Add sport-specific ultra-concise requirements
     switch (context.sport) {
       case 'MLB':
-        return `${basePrompt}BASEBALL SITUATION:
-- ${context.inning}${this.getOrdinal(context.inning || 1)} inning, ${context.outs || 0} outs
-- Count: ${context.balls || 0}-${context.strikes || 0}
-- Runners: ${this.describeBaseRunners(context.baseRunners)}
-Focus on: Run expectancy, leverage situations, clutch hitting.`;
+        return `${basePrompt}
+FORMAT: "💎 [base state] ([run probability%]) ${teams} - [outs] out"
+CONTEXT: Inning ${context.inning || 1}, ${context.outs || 0} outs, Count ${context.balls || 0}-${context.strikes || 0}
+EXAMPLE: "💎 Runners 1st & 2nd (42%) LAD vs SF - 2 out"`;
 
       case 'NFL':
       case 'NCAAF':
       case 'CFL':
-        return `${basePrompt}FOOTBALL SITUATION:
-- Q${context.quarter || 1}, ${context.timeRemaining || 'Unknown'} remaining
-${context.down && context.yardsToGo ? `- ${this.getOrdinal(context.down)} & ${context.yardsToGo}` : ''}
-${context.redZone ? '- RED ZONE: High scoring probability' : ''}
-Focus on: Down & distance, field position, clock management.`;
+        return `${basePrompt}
+FORMAT: "💎 [down & distance] ([TD probability%]) ${teams} - [possession] ball"
+CONTEXT: Q${context.quarter || 1}, ${context.timeRemaining || 'Live'}, ${context.down ? `${this.getOrdinal(context.down)} & ${context.yardsToGo}` : 'Live'}
+EXAMPLE: "💎 3rd & 8 (TD 42%) NYJ vs BUF - BUF ball"`;
 
       case 'NBA':
       case 'WNBA':
-        return `${basePrompt}BASKETBALL SITUATION:
-- ${context.timeLeft || 'Unknown'} remaining
-- Shot clock: ${context.shotClock || 'Unknown'}
-${context.fouls ? `- Team fouls: ${context.fouls.home}-${context.fouls.away}` : ''}
-Focus on: Time management, shooting efficiency, foul situation.`;
+        return `${basePrompt}
+FORMAT: "💎 [quarter] [time] ([win probability%]) ${teams} - [margin]"
+CONTEXT: ${context.timeLeft || 'Live'} remaining, Score differential
+EXAMPLE: "💎 Q4 2:13 (WP 58%) LAL vs BOS - 1pt lead"`;
 
       default:
-        return basePrompt;
+        return `${basePrompt}
+Generate exactly one ultra-concise line starting with 💎 emoji.`;
     }
   }
 
