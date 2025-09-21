@@ -67,15 +67,18 @@ export function getPrimaryMessage(alert: AlertData): string {
       try {
         payload = JSON.parse(payload);
       } catch {
-        return payload; // If it's a string that's not JSON, use it directly
+        return String(payload); // If it's a string that's not JSON, use it directly
       }
     }
     
-    if (payload.headline) return payload.headline;
-    if (payload.displayText) return payload.displayText;
-    if (payload.primary) return payload.primary;
-    if (payload.message) return payload.message;
-    if (payload.title) return payload.title;
+    if (typeof payload === 'object' && payload !== null) {
+      const payloadObj = payload as any;
+      if (payloadObj.headline) return payloadObj.headline;
+      if (payloadObj.displayText) return payloadObj.displayText;
+      if (payloadObj.primary) return payloadObj.primary;
+      if (payloadObj.message) return payloadObj.message;
+      if (payloadObj.title) return payloadObj.title;
+    }
   }
   
   // Final fallback - construct from alert type
