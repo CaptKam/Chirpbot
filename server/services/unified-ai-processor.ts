@@ -758,11 +758,11 @@ export class UnifiedAIProcessor {
             { role: 'system', content: sanitizedPrompt },
             { 
               role: 'user', 
-              content: 'Provide a concise, contextual analysis (2-3 sentences max) with betting insights and key factors to watch. Focus on actionable information.' 
+              content: 'Generate EXACTLY 3 bullet points with the most important information:\n• **Game Situation:** Current context and key details\n• **Critical Metric:** Most important probability, percentage, or statistic\n• **Action Item:** What users should consider or watch for\n\nKeep each bullet to 10-15 words max. No other text.' 
             }
           ],
-          max_tokens: 150,
-          temperature: 0.7
+          max_tokens: 120,
+          temperature: 0.6
         })
       });
 
@@ -792,16 +792,17 @@ export class UnifiedAIProcessor {
   }
 
   private buildSportSpecificPrompt(context: CrossSportContext): string {
-    const basePrompt = `You are a ${context.sport} expert AI providing contextual insights for sports alerts.
+    const basePrompt = `You are a ${context.sport} expert providing concise 3-bullet alerts.
 
-GAME CONTEXT:
-- ${context.awayTeam} @ ${context.homeTeam} (${context.awayScore}-${context.homeScore})
-- Alert: ${context.alertType} (${context.probability}% confidence)
-- Original: ${context.originalMessage}
-${context.playoffImplications ? '- PLAYOFF IMPLICATIONS: High stakes game' : ''}
-${context.championshipContext ? `- CHAMPIONSHIP CONTEXT: ${context.championshipContext}` : ''}
-${context.weather ? `- WEATHER: ${context.weather.temperature}°F, ${context.weather.condition}` : ''}
-`;
+GAME: ${context.awayTeam} @ ${context.homeTeam} (${context.awayScore}-${context.homeScore})
+ALERT: ${context.alertType} (${context.probability || 0}% confidence)
+ORIGINAL: ${context.originalMessage}
+${context.playoffImplications ? 'PLAYOFF IMPLICATIONS: High stakes\n' : ''}${context.championshipContext ? `CHAMPIONSHIP: ${context.championshipContext}\n` : ''}${context.weather ? `WEATHER: ${context.weather.temperature}°F, ${context.weather.condition}\n` : ''}
+
+Generate exactly 3 bullet points with bolded categories:
+• **Game Situation:** [Current context in 10-15 words]
+• **Critical Metric:** [Key probability/stat in 10-15 words] 
+• **Action Item:** [What to watch/consider in 10-15 words]`;
 
     // Add sport-specific context based on sport type
     switch (context.sport) {
@@ -835,38 +836,61 @@ Focus on: Time management, shooting efficiency, foul situation.`;
   }
 
   private parseAIResponse(aiResponse: string, context: CrossSportContext, startTime: number): UnifiedAIResponse {
-    // Simple parsing - extract key information from AI response
-    const lines = aiResponse.split('\n');
+    // Parse the 3-bullet point format from AI response
+    const bulletPattern = /•\s*\*\*([^:*]+)[^:]*:\*\*(.+?)(?=•|$)/g;
+    const bullets = [];
+    let match;
     
-    const getSection = (marker: string): string => {
-      const line = lines.find(l => l.includes(marker));
-      return line ? line.split(':').slice(1).join(':').trim() : '';
-    };
-
-    // Use the raw AI response as enhanced message if no structured parsing found
-    const enhancedMessage = getSection('Enhanced Message') || 
-                           (aiResponse.trim().length > 10 ? aiResponse.trim() : context.originalMessage);
+    while ((match = bulletPattern.exec(aiResponse)) !== null) {
+      bullets.push({
+        category: match[1].trim(),
+        content: match[2].trim()
+      });
+    }
+    
+    // Fallback to simple bullet extraction if structured parsing fails
+    if (bullets.length === 0) {
+      const lines = aiResponse.split('\n').filter(line => line.trim().startsWith('•'));
+      lines.slice(0, 3).forEach((line, index) => {
+        const content = line.replace('•', '').trim();
+        const categories = ['Game Situation', 'Critical Metric', 'Action Item'];
+        bullets.push({
+          category: categories[index] || 'Info',
+          content: content
+        });
+      });
+    }
+    
+    // Create enhanced message from bullets
+    const enhancedMessage = bullets.length > 0 
+      ? bullets.map(b => `• **${b.category}:** ${b.content}`).join('\n')
+      : (aiResponse.trim().length > 10 ? aiResponse.trim() : context.originalMessage);
+      
+    // Extract insights from bullets
+    const contextualInsights = bullets.length >= 3 
+      ? bullets.map(b => `${b.category}: ${b.content}`).slice(0, 3)
+      : [
+          `${context.sport} game: ${context.awayTeam} @ ${context.homeTeam}`,
+          `Score: ${context.awayScore}-${context.homeScore}`,
+          'Situation worth monitoring'
+        ];
 
     return {
       sport: context.sport,
-      enhancedTitle: getSection('Enhanced Title') || `${context.sport} Alert`,
+      enhancedTitle: `${context.sport} Alert`,
       enhancedMessage,
-      contextualInsights: [
-        getSection('Insight 1') || `${context.sport} game analysis`,
-        getSection('Insight 2') || 'Strategic implications worth monitoring',
-        getSection('Insight 3') || 'Betting opportunity assessment'
-      ].filter(insight => insight.length > 0),
-      actionableRecommendation: getSection('Recommendation') || 'Monitor game progress',
-      urgencyLevel: 'MEDIUM' as const,
+      contextualInsights,
+      actionableRecommendation: bullets.find(b => b.category.toLowerCase().includes('action'))?.content || 'Monitor game progress',
+      urgencyLevel: context.priority >= 80 ? 'HIGH' as const : 'MEDIUM' as const,
       bettingContext: {
-        recommendation: getSection('Recommendation') || 'Evaluate carefully',
-        confidence: 75,
-        reasoning: ['AI-generated analysis', 'Game situation assessment']
+        recommendation: bullets.find(b => b.category.toLowerCase().includes('action'))?.content || 'Evaluate carefully',
+        confidence: Math.min(context.probability || 75, 90),
+        reasoning: bullets.slice(0, 2).map(b => b.content)
       },
       gameProjection: {
         winProbability: { home: 50, away: 50 },
-        keyFactors: getSection('Factors').split(',').map(f => f.trim()).filter(f => f.length > 0),
-        nextCriticalMoment: getSection('Next Moment') || 'Next play development'
+        keyFactors: bullets.map(b => b.content),
+        nextCriticalMoment: 'Next play development'
       },
       aiProcessingTime: Date.now() - startTime,
       confidence: 85,
