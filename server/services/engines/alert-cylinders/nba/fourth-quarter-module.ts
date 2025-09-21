@@ -4,12 +4,26 @@ export default class FourthQuarterModule extends BaseAlertModule {
   alertType = 'NBA_FOURTH_QUARTER';
   sport = 'NBA';
 
+  // Track triggered games to prevent duplicates
+  private triggeredGames = new Set<string>();
+
   isTriggered(gameState: GameState): boolean {
+    // Check if already triggered for this game
+    if (this.triggeredGames.has(gameState.gameId)) {
+      return false; // Already triggered for this game
+    }
+
     // Fourth quarter start in close games (within 15 points for NBA pace)
-    return gameState.status === 'live' && 
-           gameState.quarter === 4 &&
-           this.parseTimeToSeconds(gameState.timeRemaining) >= 600 && // First 2 minutes of quarter
-           Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0)) <= 15;
+    const shouldTrigger = gameState.status === 'live' && 
+                         gameState.quarter === 4 &&
+                         this.parseTimeToSeconds(gameState.timeRemaining) >= 600 && // First 2 minutes of quarter
+                         Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0)) <= 15;
+
+    if (shouldTrigger) {
+      this.triggeredGames.add(gameState.gameId);
+    }
+
+    return shouldTrigger;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
@@ -19,7 +33,7 @@ export default class FourthQuarterModule extends BaseAlertModule {
     const timeRemaining = gameState.timeRemaining || '12:00';
 
     return {
-      alertKey: `${gameState.gameId}_nba_fourth_quarter_${timeRemaining.replace(/[:\s]/g, '')}`,
+      alertKey: `${gameState.gameId}_nba_fourth_quarter`,
       type: this.alertType,
       message: `🏀 NBA FOURTH QUARTER! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - Crunch time begins!`,
       context: {
