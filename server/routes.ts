@@ -2212,6 +2212,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             // Include AI data
             betbookData: payload.betbookData || null,
             gameInfo: payload.gameInfo || null,
+            // Include gambling insights and composer enhancement status
+            gamblingInsights: payload.gamblingInsights || null,
+            hasComposerEnhancement: payload.hasComposerEnhancement || false,
             // Include full payload for V3 message access
             payload: payload
           });
