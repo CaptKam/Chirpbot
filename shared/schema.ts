@@ -264,6 +264,7 @@ export interface GameDay {
 
 // Gambling insights interface for enhanced alert data
 export interface GamblingInsights {
+  structuredTemplate?: string; // New structured format with emojis
   market?: {
     moneyline?: {
       home?: number;

@@ -26,6 +26,7 @@ interface UniversalAlertProps {
   weather?: any;
   gameInfo?: any;
   gamblingInsights?: {
+    structuredTemplate?: string;
     bullets?: string[];
     confidence?: number;
     tags?: string[];
@@ -247,10 +248,9 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
           </div>
 
           {/* Gambling Insights Bullet Points */}
-          {alert.gamblingInsights?.bullets && 
+          {(alert.gamblingInsights?.structuredTemplate || alert.gamblingInsights?.bullets) && 
            alert.hasComposerEnhancement && 
-           userSettings?.gamblingInsightsEnabled !== false && 
-           alert.gamblingInsights.bullets.length > 0 && (
+           (userSettings as any)?.gamblingInsightsEnabled !== false && (
             <div className="mb-4" data-testid={`gambling-insights-${alert.id}`}>
               <div className="flex items-center gap-2 mb-3">
                 <div className={`p-1 rounded-md ${sportConfig.iconColor}`}>
@@ -269,25 +269,34 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
                 )}
               </div>
               <div className="space-y-2">
-                {alert.gamblingInsights.bullets.map((bullet, index) => (
-                  <div key={index} className="flex items-start gap-3 group">
-                    <div 
-                      className={`w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0 ${
-                        alert.sport === 'MLB' ? 'bg-green-400' :
-                        alert.sport === 'NFL' ? 'bg-orange-400' :
-                        alert.sport === 'NBA' ? 'bg-purple-400' :
-                        alert.sport === 'NHL' ? 'bg-cyan-400' :
-                        alert.sport === 'NCAAF' ? 'bg-blue-400' :
-                        alert.sport === 'CFL' ? 'bg-red-400' :
-                        alert.sport === 'WNBA' ? 'bg-pink-400' :
-                        'bg-slate-400'
-                      } group-hover:scale-125 transition-transform duration-200`}
-                    />
-                    <p className="text-slate-200 text-sm leading-relaxed flex-1 group-hover:text-slate-100 transition-colors duration-200">
-                      {bullet}
-                    </p>
+                {alert.gamblingInsights.structuredTemplate ? (
+                  <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
+                    <pre className="text-slate-100 text-sm whitespace-pre-line font-medium leading-relaxed">
+                      {alert.gamblingInsights.structuredTemplate}
+                    </pre>
                   </div>
-                ))}
+                ) : (
+                  // Fallback to old bullet points format
+                  alert.gamblingInsights.bullets?.map((bullet, index) => (
+                    <div key={index} className="flex items-start gap-3 group">
+                      <div 
+                        className={`w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0 ${
+                          alert.sport === 'MLB' ? 'bg-green-400' :
+                          alert.sport === 'NFL' ? 'bg-orange-400' :
+                          alert.sport === 'NBA' ? 'bg-purple-400' :
+                          alert.sport === 'NHL' ? 'bg-cyan-400' :
+                          alert.sport === 'NCAAF' ? 'bg-blue-400' :
+                          alert.sport === 'CFL' ? 'bg-red-400' :
+                          alert.sport === 'WNBA' ? 'bg-pink-400' :
+                          'bg-slate-400'
+                        } group-hover:scale-125 transition-transform duration-200`}
+                      />
+                      <p className="text-slate-200 text-sm leading-relaxed flex-1 group-hover:text-slate-100 transition-colors duration-200">
+                        {bullet}
+                      </p>
+                    </div>
+                  ))
+                )}
               </div>
               {alert.gamblingInsights.tags && alert.gamblingInsights.tags.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1">

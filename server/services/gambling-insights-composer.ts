@@ -1107,7 +1107,8 @@ export class GamblingInsightsComposer {
 
       // Build gambling insights object with new structured format
       const insights: GamblingInsights = {
-        bullets: [structuredContent], // Single structured template
+        structuredTemplate: structuredContent, // New structured format with emojis
+        bullets: [structuredContent], // Fallback for backward compatibility
         confidence,
         tags: [...tags, 'gambling-insights', 'auto-generated'],
         // Market data from odds API
@@ -1267,13 +1268,13 @@ export class GamblingInsightsComposer {
         const gamblingInsights = await this.compose(alert, gameState, undefined, false, undefined);
         
         // Log bullet points for each alert as requested
-        console.log(`🎯 Composer bullets: sport=${sport}, type=${alert.type}, bullets=${gamblingInsights.bullets.length}`);
+        console.log(`🎯 Composer bullets: sport=${sport}, type=${alert.type}, bullets=${gamblingInsights.bullets?.length || 0}`);
         
         // Attach gambling insights to the alert
         const enhancedAlert: AlertResult = {
           ...alert,
           gamblingInsights,
-          hasComposerEnhancement: gamblingInsights.bullets.length > 0
+          hasComposerEnhancement: (gamblingInsights.bullets?.length || 0) > 0
         };
         
         enhancedAlerts.push(enhancedAlert);
