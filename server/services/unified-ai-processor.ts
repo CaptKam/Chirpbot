@@ -657,6 +657,13 @@ export class UnifiedAIProcessor {
     return {
       ...originalAlert,
       message: aiResponse.enhancedMessage,
+      // Explicitly preserve gambling insights from pipeline
+      gamblingInsights: originalAlert.gamblingInsights,
+      hasComposerEnhancement: originalAlert.hasComposerEnhancement,
+      // Preserve weather enhancement fields 
+      weatherContext: originalAlert.weatherContext,
+      isWeatherTriggered: originalAlert.isWeatherTriggered,
+      weatherSeverity: originalAlert.weatherSeverity,
       context: {
         ...originalAlert.context,
         aiEnhanced: true,

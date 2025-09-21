@@ -95,6 +95,48 @@ export interface Alert {
     windDirection?: string;
     windImpact?: string;
   };
+  gamblingInsights?: {
+    market?: {
+      moneyline?: {
+        home?: number;
+        away?: number;
+      };
+      spread?: {
+        points?: number;
+        home?: number;
+        away?: number;
+      };
+      total?: {
+        points?: number;
+        over?: number;
+        under?: number;
+      };
+    };
+    weather?: {
+      impact: string;
+      conditions: string;
+      severity: 'low' | 'medium' | 'high';
+    };
+    keyPlayers?: {
+      name: string;
+      position: string;
+      relevance: string;
+    }[];
+    momentum?: {
+      recent: string;
+      trend: 'positive' | 'negative' | 'neutral';
+      timeframe: string;
+    };
+    situation?: {
+      context: string;
+      significance: string;
+      timing: string;
+    };
+    bullets?: string[];
+    confidence?: number; // 0-1 rating
+    tags?: string[];
+  };
+  hasComposerEnhancement?: boolean;
   gameInfo?: {
     homeTeam: string;
     awayTeam: string;

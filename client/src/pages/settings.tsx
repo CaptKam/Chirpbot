@@ -7,7 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Zap, LogOut, SettingsIcon, Bell, Target, Trophy, Clock, TrendingUp, Users, AlertTriangle, Send, CheckCircle, XCircle, Monitor, BarChart3, ArrowRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Zap, LogOut, SettingsIcon, Bell, Target, Trophy, Clock, TrendingUp, Users, AlertTriangle, Send, CheckCircle, XCircle, Monitor, BarChart3, ArrowRight, DollarSign, Star } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -106,6 +107,9 @@ export default function Settings() {
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
+  // Gambling insights settings state
+  const [gamblingInsightsEnabled, setGamblingInsightsEnabled] = useState(true);
+
   // Enhanced toggle management with status tracking
   const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set());
   const [toggleSuccess, setToggleSuccess] = useState<Map<string, boolean>>(new Map());
@@ -155,6 +159,13 @@ export default function Settings() {
   const { data: telegramSettings, isLoading: telegramLoading } = useQuery({
     queryKey: [`/api/user/${user?.id}/telegram`],
     enabled: !!user?.id && isAuthenticated,
+  });
+
+  // Gambling insights settings query
+  const { data: gamblingInsightsSettings, isLoading: gamblingInsightsLoading } = useQuery({
+    queryKey: [`/api/user/${user?.id}/settings/gambling-insights`],
+    enabled: !!user?.id && isAuthenticated,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
   // Unified loading state - coordinate all loading states (now includes global settings for all users)
@@ -388,8 +399,39 @@ export default function Settings() {
     }
   };
 
+  // Gambling insights settings mutation
+  const updateGamblingInsightsMutation = useMutation({
+    mutationFn: async ({ enabled }: { enabled: boolean }) => {
+      const response = await apiRequest("POST", `/api/user/${user?.id}/settings/gambling-insights`, {
+        gamblingInsightsEnabled: enabled
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [`/api/user/${user?.id}/settings/gambling-insights`]
+      });
+      toast({
+        title: "Gambling insights updated",
+        description: `Gambling insights ${gamblingInsightsEnabled ? 'enabled' : 'disabled'} successfully.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update gambling insights setting. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleLogout = () => {
     logoutMutation.mutate();
+  };
+
+  const handleGamblingInsightsToggle = (enabled: boolean) => {
+    setGamblingInsightsEnabled(enabled);
+    updateGamblingInsightsMutation.mutate({ enabled });
   };
 
   const handleAlertToggle = (alertType: string, enabled: boolean) => {
@@ -785,6 +827,82 @@ export default function Settings() {
                 </div>
 
                     
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Gambling Insights Settings Section */}
+        {isAuthenticated && user && (
+          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-purple-500/5">
+            <div className="flex items-center space-x-4 mb-6">
+              <div className="h-12 w-12 rounded-lg bg-purple-500/20 ring-1 ring-purple-500/30 flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-purple-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-black uppercase tracking-wide text-slate-100">Gambling Insights</h2>
+                <p className="text-sm text-slate-300">
+                  Enhanced alert information with betting insights and analysis
+                </p>
+              </div>
+            </div>
+
+            {gamblingInsightsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-8 h-8 border-4 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Enable/Disable Toggle */}
+                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 hover:ring-1 hover:ring-purple-400/30 transition-all duration-300 group">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="text-sm font-semibold text-slate-100 group-hover:text-purple-400 transition-colors">
+                        Enable Gambling Insights
+                      </h4>
+                      <Badge 
+                        variant="outline" 
+                        className="bg-purple-500/10 text-purple-400 border-purple-500/30 text-xs"
+                      >
+                        BETA
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      Show additional betting insights, market analysis, and strategic bullet points with your alerts
+                    </p>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      <span className="text-xs bg-slate-700/50 text-slate-300 px-2 py-1 rounded-md">Bullet Points</span>
+                      <span className="text-xs bg-slate-700/50 text-slate-300 px-2 py-1 rounded-md">Market Data</span>
+                      <span className="text-xs bg-slate-700/50 text-slate-300 px-2 py-1 rounded-md">Strategy Tips</span>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={gamblingInsightsEnabled}
+                    onCheckedChange={handleGamblingInsightsToggle}
+                    disabled={updateGamblingInsightsMutation.isPending}
+                    data-testid="toggle-gambling-insights"
+                    className="data-[state=checked]:bg-purple-400 ml-4"
+                  />
+                </div>
+
+                {/* Feature Description */}
+                {gamblingInsightsEnabled && (
+                  <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <Star className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <h5 className="text-sm font-medium text-purple-300 mb-1">
+                          Enhanced Alerts Active
+                        </h5>
+                        <p className="text-xs text-purple-200/80 leading-relaxed">
+                          Your alerts will now include gambling insights when available. This includes strategic bullet points,
+                          betting market analysis, weather impact assessments, and player performance insights to help you
+                          make more informed decisions.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

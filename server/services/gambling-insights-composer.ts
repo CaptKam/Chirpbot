@@ -105,8 +105,11 @@ class MLBInsightsMapper extends BaseSportMapper {
 
     // Wind impact on scoring
     if (weather?.windSpeed || gameState.weatherContext?.windSpeed) {
-      const windImpact = this.analyzeWindImpact(weather || gameState.weatherContext);
-      if (windImpact) bullets.push(this.formatBulletPoint(windImpact));
+      const weatherData = weather || gameState.weatherContext;
+      if (weatherData) {
+        const windImpact = this.analyzeWindImpact(weatherData);
+        if (windImpact) bullets.push(this.formatBulletPoint(windImpact));
+      }
     }
 
     // RE24 scoring probability
@@ -326,8 +329,11 @@ class NFLNCAAFInsightsMapper extends BaseSportMapper {
 
     // Weather impact on passing/kicking
     if (weather?.windSpeed || gameState.weatherContext?.windSpeed) {
-      const weatherImpact = this.analyzeWeatherImpact(weather || gameState.weatherContext, gameState);
-      if (weatherImpact) bullets.push(this.formatBulletPoint(weatherImpact));
+      const weatherData = weather || gameState.weatherContext;
+      if (weatherData) {
+        const weatherImpact = this.analyzeWeatherImpact(weatherData, gameState);
+        if (weatherImpact) bullets.push(this.formatBulletPoint(weatherImpact));
+      }
     }
 
     return bullets.slice(0, 5);
@@ -335,7 +341,7 @@ class NFLNCAAFInsightsMapper extends BaseSportMapper {
 
   private analyzeDownDistance(gameState: GameStateData): string {
     const down = gameState.down || 1;
-    const yardsToGo = gameState.yardsToGo || 10;
+    const yardsToGo = gameState.yardsToGo ?? 10;
     const fieldPosition = gameState.fieldPosition || 50;
 
     if (down === 4) {
@@ -350,7 +356,7 @@ class NFLNCAAFInsightsMapper extends BaseSportMapper {
   }
 
   private analyzeFieldPosition(gameState: GameStateData): string {
-    const fieldPosition = gameState.fieldPosition || 50;
+    const fieldPosition = gameState.fieldPosition ?? 50;
     const possession = gameState.possession || 'Offense';
 
     if (fieldPosition <= 10) {
@@ -369,7 +375,7 @@ class NFLNCAAFInsightsMapper extends BaseSportMapper {
   private analyzeRedZoneEfficiency(gameState: GameStateData): string {
     const down = gameState.down || 1;
     const yardsToGo = gameState.yardsToGo || 10;
-    const fieldPosition = gameState.fieldPosition || 20;
+    const fieldPosition = gameState.fieldPosition ?? 20;
 
     const probability = this.calculateRedZoneTouchdownProbability(down, yardsToGo, fieldPosition);
     
@@ -669,7 +675,7 @@ class CFLInsightsMapper extends BaseSportMapper {
   }
 
   private analyzeRougeOpportunity(gameState: GameStateData): string {
-    const fieldPosition = gameState.fieldPosition || 45;
+    const fieldPosition = gameState.fieldPosition ?? 45;
     const yardsToGo = gameState.yardsToGo || 10;
     const estimatedFGDistance = fieldPosition + 10;
 
@@ -677,7 +683,7 @@ class CFLInsightsMapper extends BaseSportMapper {
   }
 
   private analyzeSinglesOpportunity(gameState: GameStateData): string | null {
-    const fieldPosition = gameState.fieldPosition || 50;
+    const fieldPosition = gameState.fieldPosition ?? 50;
     
     if (fieldPosition > 45) return null;
 
@@ -831,7 +837,7 @@ export class GamblingInsightsComposer {
   private shouldIncludeSituationAnalysis(alert: AlertResult, gameState: GameStateData): boolean {
     // Include situation analysis for high-impact alerts
     return alert.priority > 75 || 
-           gameState.quarter >= 4 || 
+           (gameState.quarter !== undefined && gameState.quarter >= 4) || 
            Math.abs(gameState.homeScore - gameState.awayScore) <= 7;
   }
 
@@ -914,6 +920,140 @@ export class GamblingInsightsComposer {
       default:
         return 'active game';
     }
+  }
+
+  /**
+   * Enhance alerts with gambling insights for pipeline integration
+   * @param alerts - Array of alerts to enhance
+   * @param sport - Sport type for mapping
+   * @returns Enhanced alerts with gambling insights attached
+   */
+  async enhanceAlertsWithGamblingInsights(alerts: AlertResult[], sport: string): Promise<AlertResult[]> {
+    if (!alerts || alerts.length === 0) {
+      return alerts;
+    }
+
+    console.log(`🎲 Composer: ${sport} enhancing ${alerts.length} alerts`);
+
+    const enhancedAlerts: AlertResult[] = [];
+
+    for (const alert of alerts) {
+      try {
+        // Build game state from alert data
+        const gameState: GameStateData = this.buildGameStateFromAlert(alert, sport);
+        
+        // Get gambling insights using the compose method
+        const gamblingInsights = this.compose(alert, gameState);
+        
+        // Log bullet points for each alert as requested
+        console.log(`🎯 Composer bullets: sport=${sport}, type=${alert.type}, bullets=${gamblingInsights.bullets.length}`);
+        
+        // Attach gambling insights to the alert
+        const enhancedAlert: AlertResult = {
+          ...alert,
+          gamblingInsights,
+          hasComposerEnhancement: gamblingInsights.bullets.length > 0
+        };
+        
+        enhancedAlerts.push(enhancedAlert);
+        
+      } catch (error) {
+        console.error(`❌ Error enhancing alert ${alert.alertKey} with gambling insights:`, error);
+        // Include original alert without enhancement if error occurs
+        enhancedAlerts.push({
+          ...alert,
+          hasComposerEnhancement: false
+        });
+      }
+    }
+
+    console.log(`🎲 Composer: ${sport} enhanced ${enhancedAlerts.length} alerts`);
+    return enhancedAlerts;
+  }
+
+  /**
+   * Build game state data from alert for gambling insights
+   */
+  private buildGameStateFromAlert(alert: AlertResult, sport: string): GameStateData {
+    // Extract game state from alert context
+    const gameState: GameStateData = {
+      sport: sport,
+      gameId: alert.gameId || '',
+      homeTeam: alert.homeTeam || '',
+      awayTeam: alert.awayTeam || '',
+      homeScore: alert.homeScore || 0,
+      awayScore: alert.awayScore || 0,
+      status: alert.status || 'live',
+      isLive: alert.isLive || true,
+      // Extract sport-specific fields from alert context if available
+      ...this.extractSportSpecificFields(alert, sport)
+    };
+
+    return gameState;
+  }
+
+  /**
+   * Extract sport-specific fields from alert context
+   */
+  private extractSportSpecificFields(alert: AlertResult, sport: string): Partial<GameStateData> {
+    const context = alert.context || {};
+    const fields: Partial<GameStateData> = {};
+
+    switch (sport.toUpperCase()) {
+      case 'MLB':
+        fields.inning = context.inning;
+        fields.isTopInning = context.isTopInning;
+        fields.hasFirst = context.hasFirst;
+        fields.hasSecond = context.hasSecond;
+        fields.hasThird = context.hasThird;
+        fields.outs = context.outs;
+        fields.balls = context.balls;
+        fields.strikes = context.strikes;
+        fields.currentBatter = context.currentBatter;
+        fields.onDeckBatter = context.onDeckBatter;
+        fields.currentPitcher = context.currentPitcher;
+        fields.pitchCount = context.pitchCount;
+        break;
+        
+      case 'NFL':
+      case 'NCAAF':
+        fields.quarter = context.quarter;
+        fields.down = context.down;
+        fields.yardsToGo = context.yardsToGo;
+        fields.fieldPosition = context.fieldPosition;
+        fields.timeRemaining = context.timeRemaining;
+        fields.possession = context.possession;
+        fields.redZoneEfficiency = context.redZoneEfficiency;
+        fields.turnovers = context.turnovers;
+        break;
+        
+      case 'NBA':
+      case 'WNBA':
+        fields.quarter = context.quarter;
+        fields.timeRemaining = context.timeRemaining;
+        fields.fouls = context.fouls;
+        fields.timeouts = context.timeouts;
+        fields.shotClock = context.shotClock;
+        fields.recentScoring = context.recentScoring;
+        fields.starPlayers = context.starPlayers;
+        break;
+        
+      case 'CFL':
+        fields.quarter = context.quarter;
+        fields.down = context.down;
+        fields.yardsToGo = context.yardsToGo;
+        fields.fieldPosition = context.fieldPosition;
+        fields.timeRemaining = context.timeRemaining;
+        fields.possession = context.possession;
+        break;
+    }
+
+    // Add weather context if available
+    if (alert.weatherContext) {
+      fields.weatherContext = alert.weatherContext;
+    }
+
+    return fields;
   }
 }
 

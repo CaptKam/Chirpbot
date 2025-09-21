@@ -1,10 +1,12 @@
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Clock, MapPin, TrendingUp, Users, Zap, Target, AlertTriangle, Wind, Cloud, Thermometer, Timer, Hash, Navigation } from 'lucide-react';
+import { Clock, MapPin, TrendingUp, Users, Zap, Target, AlertTriangle, Wind, Cloud, Thermometer, Timer, Hash, Navigation, DollarSign, TrendingDown, Star } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
 import { getSportTabColors } from '@shared/season-manager';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
 
 interface UniversalAlertProps {
   id: string;
@@ -23,12 +25,28 @@ interface UniversalAlertProps {
   sentToTelegram?: boolean;
   weather?: any;
   gameInfo?: any;
+  gamblingInsights?: {
+    bullets?: string[];
+    confidence?: number;
+    tags?: string[];
+    market?: any;
+    situation?: any;
+  };
+  hasComposerEnhancement?: boolean;
 }
 
 export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
   const formattedTime = format(parseISO(alert.createdAt), 'HH:mm');
   const isPriorityHigh = alert.priority >= 80;
   const isConfidenceHigh = alert.confidence >= 75;
+  const { user, isAuthenticated } = useAuth();
+
+  // Query user settings for gambling insights preference
+  const { data: userSettings } = useQuery({
+    queryKey: [`/api/user/${user?.id}/settings/gambling-insights`],
+    enabled: !!user?.id && isAuthenticated,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
   
   // Determine alert urgency level
   const getUrgencyLevel = () => {
@@ -227,6 +245,75 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
               {alert.message}
             </p>
           </div>
+
+          {/* Gambling Insights Bullet Points */}
+          {alert.gamblingInsights?.bullets && 
+           alert.hasComposerEnhancement && 
+           userSettings?.gamblingInsightsEnabled !== false && 
+           alert.gamblingInsights.bullets.length > 0 && (
+            <div className="mb-4" data-testid={`gambling-insights-${alert.id}`}>
+              <div className="flex items-center gap-2 mb-3">
+                <div className={`p-1 rounded-md ${sportConfig.iconColor}`}>
+                  <DollarSign className="w-3 h-3" />
+                </div>
+                <h4 className="text-slate-200 font-semibold text-xs uppercase tracking-wider">
+                  Gambling Insights
+                </h4>
+                {alert.gamblingInsights.confidence && (
+                  <Badge 
+                    variant="secondary" 
+                    className="bg-slate-700/50 text-slate-300 border-slate-600/50 text-xs"
+                  >
+                    {Math.round(alert.gamblingInsights.confidence * 100)}% Confidence
+                  </Badge>
+                )}
+              </div>
+              <div className="space-y-2">
+                {alert.gamblingInsights.bullets.map((bullet, index) => (
+                  <div key={index} className="flex items-start gap-3 group">
+                    <div 
+                      className={`w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0 ${
+                        alert.sport === 'MLB' ? 'bg-green-400' :
+                        alert.sport === 'NFL' ? 'bg-orange-400' :
+                        alert.sport === 'NBA' ? 'bg-purple-400' :
+                        alert.sport === 'NHL' ? 'bg-cyan-400' :
+                        alert.sport === 'NCAAF' ? 'bg-blue-400' :
+                        alert.sport === 'CFL' ? 'bg-red-400' :
+                        alert.sport === 'WNBA' ? 'bg-pink-400' :
+                        'bg-slate-400'
+                      } group-hover:scale-125 transition-transform duration-200`}
+                    />
+                    <p className="text-slate-200 text-sm leading-relaxed flex-1 group-hover:text-slate-100 transition-colors duration-200">
+                      {bullet}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              {alert.gamblingInsights.tags && alert.gamblingInsights.tags.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {alert.gamblingInsights.tags.slice(0, 3).map((tag, index) => (
+                    <Badge 
+                      key={index}
+                      variant="outline"
+                      className={`text-xs font-medium ${
+                        alert.sport === 'MLB' ? 'border-green-500/30 text-green-300 bg-green-500/10' :
+                        alert.sport === 'NFL' ? 'border-orange-500/30 text-orange-300 bg-orange-500/10' :
+                        alert.sport === 'NBA' ? 'border-purple-500/30 text-purple-300 bg-purple-500/10' :
+                        alert.sport === 'NHL' ? 'border-cyan-500/30 text-cyan-300 bg-cyan-500/10' :
+                        alert.sport === 'NCAAF' ? 'border-blue-500/30 text-blue-300 bg-blue-500/10' :
+                        alert.sport === 'CFL' ? 'border-red-500/30 text-red-300 bg-red-500/10' :
+                        alert.sport === 'WNBA' ? 'border-pink-500/30 text-pink-300 bg-pink-500/10' :
+                        'border-slate-500/30 text-slate-300 bg-slate-500/10'
+                      }`}
+                      data-testid={`insight-tag-${alert.id}-${index}`}
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Sport-Specific Context Information */}
           {alert.context && (

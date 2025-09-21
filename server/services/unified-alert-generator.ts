@@ -8,6 +8,7 @@ import { SettingsCache } from "./settings-cache";
 import { getHealthMonitor } from './unified-health-monitor';
 import { memoryManager } from '../middleware/memory-manager';
 import type { InsertAlert } from "../../shared/schema";
+import { GamblingInsightsComposer } from "./gambling-insights-composer";
 
 // Extended interface for local calendar game data (renamed to avoid import conflict)
 interface LocalCalendarGameData {
@@ -27,7 +28,8 @@ import { WeatherOnLiveService, type WeatherChangeEvent } from './weather-on-live
 import type { GameStateManager, GameStateInfo, EngineLifecycleManager } from './game-state-manager';
 import { gameStateManager } from './game-state-manager';
 import type { BaseGameData } from './base-sport-api';
-import { BaseSportEngine, GameState, AlertResult } from './engines/base-engine';
+import { BaseSportEngine, GameState, AlertResult as EngineAlertResult } from './engines/base-engine';
+import type { AlertResult as SharedAlertResult } from '../../shared/schema';
 
 // Backward compatibility imports (only used when engines are ACTIVE)
 import { MLBApiService } from "./mlb-api";
@@ -76,10 +78,12 @@ interface RetryConfig {
 }
 
 // V3 Weather-Enhanced Alert Interface
-interface WeatherEnhancedAlert extends AlertResult {
+interface WeatherEnhancedAlert extends EngineAlertResult {
   weatherContext?: WeatherChangeEvent;
   isWeatherTriggered?: boolean;
   weatherSeverity?: 'low' | 'moderate' | 'high' | 'extreme';
+  gamblingInsights?: any; // Add gambling insights field
+  hasComposerEnhancement?: boolean;
 }
 
 // Sport Engine Status for dynamic access
@@ -116,6 +120,7 @@ export class UnifiedAlertGenerator {
   private deduplication = unifiedDeduplicator;
   private settingsCache?: SettingsCache;
   private healthMonitor?: any;
+  private gamblingInsightsComposer?: GamblingInsightsComposer;
 
   // Additional monitoring properties
   private adaptivePollingManagers: Map<string, any> = new Map();
@@ -154,6 +159,7 @@ export class UnifiedAlertGenerator {
       // Initialize core services first
       this.settingsCache = new SettingsCache(storage);
       this.healthMonitor = getHealthMonitor();
+      this.gamblingInsightsComposer = new GamblingInsightsComposer();
 
       // Initialize health monitor with callback integration
       this.healthMonitor.initialize({
@@ -763,6 +769,151 @@ export class UnifiedAlertGenerator {
   }
 
   /**
+   * Enhance alerts with gambling insights using batch method
+   */
+  private async enhanceAlertsWithGamblingInsights(
+    alerts: WeatherEnhancedAlert[], 
+    gameState: GameState, 
+    sport: string
+  ): Promise<WeatherEnhancedAlert[]> {
+    // UNCONDITIONAL LOGGING: Always log entry regardless of conditions
+    console.log(`🎲 Composer: Starting enhancement for ${sport} with ${alerts.length} alerts`);
+    
+    if (!alerts || alerts.length === 0) {
+      console.log(`🎲 Composer: ${sport} - No alerts to enhance (alerts=${alerts?.length || 0})`);
+      return alerts || [];
+    }
+    
+    if (!this.gamblingInsightsComposer) {
+      console.log(`🎲 Composer: ${sport} - GamblingInsightsComposer not initialized`);
+      return alerts;
+    }
+
+    try {
+      // GAME STATE VALIDATION: Log the game state being passed to composer
+      console.log(`🎮 Game State Validation for ${sport} game ${gameState.gameId}:`, {
+        sport: gameState.sport,
+        homeTeam: gameState.homeTeam,
+        awayTeam: gameState.awayTeam,
+        homeScore: gameState.homeScore,
+        awayScore: gameState.awayScore,
+        status: gameState.status,
+        isLive: gameState.isLive,
+        // Sport-specific context
+        inning: gameState.inning,
+        outs: gameState.outs,
+        quarter: gameState.quarter,
+        down: gameState.down,
+        yardsToGo: gameState.yardsToGo,
+        timeRemaining: gameState.timeRemaining
+      });
+      
+      console.log(`🎲 Composer: ${sport} enhancing ${alerts.length} alerts`);
+
+      // Convert WeatherEnhancedAlert to SharedAlertResult for the composer
+      const alertResults: SharedAlertResult[] = alerts.map(alert => ({
+        ...alert,
+        // Ensure required AlertResult properties are present
+        gameId: alert.gameId || gameState.gameId,
+        homeTeam: alert.homeTeam || gameState.homeTeam,
+        awayTeam: alert.awayTeam || gameState.awayTeam,
+        homeScore: alert.homeScore || gameState.homeScore,
+        awayScore: alert.awayScore || gameState.awayScore,
+        status: alert.status || gameState.status,
+        isLive: alert.isLive !== undefined ? alert.isLive : gameState.isLive,
+        // Add weather context from alert to context property for composer
+        context: {
+          ...alert.context,
+          // Add game state context
+          inning: gameState.inning,
+          isTopInning: gameState.isTopInning,
+          hasFirst: gameState.runners?.first,
+          hasSecond: gameState.runners?.second,
+          hasThird: gameState.runners?.third,
+          outs: gameState.outs,
+          balls: gameState.balls,
+          strikes: gameState.strikes,
+          currentBatter: gameState.currentBatter?.name,
+          onDeckBatter: gameState.onDeckBatter?.name,
+          currentPitcher: gameState.currentPitcher?.name,
+          pitchCount: gameState.pitchCount,
+          quarter: gameState.quarter || gameState.period,
+          down: gameState.down,
+          yardsToGo: gameState.yardsToGo,
+          fieldPosition: gameState.fieldPosition,
+          timeRemaining: gameState.timeRemaining || gameState.time,
+          possession: gameState.possession,
+          redZoneEfficiency: gameState.redZoneEfficiency,
+          turnovers: gameState.turnovers,
+          fouls: gameState.fouls,
+          timeouts: gameState.timeouts,
+          shotClock: gameState.shotClock,
+          recentScoring: gameState.recentScoring,
+          starPlayers: gameState.starPlayers
+        },
+        // Add weather context from weather enhancement
+        weatherContext: alert.weatherContext ? {
+          windSpeed: alert.weatherContext?.currentWeather?.windSpeed,
+          windDirection: alert.weatherContext?.currentWeather?.windDirection,
+          temperature: alert.weatherContext?.currentWeather?.temperature,
+          conditions: alert.weatherContext?.currentWeather?.conditions,
+          severity: alert.weatherSeverity as 'low' | 'medium' | 'high'
+        } : undefined
+      }));
+
+      // Use the batch enhancement method from GamblingInsightsComposer
+      const enhancedAlerts = await this.gamblingInsightsComposer!.enhanceAlertsWithGamblingInsights(alertResults, sport);
+
+      // PER-ALERT LOGGING: Log each alert enhancement attempt
+      let bulletsTotal = 0;
+      enhancedAlerts.forEach(alert => {
+        const bullets = alert.gamblingInsights?.bullets || [];
+        const mapperUsed = alert.gamblingInsights?.mapperUsed || 'unknown';
+        bulletsTotal += bullets.length;
+        
+        console.log(`🎯 Composer bullets: alertKey=${alert.alertKey}, sport=${sport}, mapper=${mapperUsed}, bullets=${bullets.length}`);
+        
+        // Log bullet content for debugging
+        if (bullets.length > 0) {
+          console.log(`📝 Bullet content for ${alert.alertKey}:`, bullets.slice(0, 2)); // First 2 bullets for brevity
+        }
+      });
+
+      // UNCONDITIONAL LOGGING: Always log completion with bullet totals
+      console.log(`🎲 Composer: Completed enhancement for ${sport}, added ${bulletsTotal} total bullets`);
+
+      // Convert back to WeatherEnhancedAlert type while preserving weather enhancements
+      return enhancedAlerts.map(enhancedAlert => {
+        const originalAlert = alerts.find(a => a.alertKey === enhancedAlert.alertKey) || alerts[0];
+        return {
+          ...enhancedAlert,
+          // Preserve weather enhancement fields from original alert
+          weatherContext: originalAlert.weatherContext,
+          isWeatherTriggered: originalAlert.isWeatherTriggered,
+          weatherSeverity: originalAlert.weatherSeverity
+        } as WeatherEnhancedAlert;
+      });
+
+    } catch (error) {
+      // ENHANCED ERROR HANDLING: Detailed error logging
+      console.error(`❌ ERROR in gambling insights enhancement for ${sport}:`, {
+        errorMessage: error.message,
+        errorStack: error.stack,
+        alertsCount: alerts.length,
+        gameId: gameState.gameId,
+        sport: sport,
+        composerInitialized: !!this.gamblingInsightsComposer
+      });
+      
+      // Log original alerts being returned due to error
+      console.log(`🔄 Returning ${alerts.length} original alerts due to error`);
+      
+      // Return original alerts on error to maintain pipeline stability
+      return alerts;
+    }
+  }
+
+  /**
    * Check if alert type benefits from weather enhancement
    */
   private isAlertWeatherRelevant(alertType: string, sport: string): boolean {
@@ -947,7 +1098,10 @@ export class UnifiedAlertGenerator {
           const alertResults = await engine.generateLiveAlerts(gameState);
 
           // V3: Enhance alerts with weather context for live games
-          const enhancedAlerts = await this.enhanceAlertsWithWeatherContext(alertResults, gameState, sport);
+          const weatherEnhancedAlerts = await this.enhanceAlertsWithWeatherContext(alertResults, gameState, sport);
+
+          // Enhance alerts with gambling insights after weather enhancement but before AI processing
+          const enhancedAlerts = await this.enhanceAlertsWithGamblingInsights(weatherEnhancedAlerts, gameState, sport);
 
           if (enhancedAlerts && enhancedAlerts.length > 0) {
             if (this.logLevel !== 'quiet') {
