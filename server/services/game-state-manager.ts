@@ -714,6 +714,41 @@ export class GameStateManager {
               // Apply gambling insights enhancement  
               alerts = await this.enhanceAlertsWithGamblingInsights(alerts, gameState, sport);
               
+              // CRITICAL FIX: Save enhanced alerts with gambling insights to database
+              if (alerts && alerts.length > 0) {
+                try {
+                  const { unifiedAIProcessor } = await import('./unified-ai-processor');
+                  
+                  // Send each enhanced alert to UnifiedAIProcessor for database storage
+                  for (const enhancedAlert of alerts) {
+                    // Create context for the alert
+                    const context: any = {
+                      sport: sport.toUpperCase(),
+                      alertType: enhancedAlert.type,
+                      gameId: gameId,
+                      priority: enhancedAlert.priority || 75,
+                      probability: enhancedAlert.priority || 75,
+                      homeTeam: gameState.homeTeam || 'Home',
+                      awayTeam: gameState.awayTeam || 'Away',
+                      homeScore: gameState.homeScore || 0,
+                      awayScore: gameState.awayScore || 0,
+                      isLive: gameState.isLive || false,
+                      originalMessage: enhancedAlert.message,
+                      originalContext: enhancedAlert.context || {}
+                    };
+                    
+                    // Queue enhanced alert for database storage (non-blocking)
+                    unifiedAIProcessor.queueAlert(enhancedAlert, context, gameId).catch(error => {
+                      console.warn(`⚠️ Failed to queue enhanced alert ${enhancedAlert.type} for database storage:`, error);
+                    });
+                  }
+                  
+                  console.log(`💾 Queued ${alerts.length} enhanced alerts with gambling insights for database storage`);
+                } catch (error) {
+                  console.error(`❌ Failed to queue enhanced alerts for database storage:`, error);
+                }
+              }
+              
               console.log(`✅ Generated ${alerts.length} alerts for game ${gameId}`);
             } else {
               console.log(`📝 No alerts generated for game ${gameId} (normal for stable game states)`);

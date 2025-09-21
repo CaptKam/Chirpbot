@@ -12,7 +12,7 @@ import { seedDatabase } from "./seed-database";
 import { db } from "./db";
 import { alertCleanupService } from './services/alert-cleanup';
 import { SingleInstanceLock } from "./utils/singleton-lock";
-import { EmergencyMemoryMonitor } from "./emergency-memorymonitor";
+import { EmergencyMemoryMonitor } from "./emergency-memory-monitor";
 
 // 🔒 PERMANENT PORT CONFLICT SOLUTION - ACQUIRE SINGLE INSTANCE LOCK FIRST
 console.log('🔒 Checking for existing ChirpBot instances...');
