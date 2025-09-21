@@ -259,4 +259,116 @@ export interface GameDay {
   games: Game[];
 }
 
+// Gambling insights interface for enhanced alert data
+export interface GamblingInsights {
+  market?: {
+    moneyline?: {
+      home?: number;
+      away?: number;
+    };
+    spread?: {
+      points?: number;
+      home?: number;
+      away?: number;
+    };
+    total?: {
+      points?: number;
+      over?: number;
+      under?: number;
+    };
+  };
+  weather?: {
+    impact: string;
+    conditions: string;
+    severity: 'low' | 'medium' | 'high';
+  };
+  keyPlayers?: {
+    name: string;
+    position: string;
+    relevance: string;
+  }[];
+  momentum?: {
+    recent: string;
+    trend: 'positive' | 'negative' | 'neutral';
+    timeframe: string;
+  };
+  situation?: {
+    context: string;
+    significance: string;
+    timing: string;
+  };
+  bullets?: string[];
+  confidence?: number; // 0-1 rating
+  tags?: string[];
+}
+
+// Enhanced AlertResult interface with gambling insights
+export interface AlertResult {
+  alertKey: string;
+  type: string;
+  message: string;
+  context: any;
+  priority: number;
+  gamblingInsights?: GamblingInsights;
+  hasComposerEnhancement?: boolean;
+}
+
+// Zod schema for GamblingInsights validation
+export const gamblingInsightsSchema = z.object({
+  market: z.object({
+    moneyline: z.object({
+      home: z.number().optional(),
+      away: z.number().optional(),
+    }).optional(),
+    spread: z.object({
+      points: z.number().optional(),
+      home: z.number().optional(),
+      away: z.number().optional(),
+    }).optional(),
+    total: z.object({
+      points: z.number().optional(),
+      over: z.number().optional(),
+      under: z.number().optional(),
+    }).optional(),
+  }).optional(),
+  weather: z.object({
+    impact: z.string(),
+    conditions: z.string(),
+    severity: z.enum(['low', 'medium', 'high']),
+  }).optional(),
+  keyPlayers: z.array(z.object({
+    name: z.string(),
+    position: z.string(),
+    relevance: z.string(),
+  })).optional(),
+  momentum: z.object({
+    recent: z.string(),
+    trend: z.enum(['positive', 'negative', 'neutral']),
+    timeframe: z.string(),
+  }).optional(),
+  situation: z.object({
+    context: z.string(),
+    significance: z.string(),
+    timing: z.string(),
+  }).optional(),
+  bullets: z.array(z.string()).min(1).optional(),
+  confidence: z.number().min(0).max(1).optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+// Zod schema for AlertResult validation
+export const alertResultSchema = z.object({
+  alertKey: z.string(),
+  type: z.string(),
+  message: z.string(),
+  context: z.any(),
+  priority: z.number(),
+  gamblingInsights: gamblingInsightsSchema.optional(),
+  hasComposerEnhancement: z.boolean().optional(),
+});
+
+// Export types derived from Zod schemas  
+export type GamblingInsightsType = z.infer<typeof gamblingInsightsSchema>;
+export type AlertResultType = z.infer<typeof alertResultSchema>;
+
 

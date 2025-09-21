@@ -1,3 +1,8 @@
+import type { AlertResult } from '../../../shared/schema';
+
+// Re-export for backward compatibility
+export type { AlertResult };
+
 export interface GameState {
   gameId: string;
   sport: string;
@@ -8,14 +13,6 @@ export interface GameState {
   status: string;
   isLive: boolean;
   [key: string]: any; // Allow sport-specific fields
-}
-
-export interface AlertResult {
-  alertKey: string;
-  type: string;
-  message: string;
-  context: any;
-  priority: number;
 }
 
 // Base class for individual alert modules
