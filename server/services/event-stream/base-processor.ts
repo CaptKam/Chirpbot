@@ -232,6 +232,13 @@ export abstract class BaseProcessor implements IAlertProcessor {
   }
 
   /**
+   * Get processor configuration
+   */
+  getConfig(): ProcessorConfig {
+    return this.config;
+  }
+
+  /**
    * Health check - verify processor is working correctly
    */
   async healthCheck(): Promise<boolean> {
@@ -241,7 +248,7 @@ export abstract class BaseProcessor implements IAlertProcessor {
       const mockContext: ProcessorContext = this.createMockContext(mockGameState);
       
       const result = await this.processGameState(mockContext);
-      return result.success || result.error?.message.includes('disabled');
+      return result.success || (result.error instanceof Error && result.error.message.includes('disabled')) || false;
       
     } catch (error) {
       console.error(`❌ Health check failed for processor ${this.id}:`, error);
@@ -583,8 +590,8 @@ export class ProcessorManager {
    */
   async setAllEnabled(enabled: boolean): Promise<void> {
     const configUpdates = Array.from(this.processors.values()).map(async (processor) => {
-      const currentStats = processor.getStats();
-      await processor.configure({ ...currentStats, enabled } as ProcessorConfig);
+      const currentConfig = processor.getConfig();
+      await processor.configure({ ...currentConfig, enabled });
     });
     
     await Promise.all(configUpdates);
@@ -596,8 +603,8 @@ export class ProcessorManager {
    */
   async setShadowMode(shadowMode: boolean): Promise<void> {
     const configUpdates = Array.from(this.processors.values()).map(async (processor) => {
-      const currentStats = processor.getStats();
-      await processor.configure({ ...currentStats, shadowMode } as ProcessorConfig);
+      const currentConfig = processor.getConfig();
+      await processor.configure({ ...currentConfig, shadowMode });
     });
     
     await Promise.all(configUpdates);

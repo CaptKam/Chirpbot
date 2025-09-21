@@ -178,33 +178,24 @@ export class NBAProcessor extends BaseProcessor {
     const startTime = Date.now();
     
     try {
-      this.log('debug', `Processing game state change for game ${event.gameId}`);
+      this.log('debug', `Processing game state change for game ${event.payload.gameId}`);
       
       // Delegate to existing NBA engine for alert generation
-      const alerts = await this.nbaEngine.monitor(event.currentState);
+      const alerts = await this.nbaEngine.generateLiveAlerts(event.payload.currentState);
       
       const filteredAlerts: AlertResult[] = [];
       
       // Apply deduplication and cooldown logic
       for (const alert of alerts) {
-        const alertKey = `${event.gameId}_${alert.type}_${alert.message}`;
+        const alertKey = `${event.payload.gameId}_${alert.type}_${alert.message}`;
         
-        if (!this.hasAlertBeenSent(event.gameId, alertKey)) {
+        if (!this.hasAlertBeenSent(event.payload.gameId, alertKey)) {
           filteredAlerts.push(alert);
-          this.markAlertSent(event.gameId, alertKey);
+          this.markAlertSent(event.payload.gameId, alertKey);
           
-          // Emit alert generated event
-          if (context.eventBus) {
-            context.eventBus.emit('alertGenerated', {
-              type: 'alertGenerated',
-              alertId: alertKey,
-              gameId: event.gameId,
-              sport: this.sport,
-              alertType: alert.type,
-              alert: alert,
-              timestamp: Date.now(),
-              processor: this.id
-            });
+          // Alert generated event logging in shadow mode
+          if (this.config.shadowMode) {
+            this.log('debug', `Alert generated: ${alertKey}`);
           }
         }
       }
@@ -213,7 +204,7 @@ export class NBAProcessor extends BaseProcessor {
       
       // Shadow mode logging
       if (this.config.shadowMode) {
-        this.log('info', `[Shadow][nba_processor] Processed ${filteredAlerts.length} alerts for game ${event.gameId} in ${processingTime}ms`);
+        this.log('info', `[Shadow][nba_processor] Processed ${filteredAlerts.length} alerts for game ${event.payload.gameId} in ${processingTime}ms`);
         
         if (filteredAlerts.length > 0) {
           this.log('info', `[Shadow][nba_processor] Alert types: ${filteredAlerts.map(a => a.type).join(', ')}`);
@@ -222,11 +213,10 @@ export class NBAProcessor extends BaseProcessor {
 
       return {
         success: true,
-        processed: true,
-        alertsGenerated: filteredAlerts.length,
+        alerts: filteredAlerts,
         processingTimeMs: processingTime,
         metadata: {
-          gameId: event.gameId,
+          gameId: event.payload.gameId,
           sport: this.sport,
           engineUsed: 'NBAEngine',
           shadowMode: this.config.shadowMode,
@@ -241,12 +231,11 @@ export class NBAProcessor extends BaseProcessor {
       
       return {
         success: false,
-        processed: false,
-        alertsGenerated: 0,
+        alerts: [],
         processingTimeMs: processingTime,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error : new Error('Unknown error'),
         metadata: {
-          gameId: event.gameId,
+          gameId: event.payload.gameId,
           sport: this.sport,
           errorDetails: error
         }
@@ -260,17 +249,16 @@ export class NBAProcessor extends BaseProcessor {
   async processAlertGenerated(event: AlertGeneratedEvent, context: ProcessorContext): Promise<ProcessorResult> {
     // In shadow mode, we can use this to compare our results with legacy system
     if (this.config.shadowMode) {
-      this.log('debug', `[Shadow][nba_processor] Received alert: ${event.alertType} for game ${event.gameId}`);
+      this.log('debug', `[Shadow][nba_processor] Received alert: ${event.payload.alertResult.type} for game ${event.payload.gameId}`);
     }
 
     return {
       success: true,
-      processed: true,
-      alertsGenerated: 0,
+      alerts: [],
       processingTimeMs: 0,
       metadata: {
-        gameId: event.gameId,
-        alertType: event.alertType,
+        gameId: event.payload.gameId,
+        alertType: event.payload.alertResult.type,
         shadowMode: this.config.shadowMode
       }
     };
@@ -313,7 +301,7 @@ export class NBAProcessor extends BaseProcessor {
   protected async generateAlerts(gameState: GameState, context: ProcessorContext): Promise<AlertResult[]> {
     try {
       // Delegate to existing NBA engine for alert generation
-      const alerts = await this.nbaEngine.monitor(gameState);
+      const alerts = await this.nbaEngine.generateLiveAlerts(gameState);
       
       // Apply deduplication and cooldown logic
       const filteredAlerts: AlertResult[] = [];

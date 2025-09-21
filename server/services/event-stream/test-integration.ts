@@ -106,7 +106,8 @@ export class EventStreamIntegrationTest {
       this.addTestResult('legacy_bridge_init', true, 'Legacy bridge initialized successfully');
       
     } catch (error) {
-      this.addTestResult('initialization', false, `Initialization failed: ${error.message}`);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.addTestResult('initialization', false, `Initialization failed: ${errorMsg}`);
       throw error;
     }
   }
@@ -136,7 +137,8 @@ export class EventStreamIntegrationTest {
         bridgeShadowMode ? 'Bridge is in shadow mode' : 'Bridge is not in shadow mode');
       
     } catch (error) {
-      this.addTestResult('shadow_mode', false, `Shadow mode test failed: ${error.message}`);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.addTestResult('shadow_mode', false, `Shadow mode test failed: ${errorMsg}`);
     }
   }
 
@@ -197,7 +199,8 @@ export class EventStreamIntegrationTest {
         healthCheck ? 'MLB processor health check passed' : 'MLB processor health check failed');
       
     } catch (error) {
-      this.addTestResult('mlb_processor', false, `MLB processor test failed: ${error.message}`);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.addTestResult('mlb_processor', false, `MLB processor test failed: ${errorMsg}`);
     }
   }
 
@@ -237,7 +240,8 @@ export class EventStreamIntegrationTest {
         isHealthy ? 'Circuit breaker is healthy' : 'Circuit breaker is unhealthy');
       
     } catch (error) {
-      this.addTestResult('circuit_breaker', false, `Circuit breaker test failed: ${error.message}`);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.addTestResult('circuit_breaker', false, `Circuit breaker test failed: ${errorMsg}`);
     }
   }
 
@@ -313,7 +317,8 @@ export class EventStreamIntegrationTest {
       this.addTestResult('event_flow', true, 'Event flow test completed (shadow mode - no alerts expected)');
       
     } catch (error) {
-      this.addTestResult('event_flow', false, `Event flow test failed: ${error.message}`);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.addTestResult('event_flow', false, `Event flow test failed: ${errorMsg}`);
     }
   }
 
@@ -348,7 +353,8 @@ export class EventStreamIntegrationTest {
         bridgeHealth ? 'Legacy bridge is healthy' : 'Legacy bridge health check failed');
       
     } catch (error) {
-      this.addTestResult('health_checks', false, `Health check test failed: ${error.message}`);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.addTestResult('health_checks', false, `Health check test failed: ${errorMsg}`);
     }
   }
 

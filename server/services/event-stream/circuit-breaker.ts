@@ -18,9 +18,16 @@ import type {
   CircuitBreakerState, 
   CircuitBreakerStats, 
   CircuitBreakerConfig,
-  CircuitBreakerEvent,
-  CircuitBreakerOpenError
+  CircuitBreakerEvent
 } from './types';
+
+// Define CircuitBreakerOpenError class
+export class CircuitBreakerOpenError extends Error {
+  constructor(public readonly circuitName: string, public readonly retryTime: number) {
+    super(`Circuit breaker '${circuitName}' is open. Retry after ${new Date(retryTime).toISOString()}`);
+    this.name = 'CircuitBreakerOpenError';
+  }
+}
 
 export interface CircuitBreakerOptions extends CircuitBreakerConfig {
   name: string;
@@ -58,8 +65,7 @@ export class CircuitBreaker extends EventEmitter {
       recoveryTimeoutMs: options.recoveryTimeoutMs || 30000,
       monitoringWindowMs: options.monitoringWindowMs || 60000,
       minimumRequests: options.minimumRequests || 10,
-      errorRateThreshold: options.errorRateThreshold || 0.5,
-      ...options
+      errorRateThreshold: options.errorRateThreshold || 0.5
     };
     
     console.log(`🔧 Circuit Breaker initialized: ${this.name} (sport: ${this.sport})`);

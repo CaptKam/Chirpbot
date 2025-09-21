@@ -275,7 +275,7 @@ export class MLBProcessor extends BaseProcessor {
             gameState.currentBatter,
             gameState.isTopInning ? gameState.awayTeam : gameState.homeTeam,
             {
-              type: outcome.type,
+              type: outcome.type as 'double' | 'out' | 'hit' | 'walk' | 'strikeout' | 'homerun' | 'triple',
               inning: inning,
               pitcher: gameState.currentPitcher || 'Unknown',
               pitchCount: gameState.pitchCount || 0,
@@ -298,7 +298,7 @@ export class MLBProcessor extends BaseProcessor {
             gameState.currentPitcher,
             gameState.isTopInning ? gameState.homeTeam : gameState.awayTeam,
             {
-              type: pitchOutcome.type,
+              type: pitchOutcome.type as 'strike' | 'hit' | 'homerun' | 'ball' | 'foul',
               velocity: pitchOutcome.velocity,
               batter: gameState.currentBatter || 'Unknown',
               inning: inning,
