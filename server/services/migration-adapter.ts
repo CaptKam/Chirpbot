@@ -1632,17 +1632,18 @@ export class MigrationAdapter {
       // DataIngestionIntegration is already started during initialization
       console.log('✅ MigrationAdapter: DataIngestionIntegration confirmed running');
 
-      // Start OutputRouter if enabled
+      // Setup and start OutputRouter if enabled
       if (this.outputRouter && this.config.enableOutputRouter) {
-        await this.outputRouter.start();
-        
-        // Connect services to OutputRouter
+        // Connect services to OutputRouter BEFORE starting
         if (this.calendarSyncService) {
-          this.outputRouter.subscribeToCalendarSync(this.calendarSyncService);
+          this.outputRouter.setCalendarSyncService(this.calendarSyncService);
         }
         if (this.dataIngestionIntegration) {
-          this.outputRouter.subscribeToDataIngestion(this.dataIngestionIntegration);
+          this.outputRouter.setDataIngestionService(this.dataIngestionIntegration);
         }
+        
+        // Now start the OutputRouter with services connected
+        await this.outputRouter.start();
         
         console.log('✅ MigrationAdapter: OutputRouter started and connected to services');
       }
