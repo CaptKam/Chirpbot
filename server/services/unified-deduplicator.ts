@@ -19,6 +19,14 @@ interface AlertKey {
   bases?: string;
   batter?: string;
   paId?: string;
+  // Enhanced context fields for better deduplication
+  homeScore?: number;
+  awayScore?: number;
+  quarter?: number;
+  timeRemaining?: string;
+  fieldPosition?: string;
+  possession?: string;
+  timestamp?: number;
 }
 
 interface CachedAlert {
@@ -102,9 +110,9 @@ export class UnifiedDeduplicator {
   private sweepTimer!: NodeJS.Timeout;
 
   constructor(options: UnifiedDedupOptions = {}) {
-    // Alert dedup settings
-    this.alertCleanupInterval = options.alertCleanupInterval || 30000;
-    this.alertMaxAge = options.alertMaxAge || 30000;
+    // Alert dedup settings - Increased to 2 minutes for better coverage
+    this.alertCleanupInterval = options.alertCleanupInterval || 60000; // Check every minute
+    this.alertMaxAge = options.alertMaxAge || 120000; // 2 minutes window
     
     // Request dedup settings
     this.requestCacheTTL = options.requestCacheTTL || 5000;
@@ -143,14 +151,31 @@ export class UnifiedDeduplicator {
   // === ALERT DEDUPLICATION METHODS ===
 
   buildAlertDedupKey(alert: AlertKey): string {
-    const basesHash = [
-      alert.bases || '',
+    // Build a more specific key including scores and time context
+    const contextParts = [
+      alert.gameId,
+      alert.type,
+      alert.inning || alert.quarter || 0,
+      alert.half || '',
       alert.outs || 0,
-      alert.inning || 0,
-      alert.half || ''
-    ].join(':');
+      alert.bases || '',
+      alert.batter || '',
+      alert.paId || '',
+      // Add score context to detect score changes
+      alert.homeScore !== undefined ? `h${alert.homeScore}` : '',
+      alert.awayScore !== undefined ? `a${alert.awayScore}` : '',
+      // Add time context for time-sensitive sports
+      alert.timeRemaining || '',
+      alert.fieldPosition || '',
+      alert.possession || ''
+    ].filter(p => p !== ''); // Remove empty parts
 
-    return `alert:${alert.gameId}:${alert.type}:${alert.inning}:${alert.half}:${alert.outs}:${basesHash}:${alert.batter}:${alert.paId}`;
+    const key = `alert:${contextParts.join(':')}`;
+    
+    // Debug log the key generation
+    console.log(`🔑 DEDUP KEY: ${key}`);
+    
+    return key;
   }
 
   shouldSendAlert(
@@ -161,52 +186,131 @@ export class UnifiedDeduplicator {
     const now = Date.now();
     const cached = this.alertCache.get(key);
 
+    // First occurrence - always allow
     if (!cached) {
-      console.log(`🟢 UNIFIED DEDUP: Allowing first occurrence of ${alertKey.type} for game ${alertKey.gameId}`);
+      console.log(`✅ DEDUP: First occurrence of ${alertKey.type} for game ${alertKey.gameId}`);
+      console.log(`   📊 Context: Score ${alertKey.homeScore || 0}-${alertKey.awayScore || 0}, Inning/Q ${alertKey.inning || alertKey.quarter || 0}`);
       this.alertCache.set(key, {
         timestamp: now,
         count: 1,
         tier,
-        lastContext: alertKey
+        lastContext: { ...alertKey, timestamp: now }
       });
       return true;
     }
 
-    // Check if this is truly the same event
-    const isDuplicateEvent = (
+    // Calculate time since last alert
+    const timeSinceFirst = now - cached.timestamp;
+    const minutesSince = Math.floor(timeSinceFirst / 60000);
+    const secondsSince = Math.floor((timeSinceFirst % 60000) / 1000);
+
+    // Enhanced duplicate detection with multiple checks
+    const isSameGameState = (
       cached.lastContext.paId === alertKey.paId &&
       cached.lastContext.batter === alertKey.batter &&
       cached.lastContext.inning === alertKey.inning &&
+      cached.lastContext.quarter === alertKey.quarter &&
       cached.lastContext.half === alertKey.half &&
-      cached.lastContext.outs === alertKey.outs
+      cached.lastContext.outs === alertKey.outs &&
+      cached.lastContext.bases === alertKey.bases &&
+      cached.lastContext.homeScore === alertKey.homeScore &&
+      cached.lastContext.awayScore === alertKey.awayScore &&
+      cached.lastContext.timeRemaining === alertKey.timeRemaining
     );
 
-    if (!isDuplicateEvent) {
-      console.log(`🟢 UNIFIED DEDUP: Allowing ${alertKey.type} - different context (new PA/batter)`);
+    // Block if exact same game state within 30 seconds
+    if (isSameGameState && timeSinceFirst < 30000) {
+      console.log(`🚫 DEDUP: Blocking duplicate ${alertKey.type} - exact same game state`);
+      console.log(`   ⏱️  Time since last: ${secondsSince}s`);
+      console.log(`   📊 Duplicate count: ${cached.count + 1} for this key`);
+      return false;
+    }
+
+    // Check if significant context has changed
+    const hasScoreChanged = (
+      cached.lastContext.homeScore !== alertKey.homeScore ||
+      cached.lastContext.awayScore !== alertKey.awayScore
+    );
+    
+    const hasTimeChanged = (
+      cached.lastContext.timeRemaining !== alertKey.timeRemaining &&
+      alertKey.timeRemaining // Only if time is actually provided
+    );
+    
+    const hasInningChanged = (
+      cached.lastContext.inning !== alertKey.inning ||
+      cached.lastContext.quarter !== alertKey.quarter ||
+      cached.lastContext.half !== alertKey.half
+    );
+
+    // Allow if significant change occurred
+    if (hasScoreChanged || hasInningChanged) {
+      console.log(`✅ DEDUP: Allowing ${alertKey.type} - significant change detected`);
+      console.log(`   📊 Score changed: ${hasScoreChanged}, Inning changed: ${hasInningChanged}`);
+      console.log(`   ⏱️  Time since last: ${minutesSince}m ${secondsSince}s`);
+      
+      // Update cache with new context
       this.alertCache.set(key, {
         timestamp: now,
         count: cached.count + 1,
         tier,
-        lastContext: alertKey
+        lastContext: { ...alertKey, timestamp: now }
       });
       return true;
     }
 
-    // Same event within 2 seconds = true duplicate, block it
-    const timeSinceFirst = now - cached.timestamp;
-    if (timeSinceFirst < 2000) {
-      console.log(`🔴 UNIFIED DEDUP: Blocking duplicate ${alertKey.type} - same event within 2s`);
-      return false;
+    // For time-sensitive alerts, allow if enough time has passed
+    const minTimeBetweenAlerts = this.getMinTimeBetweenAlerts(alertKey.type, tier);
+    if (timeSinceFirst >= minTimeBetweenAlerts) {
+      console.log(`✅ DEDUP: Allowing ${alertKey.type} - sufficient time passed`);
+      console.log(`   ⏱️  Time since last: ${minutesSince}m ${secondsSince}s (min: ${minTimeBetweenAlerts / 1000}s)`);
+      
+      this.alertCache.set(key, {
+        timestamp: now,
+        count: cached.count + 1,
+        tier,
+        lastContext: { ...alertKey, timestamp: now }
+      });
+      return true;
     }
 
-    console.log(`🟢 UNIFIED DEDUP: Allowing ${alertKey.type} - same event but >2s later`);
-    this.alertCache.set(key, {
-      timestamp: now,
-      count: cached.count + 1,
-      tier,
-      lastContext: alertKey
-    });
-    return true;
+    // Default: Block the duplicate
+    console.log(`🚫 DEDUP: Blocking ${alertKey.type} - too soon since last alert`);
+    console.log(`   ⏱️  Time since last: ${minutesSince}m ${secondsSince}s`);
+    console.log(`   📊 Total duplicates blocked: ${cached.count}`);
+    return false;
+  }
+
+  // Helper method to determine minimum time between alerts based on type
+  private getMinTimeBetweenAlerts(alertType: string, tier: string): number {
+    // Weather alerts need longer gaps
+    if (alertType.toLowerCase().includes('weather') || alertType.toLowerCase().includes('wind')) {
+      return 60000; // 1 minute for weather changes
+    }
+    
+    // Game start/end events
+    if (alertType.toLowerCase().includes('start') || alertType.toLowerCase().includes('final')) {
+      return 120000; // 2 minutes for game phase changes
+    }
+    
+    // Critical moments need shorter gaps
+    if (alertType.toLowerCase().includes('red_zone') || alertType.toLowerCase().includes('two_minute')) {
+      return 15000; // 15 seconds for critical situations
+    }
+    
+    // Default based on tier
+    switch (tier) {
+      case 'plate-appearance':
+        return 10000; // 10 seconds
+      case 'half-inning':
+        return 30000; // 30 seconds
+      case 'full-inning':
+        return 60000; // 1 minute
+      case 'game':
+        return 120000; // 2 minutes
+      default:
+        return 20000; // 20 seconds default
+    }
   }
 
   // === REQUEST DEDUPLICATION METHODS ===
@@ -455,16 +559,42 @@ export class UnifiedDeduplicator {
   private cleanupAlerts(): void {
     const now = Date.now();
     let deleted = 0;
+    let kept = 0;
 
+    // More aggressive cleanup - remove old entries
     for (const [key, alert] of Array.from(this.alertCache.entries())) {
-      if (now - alert.timestamp > this.alertMaxAge) {
+      const age = now - alert.timestamp;
+      
+      // Remove entries older than the max age (2 minutes)
+      if (age > this.alertMaxAge) {
         this.alertCache.delete(key);
         deleted++;
+      } else {
+        kept++;
       }
     }
     
-    if (deleted > 0) {
-      console.log(`🧹 UNIFIED DEDUP: Cleaned ${deleted} expired alert entries`);
+    // Log cleanup results
+    if (deleted > 0 || kept > 10) {
+      console.log(`🧹 DEDUP CLEANUP: Removed ${deleted} expired entries, kept ${kept} active`);
+      
+      // If cache is getting large, be more aggressive
+      if (kept > 100) {
+        console.log(`⚠️  DEDUP: Cache size large (${kept}), consider reducing alert frequency`);
+        // Remove oldest 25% of entries if cache is too large
+        const entries = Array.from(this.alertCache.entries())
+          .sort((a, b) => a[1].timestamp - b[1].timestamp);
+        const toRemove = Math.floor(entries.length * 0.25);
+        
+        for (let i = 0; i < toRemove; i++) {
+          this.alertCache.delete(entries[i][0]);
+          deleted++;
+        }
+        
+        if (toRemove > 0) {
+          console.log(`🧹 DEDUP: Aggressively cleaned ${toRemove} oldest entries`);
+        }
+      }
     }
   }
 
@@ -564,9 +694,9 @@ export class UnifiedDeduplicator {
 
 // Create singleton instance for sports alerts
 export const unifiedDeduplicator = new UnifiedDeduplicator({
-  // Alert settings optimized for sports
-  alertCleanupInterval: 30000,
-  alertMaxAge: 30000,
+  // Alert settings optimized for sports - 2 minute window
+  alertCleanupInterval: 60000, // Cleanup every minute
+  alertMaxAge: 120000, // Keep alerts for 2 minutes
   
   // Request settings for API efficiency
   requestCacheTTL: 5000,
