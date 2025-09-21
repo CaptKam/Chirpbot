@@ -3,6 +3,8 @@
  * Ensures consistent display across all alert card components
  */
 
+import { cleanAlertFormatter } from './clean-alert-formatter';
+
 /**
  * Extract the first sentence from a long text for concise display
  * Handles multiple sentence ending patterns (. ! ? :)
@@ -57,63 +59,22 @@ export interface AlertData {
 
 /**
  * Get the primary message to display in alert cards
- * Priority order:
- * 1. Alert Composer enhanced content (V3 format)
- * 2. AI-enhanced content
- * 3. Direct message fields  
- * 4. Fallback to basic text
+ * Simple approach:
+ * 1. Check for pre-formatted displayMessage
+ * 2. If not, format using clean formatter
+ * 3. Return the clean, formatted result
  */
 export function getPrimaryMessage(alert: AlertData): string {
-  // Try Alert Composer V3 format first (highest priority)
   const alertAny = alert as any;
-  if (alertAny.headline) return alertAny.headline;
-  if (alertAny.displayText) return alertAny.displayText;
-  if (alertAny.mobileText) return alertAny.mobileText;
-  if (alertAny.timing?.whyNow) return alertAny.timing.whyNow;
-  if (alertAny.action?.primaryAction) return alertAny.action.primaryAction;
   
-  // Try AI-enhanced content
-  if (alert.ai?.primary) return alert.ai.primary;
-  if (alert.ai?.enhancedMessage) return alert.ai.enhancedMessage;
-  if (alert.ai?.enhancedTitle) return alert.ai.enhancedTitle;
-  if (alert.ai?.aiRecommendation) return alert.ai.aiRecommendation;
-  
-  // Try context AI fields
-  if (alert.context?.aiMessage) return alert.context.aiMessage;
-  if (alert.context?.aiTitle) return alert.context.aiTitle;
-  if (alert.context?.aiRecommendation) return alert.context.aiRecommendation;
-  if (alert.context?.enhancedMessage) return alert.context.enhancedMessage;
-  
-  // Try direct message fields (normalized by backend)
-  if (alert.primary) return alert.primary;
-  if (alert.message) return alert.message;
-  if (alert.title) return alert.title;
-  
-  // Try payload fields with better parsing
-  if (alert.payload) {
-    let payload = alert.payload;
-    if (typeof payload === 'string') {
-      try {
-        payload = JSON.parse(payload);
-      } catch {
-        return String(payload); // If it's a string that's not JSON, use it directly
-      }
-    }
-    
-    if (typeof payload === 'object' && payload !== null) {
-      const payloadObj = payload as any;
-      if (payloadObj.headline) return payloadObj.headline;
-      if (payloadObj.displayText) return payloadObj.displayText;
-      if (payloadObj.primary) return payloadObj.primary;
-      if (payloadObj.message) return payloadObj.message;
-      if (payloadObj.title) return payloadObj.title;
-    }
+  // First check if alert has a pre-formatted displayMessage
+  if (alertAny.displayMessage) {
+    return alertAny.displayMessage;
   }
   
-  // Final fallback - construct from alert type
-  const type = alertAny.type || 'GAME_ALERT';
-  const sport = alertAny.sport || 'GAME';
-  return `${sport} ${type.replace(/_/g, ' ')} Alert`;
+  // If not, format it using the clean formatter
+  const formatted = cleanAlertFormatter.format(alertAny);
+  return formatted.primary;
 }
 
 /**
@@ -147,9 +108,17 @@ export function cleanMessage(message: string): string {
 }
 
 /**
- * Get display content prioritizing gambling insights structured template
+ * Get display content using simplified approach
  */
 export function getDisplayContent(alert: any): { content: string; isStructured: boolean } {
+  // First check for pre-formatted displayMessage
+  if (alert.displayMessage) {
+    return {
+      content: alert.displayMessage,
+      isStructured: false
+    };
+  }
+  
   // Priority 1: Gambling insights structured template (preserves emojis)
   if (alert.gamblingInsights?.structuredTemplate?.trim()) {
     return {
@@ -166,11 +135,10 @@ export function getDisplayContent(alert: any): { content: string; isStructured: 
     };
   }
   
-  // Priority 3: Extract first sentence for concise display (recommended by architect)
-  const primaryMessage = getPrimaryMessage(alert);
-  const cleanedMessage = cleanMessage(primaryMessage);
+  // Use clean formatter for consistent, concise display
+  const formatted = cleanAlertFormatter.format(alert);
   return {
-    content: extractFirstSentence(cleanedMessage),
+    content: formatted.primary,
     isStructured: false
   };
 }
