@@ -621,9 +621,36 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const usersMonitoring = await storage.getUsersMonitoringGame(gameId);
       console.log(`👥 Found ${usersMonitoring.length} users monitoring game ${gameId}`);
       
-      // If no users are monitoring this game, skip saving the alert
+      // FIXED: Always save enhanced alerts with gambling insights to database
+      // Only skip user-specific deliveries if no users are monitoring
       if (usersMonitoring.length === 0) {
-        console.log(`⚠️ No users monitoring game ${gameId}, skipping alert save`);
+        console.log(`⚠️ No users monitoring game ${gameId}, skipping user deliveries but saving enhanced alert for analytics`);
+        
+        // Save the enhanced alert without user association for data completeness
+        try {
+          await storage.createAlert({
+            alertKey: alert.alertKey,
+            userId: null, // No user association for unmonitored alerts
+            sport: sport as any,
+            gameId: gameId,
+            type: alert.type,
+            state: 'active',
+            score: (alert as any).confidence || alert.priority || 80,
+            payload: JSON.stringify({
+              message: alert.message,
+              priority: alert.priority,
+              type: alert.type,
+              gameId: gameId,
+              context: (alert as any).context || {},
+              timestamp: new Date().toISOString(),
+              gamblingInsights: alert.gamblingInsights || null,
+              hasComposerEnhancement: alert.hasComposerEnhancement || false
+            })
+          });
+          console.log(`✅ Enhanced alert saved to database for analytics: ${alert.alertKey}`);
+        } catch (saveError) {
+          console.error(`❌ Failed to save enhanced alert:`, saveError);
+        }
         return;
       }
       
