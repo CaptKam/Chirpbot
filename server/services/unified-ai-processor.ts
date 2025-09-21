@@ -802,41 +802,39 @@ export class UnifiedAIProcessor {
     const teams = `${context.awayTeam} vs ${context.homeTeam}`;
     const score = `${context.awayScore}-${context.homeScore}`;
     
-    // Ultra-concise prompt for ONE-LINE output only
-    const basePrompt = `Generate ONE ultra-concise betting insight line only (≤100 chars). Use format: "💎 [key situation] ([probability%]) ${teams} - [context]"
+    // Balanced middle-ground prompt for concise but informative format
+    const basePrompt = `Generate a concise sports betting insight (150-250 characters). Provide enough detail to be informative but avoid verbose paragraphs. Focus on key game situation and betting implications.
 
-CRITICAL: Output exactly ONE line only. No explanations, no paragraphs, no multiple sentences.
+FORMAT: Start with relevant emoji, include key stats/context, end with actionable insight.
+STYLE: Conversational, informative, betting-focused without being overly technical.
 
 GAME: ${teams} (${score})
 ALERT: ${context.alertType}
 ORIGINAL: ${context.originalMessage}`;
 
-    // Add sport-specific ultra-concise requirements
+    // Add sport-specific middle-ground format examples
     switch (context.sport) {
       case 'MLB':
         return `${basePrompt}
-FORMAT: "💎 [base state] ([run probability%]) ${teams} - [outs] out"
 CONTEXT: Inning ${context.inning || 1}, ${context.outs || 0} outs, Count ${context.balls || 0}-${context.strikes || 0}
-EXAMPLE: "💎 Runners 1st & 2nd (42%) LAD vs SF - 2 out"`;
+EXAMPLE: "⚾ Runners on 1st & 2nd with 2 outs in the 7th - clutch hitting situation developing. This setup favors aggressive baserunning and could spark a rally."`;
 
       case 'NFL':
       case 'NCAAF':
       case 'CFL':
         return `${basePrompt}
-FORMAT: "💎 [down & distance] ([TD probability%]) ${teams} - [possession] ball"
 CONTEXT: Q${context.quarter || 1}, ${context.timeRemaining || 'Live'}, ${context.down ? `${this.getOrdinal(context.down)} & ${context.yardsToGo}` : 'Live'}
-EXAMPLE: "💎 3rd & 8 (TD 42%) NYJ vs BUF - BUF ball"`;
+EXAMPLE: "🏈 3rd & 8 at the 35-yard line with 5:42 left in Q4 - critical conversion attempt. Defense likely expecting pass, creating opportunity for draw play."`;
 
       case 'NBA':
       case 'WNBA':
         return `${basePrompt}
-FORMAT: "💎 [quarter] [time] ([win probability%]) ${teams} - [margin]"
 CONTEXT: ${context.timeLeft || 'Live'} remaining, Score differential
-EXAMPLE: "💎 Q4 2:13 (WP 58%) LAL vs BOS - 1pt lead"`;
+EXAMPLE: "🏀 Lakers trail by 1 with 2:13 left in Q4 - crunch time possession coming up. Both teams in bonus, expect aggressive defense and potential fouling strategy."`;
 
       default:
         return `${basePrompt}
-Generate exactly one ultra-concise line starting with 💎 emoji.`;
+Generate a balanced insight that's informative but concise (150-250 characters).`;
     }
   }
 
