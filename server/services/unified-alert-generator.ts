@@ -187,6 +187,7 @@ export class UnifiedAlertGenerator {
       this.gameStateManager.setEngineLifecycleManager(this.engineLifecycleManager);
       this.gameStateManager.setCalendarSyncService(this.calendarSyncService);
       this.gameStateManager.setWeatherOnLiveService(this.weatherOnLiveService);
+      this.gameStateManager.setGamblingInsightsComposer(this.gamblingInsightsComposer);
 
       // Connect CalendarSyncService to GameStateManager for state transitions
       this.calendarSyncService.setGameStateManager(this.gameStateManager);

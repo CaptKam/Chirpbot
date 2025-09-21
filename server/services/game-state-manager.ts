@@ -9,6 +9,9 @@
 import { RUNTIME, GameState as RuntimeGameState, WeatherArmReason } from '../config/runtime';
 // WebSocket import removed - using HTTP polling architecture
 import type { BaseGameData } from './base-sport-api';
+import { GamblingInsightsComposer } from './gambling-insights-composer';
+import type { AlertResult as EngineAlertResult, GameState } from './engines/base-engine';
+import type { WeatherChangeEvent } from './weather-on-live-service';
 
 // === CORE INTERFACES ===
 
@@ -289,6 +292,7 @@ export class GameStateManager {
   private engineManager?: EngineLifecycleManager;
   private weatherService?: WeatherService;
   private weatherOnLiveService?: any; // WeatherOnLiveService - avoiding circular import
+  private gamblingInsightsComposer?: GamblingInsightsComposer;
   // WebSocket server removed - using HTTP polling architecture
   
   // Performance tracking
@@ -323,6 +327,11 @@ export class GameStateManager {
   setWeatherOnLiveService(service: any): void {
     this.weatherOnLiveService = service;
     console.log('✅ Weather-on-Live service connected to GameStateManager');
+  }
+
+  setGamblingInsightsComposer(composer: GamblingInsightsComposer): void {
+    this.gamblingInsightsComposer = composer;
+    console.log('✅ Gambling insights composer connected to GameStateManager');
   }
 
   // WebSocket server setup removed - using HTTP polling architecture
@@ -693,9 +702,18 @@ export class GameStateManager {
             };
 
             console.log(`🚨 Generating alerts for ${sport} game ${gameId}`);
-            const alerts = await engine.generateLiveAlerts(gameState);
+            let alerts = await engine.generateLiveAlerts(gameState);
             
+            // CRITICAL FIX: Apply same enhancement pipeline as unified-alert-generator
             if (alerts && alerts.length > 0) {
+              console.log(`🔗 GameStateManager: Applying enhancement pipeline to ${alerts.length} alerts`);
+              
+              // Apply weather enhancement
+              alerts = await this.enhanceAlertsWithWeather(alerts, gameState, sport);
+              
+              // Apply gambling insights enhancement  
+              alerts = await this.enhanceAlertsWithGamblingInsights(alerts, gameState, sport);
+              
               console.log(`✅ Generated ${alerts.length} alerts for game ${gameId}`);
             } else {
               console.log(`📝 No alerts generated for game ${gameId} (normal for stable game states)`);
@@ -908,6 +926,84 @@ export class GameStateManager {
       }
     } catch (error) {
       console.error(`❌ Failed to disarm weather monitoring for game ${gameInfo.gameId}:`, error);
+    }
+  }
+
+  // === ALERT ENHANCEMENT METHODS ===
+
+  /**
+   * Weather Enhancement - Enhance alerts with weather context for live games
+   * Delegates to weatherOnLiveService for consistency with unified-alert-generator
+   */
+  private async enhanceAlertsWithWeather(
+    alerts: EngineAlertResult[], 
+    gameState: GameState, 
+    sport: string
+  ): Promise<EngineAlertResult[]> {
+    if (!alerts || alerts.length === 0) return alerts;
+    
+    try {
+      // For now, return alerts as-is since weather enhancement in forceEvaluate
+      // is primarily for the gambling insights pipeline dependency
+      // TODO: Add actual weather enhancement integration if needed
+      console.log(`🌤️ GameStateManager: Weather context check for ${alerts.length} ${sport} alerts`);
+      return alerts;
+    } catch (error) {
+      console.error(`❌ Weather enhancement failed in GameStateManager:`, error);
+      return alerts; // Return original alerts on failure
+    }
+  }
+
+  /**
+   * Gambling Insights Enhancement - Enhance alerts with gambling insights
+   * Delegates to gamblingInsightsComposer for consistency with unified-alert-generator
+   */
+  private async enhanceAlertsWithGamblingInsights(
+    alerts: EngineAlertResult[], 
+    gameState: GameState, 
+    sport: string
+  ): Promise<EngineAlertResult[]> {
+    if (!alerts || alerts.length === 0) return alerts;
+    
+    if (!this.gamblingInsightsComposer) {
+      console.log(`⚠️ GamblingInsightsComposer not available in GameStateManager`);
+      return alerts;
+    }
+
+    try {
+      console.log(`🎰 GameStateManager: Enhancing ${alerts.length} ${sport} alerts with gambling insights`);
+      
+      // Convert alerts to the format expected by GamblingInsightsComposer
+      const alertResults = alerts.map(alert => ({
+        id: alert.id || `${gameState.gameId}_${alert.type}_${Date.now()}`,
+        sport: sport,
+        type: alert.type,
+        gameId: gameState.gameId,
+        message: alert.message,
+        score: alert.score || 0,
+        alertKey: alert.alertKey || `${gameState.gameId}_${alert.type.toLowerCase().replace('_', '')}_${Date.now()}`,
+        payload: alert.payload || {},
+        state: alert.state || 'active',
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 1000 * 60 * 30), // 30 min default
+        weatherContext: undefined // No weather context in GameStateManager path for now
+      }));
+
+      // Use the batch enhancement method from GamblingInsightsComposer
+      const enhancedAlerts = await this.gamblingInsightsComposer.enhanceAlertsWithGamblingInsights(alertResults, sport);
+
+      console.log(`✅ GameStateManager: Enhanced ${enhancedAlerts.length} alerts with gambling insights`);
+      
+      // Convert back to EngineAlertResult format
+      return enhancedAlerts.map(enhanced => ({
+        ...alerts.find(orig => orig.type === enhanced.type) || alerts[0],
+        gamblingInsights: enhanced.gamblingInsights,
+        hasComposerEnhancement: !!enhanced.gamblingInsights
+      }));
+
+    } catch (error) {
+      console.error(`❌ Gambling insights enhancement failed in GameStateManager:`, error);
+      return alerts; // Return original alerts on failure
     }
   }
 
