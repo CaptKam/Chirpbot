@@ -4,6 +4,16 @@ ChirpBot V3 is an advanced multi-sport intelligence platform providing real-time
 
 # Recent Changes
 
+## September 22, 2025 - MAJOR V3 ARCHITECTURE CLEANUP COMPLETED ✅
+- **LEGACY SYSTEMS REMOVED:** Eliminated entire event-stream directory with 12 duplicate processor files that were creating parallel event processing
+- **SHADOW MODE ELIMINATED:** Removed LegacyBridge initialization and dual-write architecture that was causing duplicate alerts and verbose outputs
+- **SINGLE DATA SYSTEM:** CalendarSyncService now established as the sole unified data ingestion system across all 6 sports leagues
+- **CONFLICT RESOLUTION:** Removed event-comparison-system.ts, output-router.ts, and 9 legacy test files from previous versions
+- **CLEAN V3 ARCHITECTURE:** System now runs with zero conflicts - UnifiedAlertGenerator + Weather-on-Live + CalendarSyncService only
+- **PERFORMANCE IMPROVEMENT:** Eliminated duplicate processing that was causing toggle functionality issues and verbose alert formats
+- **VERIFIED STABLE:** All 6 sport engines (MLB, NFL, NCAAF, NBA, WNBA, CFL) running with "6 healthy, 0 errors" status
+- **TYPESCRIPT CLEAN:** All compilation errors resolved, system fully operational for clean, simple alert generation
+
 ## September 17, 2025 - MLB GAME START MODULE PERFECTED ✅
 - **CRITICAL FIX:** extractLastPlay and extractLastPitch methods added to MLBApiService to resolve TypeError crashes
 - **GAME START TIMING:** Now triggers exactly once at top of inning 1 with proper duplicate prevention
