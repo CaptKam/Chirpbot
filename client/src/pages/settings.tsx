@@ -116,10 +116,8 @@ export default function Settings() {
   const [testingOddsConnection, setTestingOddsConnection] = useState(false);
   const [oddsConnectionTestResult, setOddsConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
-  // Enhanced toggle management with status tracking
-  const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set());
-  const [toggleSuccess, setToggleSuccess] = useState<Map<string, boolean>>(new Map());
-  const [toggleErrors, setToggleErrors] = useState<Map<string, string>>(new Map());
+  // 🔧 COMPLETELY SIMPLIFIED: No more complex state management
+  const [currentlyMutating, setCurrentlyMutating] = useState(false);
 
   // Global settings query to check admin-disabled alerts (now available for ALL authenticated users)
   const { data: globalSettingsResponse, isLoading: globalSettingsLoading } = useQuery({
@@ -151,13 +149,10 @@ export default function Settings() {
     refetchInterval: false, // No automatic refetching - only manual invalidation
   });
 
-  // Clear pending toggles and status indicators when fresh data arrives from server
+  // 🔧 SIMPLIFIED: Clear mutation state when data loads
   useEffect(() => {
     if (!preferencesLoading && alertPreferences) {
-      // Clear all pending states when fresh data has arrived
-      setPendingToggles(new Set());
-      setToggleSuccess(new Map());
-      setToggleErrors(new Map());
+      setCurrentlyMutating(false);
     }
   }, [alertPreferences, preferencesLoading]);
 
@@ -226,10 +221,9 @@ export default function Settings() {
     },
   });
 
-  // Alert preferences mutation with optimistic updates
+  // 🔧 COMPLETELY SIMPLIFIED: No optimistic updates, no complex state management
   const updateAlertPreferenceMutation = useMutation({
     mutationFn: async ({ alertType, enabled }: { alertType: string; enabled: boolean }) => {
-      // Check if user is authenticated and has an ID
       if (!user?.id) {
         throw new Error('User not authenticated or ID missing');
       }
@@ -241,94 +235,25 @@ export default function Settings() {
       });
       return response.json();
     },
-    onMutate: async ({ alertType, enabled }) => {
-      // Use canonical query key
-      const queryKey = [prefKey];
-      await queryClient.cancelQueries({ queryKey });
-      
-      // Snapshot the previous value for potential rollback
-      const previousData = queryClient.getQueryData(queryKey);
-      
-      // 🔧 FIXED: Safer optimistic updates that preserve all existing preferences
-      queryClient.setQueryData(queryKey, (oldData: any) => {
-        // Always preserve existing data, even if it appears empty
-        // This prevents the race condition bug where rapid toggles lose all preferences
-        const currentData = Array.isArray(oldData) ? oldData : [];
-        
-        // Find existing preference for this alert type
-        const existingIndex = currentData.findIndex((pref: any) => pref.alertType === alertType);
-        
-        if (existingIndex >= 0) {
-          // Update existing preference while preserving all others
-          const newData = [...currentData];
-          newData[existingIndex] = { ...newData[existingIndex], enabled };
-          return newData;
-        } else {
-          // Add new preference while preserving all existing ones
-          return [...currentData, { alertType, enabled, sport: activeSport }];
-        }
-      });
-      
-      // Return context for potential rollback
-      return { previousData, alertType };
+    onSuccess: () => {
+      // Just refetch the data - no complex cache manipulation
+      queryClient.invalidateQueries({ queryKey: [prefKey] });
     },
-    onSuccess: (data, variables, context) => {
-      // Show success indicator
-      if (variables?.alertType) {
-        setToggleSuccess(prev => new Map(prev).set(variables.alertType, true));
-        
-        // Clear success indicator after 2 seconds
-        setTimeout(() => {
-          setToggleSuccess(prev => {
-            const newMap = new Map(prev);
-            newMap.delete(variables.alertType);
-            return newMap;
-          });
-        }, 2000);
-      }
-      
-      // 🔧 FIXED: Immediate cache invalidation without delay to prevent race conditions
-      // The artificial delay was creating windows for race conditions between multiple toggles
-      const queryKey = [prefKey];
-      queryClient.invalidateQueries({
-        queryKey: queryKey,
-        exact: true
-      });
-    },
-    onError: (error: any, variables, context) => {
-      // Rollback cache to previous state using canonical key
-      if (context?.previousData) {
-        const queryKey = [prefKey];
-        queryClient.setQueryData(queryKey, context.previousData);
-      }
-      
-      // 🚨 ENHANCED ERROR FEEDBACK: Show inline error indicator
-      if (variables?.alertType) {
-        const errorMessage = error?.message || error?.toString?.() || 'Update failed';
-        setToggleErrors(prev => new Map(prev).set(variables.alertType, errorMessage));
-        
-        // Clear error indicator after 5 seconds
-        setTimeout(() => {
-          setToggleErrors(prev => {
-            const newMap = new Map(prev);
-            newMap.delete(variables.alertType);
-            return newMap;
-          });
-        }, 5000);
-      }
-      
-      // Extract meaningful error message
-      const errorMessage = error?.message || error?.toString?.() || 'Unknown error occurred';
-      
-      // Only show toast for critical authentication errors
-      if (errorMessage.includes('401') || errorMessage.includes('not authenticated') || errorMessage.includes('ID missing')) {
+    onError: (error: any) => {
+      const errorMessage = error?.message || 'Update failed';
+      if (errorMessage.includes('401') || errorMessage.includes('not authenticated')) {
         toast({
           title: "Authentication Required",
           description: "Please log in to save your alert preferences.",
           variant: "destructive",
         });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update alert preference. Please try again.",
+          variant: "destructive",
+        });
       }
-      // Other errors show inline feedback instead of toast spam
     },
   });
 
@@ -480,77 +405,26 @@ export default function Settings() {
       return;
     }
 
-    // 🛡️ FIXED: Only check specific toggle pending state, not global mutation state
-    if (pendingToggles.has(alertType)) {
-      console.log(`⏸️ Blocking toggle for ${alertType} - already pending`);
+    // 🔧 COMPLETELY SIMPLIFIED: Just prevent multiple clicks during mutation
+    if (currentlyMutating || updateAlertPreferenceMutation.isPending) {
       return;
     }
 
-    // Clear any previous status indicators for this alert
-    setToggleSuccess(prev => {
-      const newMap = new Map(prev);
-      newMap.delete(alertType);
-      return newMap;
-    });
-    setToggleErrors(prev => {
-      const newMap = new Map(prev);
-      newMap.delete(alertType);
-      return newMap;
-    });
-
-    // 🔧 FIXED: Add enhanced logging and immediate mutex lock
-    console.log(`🔄 Starting toggle for ${alertType}: ${enabled}`);
-    setPendingToggles(prev => new Set([...prev, alertType]));
-    
-    // Enhanced mutation with better error handling and atomic operations
-    updateAlertPreferenceMutation.mutate(
-      { alertType, enabled },
-      {
-        onSuccess: () => {
-          console.log(`✅ Toggle ${alertType} succeeded`);
-        },
-        onError: (error) => {
-          console.error(`❌ Toggle ${alertType} failed:`, error);
-        },
-        onSettled: () => {
-          console.log(`🏁 Toggle ${alertType} settled, clearing pending state`);
-          // 🔧 ATOMIC: Remove from pending in a single operation to prevent race conditions
-          setTimeout(() => {
-            setPendingToggles(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(alertType);
-              return newSet;
-            });
-          }, 50); // Small delay to ensure state consistency
-        }
-      }
-    );
+    setCurrentlyMutating(true);
+    updateAlertPreferenceMutation.mutate({ alertType, enabled });
   };
 
-  // Clear pending toggles when switching sports (simplified)
+  // 🔧 SIMPLIFIED: Clear mutation state when switching sports
   useEffect(() => {
-    setPendingToggles(new Set());
+    setCurrentlyMutating(false);
   }, [activeSport]);
-
-  // 🔧 FIXED: Emergency timeout without dependency on pendingToggles to prevent race conditions
+  
+  // 🔧 SIMPLIFIED: Clear mutation state when mutation finishes
   useEffect(() => {
-    const clearStuckToggles = () => {
-      // Only clear if there are actually stuck toggles (longer than 15 seconds)
-      setPendingToggles(prev => {
-        if (prev.size > 0) {
-          console.warn('⚠️ Emergency: Clearing stuck pending toggles:', Array.from(prev));
-          setToggleErrors(new Map());
-          setToggleSuccess(new Map());
-          return new Set();
-        }
-        return prev;
-      });
-    };
-
-    // Fixed interval instead of dependency-based timeout to prevent multiple timers
-    const intervalId = setInterval(clearStuckToggles, 15000); // Check every 15 seconds
-    return () => clearInterval(intervalId);
-  }, []); // 🔧 No dependencies to prevent race conditions
+    if (!updateAlertPreferenceMutation.isPending) {
+      setCurrentlyMutating(false);
+    }
+  }, [updateAlertPreferenceMutation.isPending]);
 
   // Populate Telegram settings from query data
   useEffect(() => {
@@ -784,7 +658,7 @@ export default function Settings() {
                       {(Array.isArray(availableAlerts) && availableAlerts.length > 0 ? availableAlerts : ALERT_TYPE_CONFIG[activeSport] || []).map((alertType: any) => {
                         const userPreference = getAlertPreference(activeSport, alertType.key);
                         const isGloballyDisabled = isAlertGloballyDisabled(alertType.key);
-                        const isPending = pendingToggles.has(alertType.key);
+                        const isPending = currentlyMutating && updateAlertPreferenceMutation.isPending;
                         
                         // Show skeleton if preference is still loading
                         if (userPreference === undefined) {
@@ -825,7 +699,7 @@ export default function Settings() {
                                     </span>
                                   )}
                                 </h4>
-                                {pendingToggles.has(alertType.key) && (
+                                {currentlyMutating && updateAlertPreferenceMutation.isPending && (
                                   <div className={`w-4 h-4 border-2 ${getBorderClass()} border-t-transparent rounded-full animate-spin`}></div>
                                 )}
                               </div>
