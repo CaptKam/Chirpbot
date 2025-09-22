@@ -194,17 +194,12 @@ export default function Settings() {
     });
   }
 
-  // Simplified helper to get alert preference without optimistic state complexity
+  // Helper to get alert preference - returns user's actual preference (not masked by global settings)
   const getAlertPreference = (sport: string, alertType: string): boolean | undefined => {
     // Return undefined while loading to show skeleton UI
     if (isSettingsLoading) return undefined;
 
-    // Check if the alert is globally disabled by admin (highest priority)
-    if (globalSettings && typeof globalSettings === 'object' && (globalSettings as Record<string, boolean>)[alertType] === false) {
-      return false;
-    }
-
-    // Simple: just check server state from preference map
+    // Return user's actual preference from the map (don't mask with global settings)
     const serverPreference = preferenceMap.get(alertType);
     if (serverPreference !== undefined) {
       return serverPreference;
@@ -212,6 +207,12 @@ export default function Settings() {
 
     // Default to false for new preferences
     return false;
+  };
+
+  // Helper to check if alert is globally disabled
+  const isAlertGloballyDisabled = (alertType: string): boolean => {
+    return globalSettings && typeof globalSettings === 'object' 
+      && (globalSettings as Record<string, boolean>)[alertType] === false;
   };
 
   const logoutMutation = useMutation({
@@ -287,18 +288,16 @@ export default function Settings() {
         }, 2000);
       }
       
-      // Invalidate cache using canonical key for precise targeting
+      // Only invalidate the specific preference query (not global settings)
       const queryKey = [prefKey];
-      queryClient.invalidateQueries({
-        queryKey: queryKey,
-        exact: true
-      });
       
-      // Also invalidate global settings for this sport
-      queryClient.invalidateQueries({
-        queryKey: [`/api/global-alert-settings/${activeSport}`],
-        exact: true
-      });
+      // Use a slight delay to avoid race conditions with optimistic updates
+      setTimeout(() => {
+        queryClient.invalidateQueries({
+          queryKey: queryKey,
+          exact: true
+        });
+      }, 200);
     },
     onError: (error: any, variables, context) => {
       // Rollback cache to previous state using canonical key
@@ -442,9 +441,26 @@ export default function Settings() {
     logoutMutation.mutate();
   };
 
+  // Track pending state for gambling insights toggle
+  const [gamblingInsightsPending, setGamblingInsightsPending] = useState(false);
+
   const handleGamblingInsightsToggle = (enabled: boolean) => {
+    // Prevent concurrent toggles
+    if (gamblingInsightsPending || updateGamblingInsightsMutation.isPending) {
+      return;
+    }
+    
+    setGamblingInsightsPending(true);
     setGamblingInsightsEnabled(enabled);
-    updateGamblingInsightsMutation.mutate({ enabled });
+    
+    updateGamblingInsightsMutation.mutate(
+      { enabled },
+      {
+        onSettled: () => {
+          setGamblingInsightsPending(false);
+        }
+      }
+    );
   };
 
   const handleAlertToggle = (alertType: string, enabled: boolean) => {
@@ -453,6 +469,16 @@ export default function Settings() {
       toast({
         title: "Authentication Required",
         description: "Please log in to change alert preferences.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Don't allow toggling if globally disabled
+    if (isAlertGloballyDisabled(alertType)) {
+      toast({
+        title: "Alert Disabled",
+        description: "This alert has been disabled system-wide by the administrator.",
         variant: "destructive",
       });
       return;
@@ -751,16 +777,12 @@ export default function Settings() {
                     <div className="space-y-3">
                       {/* Defensive fallback: Use API data if available, otherwise fallback to local config */}
                       {(Array.isArray(availableAlerts) && availableAlerts.length > 0 ? availableAlerts : ALERT_TYPE_CONFIG[activeSport] || []).map((alertType: any) => {
-                        const isEnabled = getAlertPreference(activeSport, alertType.key);
-                        // Check if this alert is globally disabled from the globalSettings we fetched
-                        const isGloballyDisabled = globalSettings && typeof globalSettings === 'object' 
-                          && (globalSettings as Record<string, boolean>)[alertType.key] === false;
-                        
-                        // Get user preference regardless of global override to show true user intent
-                        const userPreference = preferenceMap.get(alertType.key) ?? true;
+                        const userPreference = getAlertPreference(activeSport, alertType.key);
+                        const isGloballyDisabled = isAlertGloballyDisabled(alertType.key);
+                        const isPending = pendingToggles.has(alertType.key);
                         
                         // Show skeleton if preference is still loading
-                        if (isEnabled === undefined) {
+                        if (userPreference === undefined) {
                           return (
                             <div key={alertType.key} className={`flex items-center justify-between p-3 rounded-lg border opacity-60 ${getCardBgClass()} ${getCardBorderClass()}`}>
                               <div className="flex-1">
@@ -810,11 +832,11 @@ export default function Settings() {
                               </p>
                             </div>
                             <Switch
-                              checked={isEnabled && !isGloballyDisabled}
+                              checked={isPending ? !userPreference : userPreference}
                               onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
-                              disabled={pendingToggles.has(alertType.key) || isGloballyDisabled}
+                              disabled={isPending || isGloballyDisabled}
                               data-testid={`toggle-${alertType.key.toLowerCase()}`}
-                              className={`${getCheckedBgClass()} transition-all duration-200`}
+                              className={`${isGloballyDisabled ? 'opacity-50' : getCheckedBgClass()} transition-all duration-200`}
                             />
                           </div>
                         );
@@ -892,7 +914,7 @@ export default function Settings() {
                   <Switch
                     checked={gamblingInsightsEnabled}
                     onCheckedChange={handleGamblingInsightsToggle}
-                    disabled={updateGamblingInsightsMutation.isPending}
+                    disabled={gamblingInsightsPending || updateGamblingInsightsMutation.isPending}
                     data-testid="toggle-gambling-insights"
                     className="data-[state=checked]:bg-purple-400 ml-4"
                   />
