@@ -249,24 +249,23 @@ export default function Settings() {
       // Snapshot the previous value for potential rollback
       const previousData = queryClient.getQueryData(queryKey);
       
-      // Optimistically update the cache
+      // 🔧 FIXED: Safer optimistic updates that preserve all existing preferences
       queryClient.setQueryData(queryKey, (oldData: any) => {
-        if (!oldData || !Array.isArray(oldData)) {
-          // If no data exists, create initial array with the new preference
-          return [{ alertType, enabled, sport: activeSport }];
-        }
+        // Always preserve existing data, even if it appears empty
+        // This prevents the race condition bug where rapid toggles lose all preferences
+        const currentData = Array.isArray(oldData) ? oldData : [];
         
         // Find existing preference for this alert type
-        const existingIndex = oldData.findIndex((pref: any) => pref.alertType === alertType);
+        const existingIndex = currentData.findIndex((pref: any) => pref.alertType === alertType);
         
         if (existingIndex >= 0) {
-          // Update existing preference
-          const newData = [...oldData];
+          // Update existing preference while preserving all others
+          const newData = [...currentData];
           newData[existingIndex] = { ...newData[existingIndex], enabled };
           return newData;
         } else {
-          // Add new preference
-          return [...oldData, { alertType, enabled, sport: activeSport }];
+          // Add new preference while preserving all existing ones
+          return [...currentData, { alertType, enabled, sport: activeSport }];
         }
       });
       
@@ -288,16 +287,13 @@ export default function Settings() {
         }, 2000);
       }
       
-      // Only invalidate the specific preference query (not global settings)
+      // 🔧 FIXED: Immediate cache invalidation without delay to prevent race conditions
+      // The artificial delay was creating windows for race conditions between multiple toggles
       const queryKey = [prefKey];
-      
-      // Use a slight delay to avoid race conditions with optimistic updates
-      setTimeout(() => {
-        queryClient.invalidateQueries({
-          queryKey: queryKey,
-          exact: true
-        });
-      }, 200);
+      queryClient.invalidateQueries({
+        queryKey: queryKey,
+        exact: true
+      });
     },
     onError: (error: any, variables, context) => {
       // Rollback cache to previous state using canonical key
@@ -484,8 +480,9 @@ export default function Settings() {
       return;
     }
 
-    // 🛡️ PRODUCTION SAFE: Prevent rapid toggles while mutation is pending
-    if (pendingToggles.has(alertType)) {
+    // 🛡️ ENHANCED: Prevent concurrent mutations that cause race conditions
+    if (pendingToggles.has(alertType) || updateAlertPreferenceMutation.isPending) {
+      console.log(`⏸️ Blocking toggle for ${alertType} - concurrent mutation in progress`);
       return;
     }
 
