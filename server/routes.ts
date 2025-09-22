@@ -4687,7 +4687,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       }
 
       res.json({
-        enabled: user.oddsApiEnabled || false,
+        gamblingInsightsEnabled: user.oddsApiEnabled || false,
         oddsApiKey: user.oddsApiKey ? '***' : null // Don't expose the actual key
       });
     } catch (error) {
@@ -4699,14 +4699,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post('/api/user/:userId/settings/gambling-insights', requireUserAuth, async (req, res) => {
     try {
       const { userId } = req.params;
-      const { enabled, oddsApiKey } = req.body;
+      const { gamblingInsightsEnabled, oddsApiKey } = req.body;
 
       // Verify user can only modify their own settings
       if (req.session?.userId !== userId) {
         return res.status(403).json({ message: 'Access denied' });
       }
 
-      await storage.updateUserGamblingInsights(userId, enabled, oddsApiKey);
+      await storage.updateUserGamblingInsights(userId, gamblingInsightsEnabled, oddsApiKey);
       res.json({ message: 'Gambling insights settings updated successfully' });
     } catch (error) {
       console.error('Error updating gambling insights settings:', error);
