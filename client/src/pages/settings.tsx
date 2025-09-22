@@ -116,8 +116,8 @@ export default function Settings() {
   const [testingOddsConnection, setTestingOddsConnection] = useState(false);
   const [oddsConnectionTestResult, setOddsConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
-  // 🔧 COMPLETELY SIMPLIFIED: No more complex state management
-  const [currentlyMutating, setCurrentlyMutating] = useState(false);
+  // 🔧 FIXED: Per-alert pending state instead of global mutex
+  const [pendingAlerts, setPendingAlerts] = useState<Set<string>>(new Set());
 
   // Global settings query to check admin-disabled alerts (now available for ALL authenticated users)
   const { data: globalSettingsResponse, isLoading: globalSettingsLoading } = useQuery({
@@ -138,21 +138,21 @@ export default function Settings() {
     refetchInterval: 60 * 1000, // Refetch every 60 seconds
   });
 
-  // Canonicalized query key for consistency
-  const prefKey = user?.id ? `/api/user/${user.id}/alert-preferences/${activeSport.toLowerCase()}` : null;
+  // 🔧 FIXED: Hierarchical query keys for proper cache invalidation
+  const queryKeySegments = user?.id ? ['/api/user', user.id, 'alert-preferences', activeSport.toLowerCase()] : [];
   
   // Alert preferences query
   const { data: alertPreferences, isLoading: preferencesLoading } = useQuery({
-    queryKey: [prefKey],
-    enabled: !!prefKey && isAuthenticated,
+    queryKey: queryKeySegments,
+    enabled: !!user?.id && isAuthenticated,
     staleTime: 2 * 60 * 1000, // Cache for 2 minutes
     refetchInterval: false, // No automatic refetching - only manual invalidation
   });
 
-  // 🔧 SIMPLIFIED: Clear mutation state when data loads
+  // 🔧 FIXED: Clear pending state when data loads
   useEffect(() => {
     if (!preferencesLoading && alertPreferences) {
-      setCurrentlyMutating(false);
+      setPendingAlerts(new Set());
     }
   }, [alertPreferences, preferencesLoading]);
 
@@ -229,17 +229,31 @@ export default function Settings() {
       }
 
       const response = await apiRequest("POST", `/api/user/${user.id}/alert-preferences`, {
-        sport: activeSport,
+        sport: activeSport.toLowerCase(),
         alertType,
         enabled
       });
       return response.json();
     },
-    onSuccess: () => {
-      // Just refetch the data - no complex cache manipulation
-      queryClient.invalidateQueries({ queryKey: [prefKey] });
+    onSuccess: (_, { alertType }) => {
+      // 🔧 FIXED: Use hierarchical key for precise invalidation and clear pending state
+      if (queryKeySegments) {
+        queryClient.invalidateQueries({ queryKey: queryKeySegments });
+      }
+      setPendingAlerts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(alertType);
+        return newSet;
+      });
     },
-    onError: (error: any) => {
+    onError: (error: any, { alertType }) => {
+      // 🔧 FIXED: Clear pending state on error
+      setPendingAlerts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(alertType);
+        return newSet;
+      });
+      
       const errorMessage = error?.message || 'Update failed';
       if (errorMessage.includes('401') || errorMessage.includes('not authenticated')) {
         toast({
@@ -405,26 +419,20 @@ export default function Settings() {
       return;
     }
 
-    // 🔧 COMPLETELY SIMPLIFIED: Just prevent multiple clicks during mutation
-    if (currentlyMutating || updateAlertPreferenceMutation.isPending) {
+    // 🔧 FIXED: Per-alert pending state prevents double-clicks on same alert
+    if (pendingAlerts.has(alertType)) {
       return;
     }
 
-    setCurrentlyMutating(true);
+    // Add to pending set
+    setPendingAlerts(prev => new Set([...prev, alertType]));
     updateAlertPreferenceMutation.mutate({ alertType, enabled });
   };
 
-  // 🔧 SIMPLIFIED: Clear mutation state when switching sports
+  // 🔧 FIXED: Clear pending alerts when switching sports
   useEffect(() => {
-    setCurrentlyMutating(false);
+    setPendingAlerts(new Set());
   }, [activeSport]);
-  
-  // 🔧 SIMPLIFIED: Clear mutation state when mutation finishes
-  useEffect(() => {
-    if (!updateAlertPreferenceMutation.isPending) {
-      setCurrentlyMutating(false);
-    }
-  }, [updateAlertPreferenceMutation.isPending]);
 
   // Populate Telegram settings from query data
   useEffect(() => {
@@ -658,7 +666,7 @@ export default function Settings() {
                       {(Array.isArray(availableAlerts) && availableAlerts.length > 0 ? availableAlerts : ALERT_TYPE_CONFIG[activeSport] || []).map((alertType: any) => {
                         const userPreference = getAlertPreference(activeSport, alertType.key);
                         const isGloballyDisabled = isAlertGloballyDisabled(alertType.key);
-                        const isPending = currentlyMutating && updateAlertPreferenceMutation.isPending;
+                        const isPending = pendingAlerts.has(alertType.key);
                         
                         // Show skeleton if preference is still loading
                         if (userPreference === undefined) {
@@ -699,7 +707,7 @@ export default function Settings() {
                                     </span>
                                   )}
                                 </h4>
-                                {currentlyMutating && updateAlertPreferenceMutation.isPending && (
+                                {pendingAlerts.has(alertType.key) && (
                                   <div className={`w-4 h-4 border-2 ${getBorderClass()} border-t-transparent rounded-full animate-spin`}></div>
                                 )}
                               </div>
