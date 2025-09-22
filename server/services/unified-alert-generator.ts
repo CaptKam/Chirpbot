@@ -1,10 +1,9 @@
 import { db } from "../db";
 import { sql } from "drizzle-orm";
 import { userMonitoredTeams } from "../../shared/schema";
-import { storage } from "../storage";
+import { storage, unifiedSettings } from "../storage";
 import { unifiedDeduplicator } from "./unified-deduplicator";
 import { sendTelegramAlert, type TelegramConfig } from "./telegram";
-import { SettingsCache } from "./settings-cache";
 import { getHealthMonitor } from './unified-health-monitor';
 import { memoryManager } from '../middleware/memory-manager';
 import type { InsertAlert } from "../../shared/schema";
@@ -117,7 +116,7 @@ export class UnifiedAlertGenerator {
 
   // Core services
   private deduplication = unifiedDeduplicator;
-  private settingsCache?: SettingsCache;
+  private settingsCache = unifiedSettings;
   private healthMonitor?: any;
   private gamblingInsightsComposer?: GamblingInsightsComposer;
 
@@ -156,7 +155,7 @@ export class UnifiedAlertGenerator {
 
     try {
       // Initialize core services first
-      this.settingsCache = new SettingsCache(storage);
+      // 🔧 FIX: Using shared singleton unifiedSettings instead of creating new instance
       this.healthMonitor = getHealthMonitor();
       this.gamblingInsightsComposer = new GamblingInsightsComposer();
 
@@ -215,10 +214,7 @@ export class UnifiedAlertGenerator {
   }
 
   async isAlertGloballyEnabled(sport: string, alertType: string): Promise<boolean> {
-    if (!this.settingsCache) {
-      console.error('Settings cache not initialized');
-      return false;
-    }
+    // Settings cache is now always available as shared singleton
 
     return this.settingsCache.isAlertEnabled(sport, alertType);
   }
@@ -344,7 +340,7 @@ export class UnifiedAlertGenerator {
         try {
           // Use cached settings to avoid sequential blocking
           const enabledAlerts: string[] = await Promise.race([
-            this.settingsCache!.getEnabledAlertTypes(sport),
+            this.settingsCache.getEnabledAlertTypes(sport),
             new Promise<string[]>((_, reject) => setTimeout(() => reject(new Error('Settings timeout')), 5000))
           ]).catch(error => {
             console.error(`❌ Error getting ${sport} settings:`, error);
@@ -966,7 +962,7 @@ export class UnifiedAlertGenerator {
 
     const sports = ['MLB', 'NFL', 'NCAAF', 'WNBA', 'CFL'];
     for (const sport of sports) {
-      const enabledAlerts = await this.settingsCache!.getEnabledAlertTypes(sport);
+      const enabledAlerts = await this.settingsCache.getEnabledAlertTypes(sport);
       if (enabledAlerts.length > 0) {
         return true;
       }
@@ -1069,7 +1065,7 @@ export class UnifiedAlertGenerator {
 
     try {
       // Get enabled alert types for this sport
-      const enabledAlerts = await this.settingsCache!.getEnabledAlertTypes(sport);
+      const enabledAlerts = await this.settingsCache.getEnabledAlertTypes(sport);
 
       // Initialize the engine with user alert modules
       await engine.initializeUserAlertModules(enabledAlerts);
