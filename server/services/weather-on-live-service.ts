@@ -12,7 +12,6 @@
 
 import { RUNTIME, GameState as RuntimeGameState, WeatherArmReason } from '../config/runtime';
 import { WeatherService, type WeatherData } from './weather-service';
-import { weatherAlertIntegration } from './weather-alert-integration';
 import { unifiedDeduplicator } from './unified-deduplicator';
 import { storage } from '../storage';
 // WebSocket import removed - using HTTP polling architecture

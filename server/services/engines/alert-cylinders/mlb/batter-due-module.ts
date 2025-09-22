@@ -1,5 +1,4 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { weatherAlertIntegration } from '../../../weather-alert-integration';
 import { advancedPlayerStats, PlayerAdvancedStats, PitcherAdvancedStats, HandednessMatchup } from '../../../advanced-player-stats';
 import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 

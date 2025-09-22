@@ -18,7 +18,7 @@ import { EventEmitter } from 'events';
 import type { CalendarSyncService, CalendarUpdateEvent } from './calendar-sync-service';
 import type { UnifiedEventStream } from './event-stream/unified-event-stream';
 import type { UnifiedEvent, GameStateChangedEvent, AlertGeneratedEvent } from './event-stream/types';
-import { EventDeduper, type DeduplicationResult, type EventDeduplicationConfig } from './event-deduper';
+import { unifiedDeduplicator } from './unified-deduplicator';
 import type { EventComparator, MetricsCollector } from './event-comparison-system';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -27,21 +27,21 @@ import { v4 as uuidv4 } from 'uuid';
 export interface OutputRouterConfig {
   enabled: boolean;
   enableDeduplication: boolean;
-  enableShadowMode: boolean;
+  // Shadow mode removed - using single production pipeline
   enableMetrics: boolean;
   logLevel: 'minimal' | 'detailed' | 'debug';
   
   // Routing behavior
-  defaultRoute: 'production' | 'shadow' | 'both';
+  defaultRoute: 'production'; // Single production pipeline only
   forceProductionSports: string[];
-  forceShadowSports: string[];
+  // forceShadowSports removed - single production pipeline
   
   // Stream configuration
   productionStreamConfig: StreamConfig;
-  shadowStreamConfig: StreamConfig;
+  // Shadow stream removed - single production pipeline
   
-  // Deduplication settings
-  deduplication: Partial<EventDeduplicationConfig>;
+  // Deduplication enabled flag
+  enableUnifiedDedup: boolean;
   
   // Health monitoring
   healthCheck: {
@@ -63,11 +63,11 @@ export interface StreamConfig {
 }
 
 export interface RoutingDecision {
-  route: 'production' | 'shadow' | 'both' | 'drop';
+  route: 'production' | 'drop'; // Simplified routing
   source: 'calendar' | 'ingestion';
   isAuthoritative: boolean;
   reason: string;
-  dedupResult?: DeduplicationResult;
+  dedupResult?: boolean; // simplified dedup result
 }
 
 export interface OutputRouterMetrics {
@@ -77,7 +77,7 @@ export interface OutputRouterMetrics {
   eventsDeduplicated: number;
   
   productionEvents: number;
-  shadowEvents: number;
+  // Shadow events removed
   bothEvents: number;
   
   calendarEvents: number;
@@ -93,7 +93,7 @@ export interface OutputRouterMetrics {
   
   streamBacklogs: {
     production: number;
-    shadow: number;
+    // Shadow backlog removed
   };
   
   processingLatency: {
@@ -122,13 +122,13 @@ export interface RouteableEvent {
 
 export class OutputRouter extends EventEmitter {
   private readonly config: OutputRouterConfig;
-  private readonly eventDeduper: EventDeduper;
+  // Using unified deduplicator singleton
   private readonly metrics: OutputRouterMetrics;
   
   // Service references
   private calendarSyncService?: CalendarSyncService;
   private productionStream?: UnifiedEventStream;
-  private shadowStream?: UnifiedEventStream;
+  // Shadow stream removed
   
   // Comparison system
   private eventComparator?: EventComparator;
@@ -136,7 +136,7 @@ export class OutputRouter extends EventEmitter {
   
   // Processing queues
   private readonly productionQueue: RouteableEvent[] = [];
-  private readonly shadowQueue: RouteableEvent[] = [];
+  // Shadow queue removed - single production queue
   
   // State management
   private outputRouterRunning = false;
@@ -155,12 +155,12 @@ export class OutputRouter extends EventEmitter {
     this.config = {
       enabled: true,
       enableDeduplication: true,
-      enableShadowMode: true,
+      // Shadow mode disabled - single production pipeline
       enableMetrics: true,
       logLevel: 'detailed',
-      defaultRoute: 'both',
+      defaultRoute: 'production',
       forceProductionSports: [],
-      forceShadowSports: [],
+      // forceShadowSports removed - single production pipeline
       productionStreamConfig: {
         enabled: true,
         name: 'production',
@@ -170,21 +170,8 @@ export class OutputRouter extends EventEmitter {
         retryAttempts: 3,
         retryDelayMs: 1000
       },
-      shadowStreamConfig: {
-        enabled: true,
-        name: 'shadow',
-        maxBacklog: 20000,
-        batchSize: 200,
-        flushIntervalMs: 2000,
-        retryAttempts: 1,
-        retryDelayMs: 5000
-      },
-      deduplication: {
-        enabled: true,
-        defaultTtlMs: 300_000,
-        maxStoredFingerprints: 50_000,
-        logLevel: 'minimal'
-      },
+      // Shadow stream config removed
+      enableUnifiedDedup: true,
       healthCheck: {
         intervalMs: 30_000,
         timeoutMs: 5_000,
@@ -194,11 +181,7 @@ export class OutputRouter extends EventEmitter {
       ...config
     };
 
-    // Initialize event deduper
-    this.eventDeduper = new EventDeduper({
-      enabled: this.config.enableDeduplication,
-      ...this.config.deduplication
-    });
+    // Using unified deduplicator singleton - no initialization needed
 
     // Initialize metrics
     this.metrics = {
@@ -207,7 +190,7 @@ export class OutputRouter extends EventEmitter {
       eventsDropped: 0,
       eventsDeduplicated: 0,
       productionEvents: 0,
-      shadowEvents: 0,
+      // Shadow events removed
       bothEvents: 0,
       calendarEvents: 0,
       ingestionEvents: 0,
@@ -216,7 +199,7 @@ export class OutputRouter extends EventEmitter {
       errorCount: 0,
       streamBacklogs: {
         production: 0,
-        shadow: 0
+        // Shadow backlog removed
       },
       processingLatency: {
         averageMs: 0,
@@ -261,10 +244,7 @@ export class OutputRouter extends EventEmitter {
   /**
    * Set shadow stream for comparison monitoring
    */
-  setShadowStream(shadowStream: UnifiedEventStream): void {
-    this.shadowStream = shadowStream;
-    console.log('📤 OutputRouter: ShadowStream integration enabled');
-  }
+  // setShadowStream removed - single production pipeline only
 
   /**
    * Set event comparator for production vs shadow comparison
@@ -356,7 +336,7 @@ export class OutputRouter extends EventEmitter {
       await this.flushAllQueues();
       
       // Stop deduper
-      this.eventDeduper.stop();
+      // Unified deduplicator cleanup handled elsewhere
       
       console.log('✅ OutputRouter: Stopped successfully');
 
@@ -469,19 +449,26 @@ export class OutputRouter extends EventEmitter {
    */
   private async makeRoutingDecision(event: RouteableEvent): Promise<RoutingDecision> {
     // Check deduplication first
-    let dedupResult: DeduplicationResult | undefined;
+    let isDuplicate = false;
     
-    if (this.config.enableDeduplication) {
-      dedupResult = this.eventDeduper.checkDuplicate(event.originalEvent);
+    if (this.config.enableDeduplication && this.config.enableUnifiedDedup) {
+      // Use unified deduplicator to check for duplicates
+      const alertKey = {
+        gameId: event.gameId,
+        type: event.eventType,
+        sport: event.sport,
+        timestamp: event.timestamp
+      };
+      isDuplicate = !unifiedDeduplicator.shouldSendAlert(alertKey);
       
-      if (dedupResult.isDuplicate && dedupResult.action === 'skip') {
+      if (isDuplicate) {
         this.metrics.eventsDeduplicated++;
         return {
           route: 'drop',
           source: event.source,
           isAuthoritative: false,
-          reason: `duplicate: ${dedupResult.reason}`,
-          dedupResult
+          reason: 'duplicate event detected by unified deduplicator',
+          dedupResult: isDuplicate
         };
       }
     }
@@ -493,17 +480,18 @@ export class OutputRouter extends EventEmitter {
         source: event.source,
         isAuthoritative: true,
         reason: `force production for sport ${event.sport}`,
-        dedupResult
+        dedupResult: isDuplicate
       };
     }
 
-    if (this.config.forceShadowSports.includes(event.sport)) {
+    // forceShadowSports check removed - single production pipeline
+    if (false) { // disabled
       return {
         route: 'shadow',
         source: event.source,
         isAuthoritative: false,
         reason: `force shadow for sport ${event.sport}`,
-        dedupResult
+        dedupResult: isDuplicate
       };
     }
 
@@ -514,7 +502,7 @@ export class OutputRouter extends EventEmitter {
         source: event.source,
         isAuthoritative: event.source === 'calendar', // Default to calendar as authoritative
         reason: 'no rollout controller - using default',
-        dedupResult
+        dedupResult: isDuplicate
       };
     }
 
@@ -530,7 +518,7 @@ export class OutputRouter extends EventEmitter {
         source: event.source,
         isAuthoritative: true,
         reason: `authoritative ${event.source} for ${event.sport} (rollout: ${shouldUseIngestion ? 'ingestion' : 'calendar'})`,
-        dedupResult
+        dedupResult: isDuplicate
       };
     } else {
       return {
@@ -538,7 +526,7 @@ export class OutputRouter extends EventEmitter {
         source: event.source,
         isAuthoritative: false,
         reason: `non-authoritative ${event.source} for ${event.sport} (rollout: ${shouldUseIngestion ? 'ingestion' : 'calendar'})`,
-        dedupResult
+        dedupResult: isDuplicate
       };
     }
   }
@@ -774,7 +762,7 @@ export class OutputRouter extends EventEmitter {
       this.metrics.lastMetricsUpdate = new Date();
       
       // Get deduplication metrics
-      this.metrics.deduplicationMetrics = this.eventDeduper.getMetrics();
+      // Deduplication metrics handled by unified deduplicator
       
       // Check health status
       const errorRate = this.metrics.eventsReceived > 0 ? 

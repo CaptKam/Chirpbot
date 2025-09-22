@@ -1,10 +1,25 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { weatherAlertIntegration } from '../../../weather-alert-integration';
+import { WeatherService, type WeatherData } from '../../../weather-service';
 import { cleanAlertFormatter } from '../../../clean-alert-formatter';
+
+// Weather-related types for stealing factors
+interface StealingWeatherFactors {
+  temperatureMultiplier: number;
+  windMultiplier: number;
+  humidityMultiplier: number;
+  overallWeatherImpact: number;
+  gripFactor: number;
+  visibilityFactor: number;
+  fieldingFactor: number;
+  weatherContext: string;
+  significantWeatherEffect: boolean;
+}
 
 export default class StealLikelihoodModule extends BaseAlertModule {
   alertType = 'MLB_STEAL_LIKELIHOOD';
   sport = 'MLB';
+  
+  private weatherService = new WeatherService();
 
   // Historical steal ATTEMPT rates by base and game situation (2019-2023 MLB data)
   // These are actual attempt probabilities per pitch, recalibrated for realistic levels
@@ -287,7 +302,7 @@ export default class StealLikelihoodModule extends BaseAlertModule {
 
     // WEATHER INTEGRATION: Apply weather factors to steal probability
     try {
-      const weatherFactors = await weatherAlertIntegration.calculateStealingWeatherFactors(gameState);
+      const weatherFactors = await this.calculateStealingWeatherFactors(gameState);
       // Apply multiplicative weather impact for stealing conditions
       probability = probability * weatherFactors.overallWeatherImpact;
       
@@ -505,5 +520,150 @@ export default class StealLikelihoodModule extends BaseAlertModule {
     if (inning >= 9) leverage += 0.2;
     
     return Math.round(leverage * 10) / 10;
+  }
+
+  // ===================================
+  // WEATHER INTEGRATION METHODS
+  // ===================================
+
+  /**
+   * Calculate weather factors specifically for steal likelihood
+   */
+  private async calculateStealingWeatherFactors(gameState: GameState): Promise<StealingWeatherFactors> {
+    try {
+      // Use home team for weather (stealing happens at home stadium)
+      const weatherData = await this.weatherService.getWeatherForTeam(gameState.homeTeam);
+
+      if (!weatherData) {
+        return this.getNeutralStealingFactors();
+      }
+
+      // Calculate base weather effects
+      const temperatureMultiplier = this.calculateTemperatureEffect(weatherData.temperature);
+      const windMultiplier = this.calculateWindEffect(weatherData.windSpeed);
+      const humidityMultiplier = this.calculateHumidityEffect(weatherData.humidity);
+      
+      // Stealing-specific effects
+      const gripFactor = this.calculateGripEffect(weatherData);
+      const visibilityFactor = this.calculateVisibilityEffect(weatherData);
+      const fieldingFactor = this.calculateFieldingDifficulty(weatherData);
+      
+      // Overall impact for stealing
+      const overallWeatherImpact = (temperatureMultiplier + gripFactor + visibilityFactor) / 3;
+      
+      const weatherContext = this.generateStealingWeatherContext(weatherData, overallWeatherImpact);
+      const significantWeatherEffect = Math.abs(overallWeatherImpact - 1.0) > 0.08; // >8% impact
+
+      return {
+        temperatureMultiplier,
+        windMultiplier,
+        humidityMultiplier,
+        overallWeatherImpact,
+        gripFactor,
+        visibilityFactor,
+        fieldingFactor,
+        weatherContext,
+        significantWeatherEffect
+      };
+    } catch (error) {
+      console.error('Weather calculation error in steal likelihood:', error);
+      return this.getNeutralStealingFactors();
+    }
+  }
+
+  private getNeutralStealingFactors(): StealingWeatherFactors {
+    return {
+      temperatureMultiplier: 1.0,
+      windMultiplier: 1.0,
+      humidityMultiplier: 1.0,
+      overallWeatherImpact: 1.0,
+      gripFactor: 1.0,
+      visibilityFactor: 1.0,
+      fieldingFactor: 1.0,
+      weatherContext: '',
+      significantWeatherEffect: false
+    };
+  }
+
+  private calculateTemperatureEffect(temperature: number): number {
+    // Cold weather affects grip and agility for stealing
+    if (temperature <= 40) return 0.9; // 10% penalty for very cold
+    if (temperature <= 55) return 0.95; // 5% penalty for cold
+    if (temperature >= 85) return 1.05; // 5% bonus for warm (better agility)
+    return 1.0; // Neutral
+  }
+
+  private calculateWindEffect(windSpeed: number): number {
+    // Wind has minimal direct impact on stealing, but affects overall game flow
+    if (windSpeed >= 20) return 1.02; // Slight increase in steal attempts in windy conditions
+    return 1.0; // Neutral
+  }
+
+  private calculateHumidityEffect(humidity: number): number {
+    // High humidity can affect grip and stamina
+    if (humidity >= 80) return 0.95; // 5% penalty for very humid
+    return 1.0; // Neutral for normal humidity
+  }
+
+  private calculateGripEffect(weatherData: WeatherData): number {
+    // Cold and wet conditions worsen grip for pitcher and catcher
+    let gripFactor = 1.0;
+    
+    if (weatherData.temperature <= 45) {
+      gripFactor *= 0.92; // Cold affects grip
+    }
+    
+    if (weatherData.condition?.toLowerCase().includes('rain')) {
+      gripFactor *= 0.85; // Rain significantly affects grip
+    }
+    
+    return gripFactor;
+  }
+
+  private calculateVisibilityEffect(weatherData: WeatherData): number {
+    // Poor visibility affects fielding reaction time
+    const condition = weatherData.condition?.toLowerCase() || '';
+    
+    if (condition.includes('fog') || condition.includes('mist')) {
+      return 1.1; // 10% advantage for baserunners
+    }
+    
+    if (condition.includes('rain')) {
+      return 1.05; // 5% advantage for baserunners
+    }
+    
+    return 1.0; // Clear conditions
+  }
+
+  private calculateFieldingDifficulty(weatherData: WeatherData): number {
+    // Combines all factors that make fielding more difficult
+    const gripEffect = this.calculateGripEffect(weatherData);
+    const visibilityEffect = this.calculateVisibilityEffect(weatherData);
+    
+    // Average the effects
+    return (gripEffect + visibilityEffect) / 2;
+  }
+
+  private generateStealingWeatherContext(weatherData: WeatherData, overallImpact: number): string {
+    if (Math.abs(overallImpact - 1.0) < 0.05) {
+      return ''; // No significant weather impact
+    }
+    
+    const condition = weatherData.condition?.toLowerCase() || '';
+    const temp = weatherData.temperature;
+    
+    if (overallImpact > 1.05) {
+      if (condition.includes('rain')) {
+        return 'Wet conditions favor baserunners';
+      }
+      if (temp <= 45) {
+        return 'Cold weather affects pitcher grip';
+      }
+      return 'Weather conditions favor steal attempts';
+    } else if (overallImpact < 0.95) {
+      return 'Weather conditions discourage stealing';
+    }
+    
+    return '';
   }
 }

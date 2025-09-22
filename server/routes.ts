@@ -2400,7 +2400,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   // Show timezone info on startup
   const { formatPacificTime, getPacificDate } = await import('./utils/timezone');
-  console.log('🌴 ChirpBot V2 - Using Pacific Timezone (PST/PDT)');
+  console.log('🌴 ChirpBot V3 - Using Pacific Timezone (PST/PDT)');
   console.log(`📅 Current Pacific Date: ${getPacificDate()}`);
   console.log(`🕐 Current Pacific Time: ${formatPacificTime()}`);
 

@@ -561,9 +561,10 @@ export class MLBEngine extends BaseSportEngine {
           // Fetch weather data if available
           let weatherContext = gameState.weatherContext;
           try {
-            const { weatherAlertIntegration } = await import('../weather-alert-integration');
+            const { WeatherService } = await import('../weather-service');
+            const weatherService = new WeatherService();
             // Get weather for home team (where game is played)
-            const weatherData = await weatherAlertIntegration.getWeatherForTeam(
+            const weatherData = await weatherService.getWeatherForTeam(
               gameState.homeTeam
             );
             if (weatherData) {

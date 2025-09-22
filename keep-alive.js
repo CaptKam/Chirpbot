@@ -2,7 +2,7 @@
 
 /**
  * ULTIMATE BULLETPROOF SERVER MANAGER
- * This script ensures ChirpBot V2 NEVER stays down
+ * This script ensures ChirpBot V3 NEVER stays down
  * It monitors the server process and restarts it instantly if it crashes
  */
 

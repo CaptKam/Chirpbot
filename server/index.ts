@@ -116,27 +116,9 @@ const gracefulShutdown = async (signal: string) => {
       console.log('✅ Alert monitoring timer cleared');
     }
 
-    // 🚀 GRACEFUL SHUTDOWN: DataIngestionService cleanup
-    const di = (global as any).dataIngestionIntegration;
-    if (di && typeof di.shutdown === 'function') {
-      try {
-        await di.shutdown();
-        console.log('✅ DataIngestionService gracefully shut down');
-      } catch (err) {
-        console.error('⚠️ Error shutting down DataIngestionService:', err);
-      }
-    }
+    // DataIngestionService cleanup removed - using CalendarSyncService only
 
-    // 🔄 GRACEFUL SHUTDOWN: MigrationAdapter cleanup
-    const migrationAdapter = (global as any).migrationAdapter;
-    if (migrationAdapter && typeof migrationAdapter.stop === 'function') {
-      try {
-        await migrationAdapter.stop();
-        console.log('✅ MigrationAdapter gracefully shut down');
-      } catch (err) {
-        console.error('⚠️ Error shutting down MigrationAdapter:', err);
-      }
-    }
+    // MigrationAdapter cleanup removed - simplified architecture
 
     // Database uses HTTP connection - no need to close
     console.log('✅ Database connections handled');

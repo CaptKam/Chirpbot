@@ -122,7 +122,7 @@ export class UnifiedAlertGenerator {
   private gamblingInsightsComposer?: GamblingInsightsComposer;
 
   // Additional monitoring properties
-  private adaptivePollingManagers: Map<string, any> = new Map();
+  // adaptivePollingManagers removed - using CalendarSyncService only
   private engineFailures: Map<string, EngineFailureRecord> = new Map();
 
   // Backward compatibility API services (used for fallback only)
