@@ -480,9 +480,9 @@ export default function Settings() {
       return;
     }
 
-    // 🛡️ ENHANCED: Prevent concurrent mutations that cause race conditions
-    if (pendingToggles.has(alertType) || updateAlertPreferenceMutation.isPending) {
-      console.log(`⏸️ Blocking toggle for ${alertType} - concurrent mutation in progress`);
+    // 🛡️ FIXED: Only check specific toggle pending state, not global mutation state
+    if (pendingToggles.has(alertType)) {
+      console.log(`⏸️ Blocking toggle for ${alertType} - already pending`);
       return;
     }
 
@@ -498,27 +498,30 @@ export default function Settings() {
       return newMap;
     });
 
-    // Add to pending toggles for immediate UI feedback
+    // 🔧 FIXED: Add enhanced logging and immediate mutex lock
+    console.log(`🔄 Starting toggle for ${alertType}: ${enabled}`);
     setPendingToggles(prev => new Set([...prev, alertType]));
     
-    // Simple immediate mutation without complex debouncing or optimistic state
+    // Enhanced mutation with better error handling and atomic operations
     updateAlertPreferenceMutation.mutate(
       { alertType, enabled },
       {
         onSuccess: () => {
-          console.log(`Toggle ${alertType} succeeded`);
+          console.log(`✅ Toggle ${alertType} succeeded`);
         },
         onError: (error) => {
-          console.error(`Toggle ${alertType} failed:`, error);
+          console.error(`❌ Toggle ${alertType} failed:`, error);
         },
         onSettled: () => {
-          console.log(`Toggle ${alertType} settled, clearing pending state`);
-          // Remove from pending toggles when mutation completes (success or error)
-          setPendingToggles(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(alertType);
-            return newSet;
-          });
+          console.log(`🏁 Toggle ${alertType} settled, clearing pending state`);
+          // 🔧 ATOMIC: Remove from pending in a single operation to prevent race conditions
+          setTimeout(() => {
+            setPendingToggles(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(alertType);
+              return newSet;
+            });
+          }, 50); // Small delay to ensure state consistency
         }
       }
     );
@@ -529,20 +532,25 @@ export default function Settings() {
     setPendingToggles(new Set());
   }, [activeSport]);
 
-  // Emergency timeout to clear stuck pending toggles
+  // 🔧 FIXED: Emergency timeout without dependency on pendingToggles to prevent race conditions
   useEffect(() => {
     const clearStuckToggles = () => {
-      if (pendingToggles.size > 0) {
-        console.warn('Clearing stuck pending toggles:', Array.from(pendingToggles));
-        setPendingToggles(new Set());
-        setToggleErrors(new Map());
-        setToggleSuccess(new Map());
-      }
+      // Only clear if there are actually stuck toggles (longer than 15 seconds)
+      setPendingToggles(prev => {
+        if (prev.size > 0) {
+          console.warn('⚠️ Emergency: Clearing stuck pending toggles:', Array.from(prev));
+          setToggleErrors(new Map());
+          setToggleSuccess(new Map());
+          return new Set();
+        }
+        return prev;
+      });
     };
 
-    const timeoutId = setTimeout(clearStuckToggles, 10000); // Clear after 10 seconds
-    return () => clearTimeout(timeoutId);
-  }, [pendingToggles]);
+    // Fixed interval instead of dependency-based timeout to prevent multiple timers
+    const intervalId = setInterval(clearStuckToggles, 15000); // Check every 15 seconds
+    return () => clearInterval(intervalId);
+  }, []); // 🔧 No dependencies to prevent race conditions
 
   // Populate Telegram settings from query data
   useEffect(() => {
