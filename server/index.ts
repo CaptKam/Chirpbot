@@ -440,35 +440,6 @@ async function startServer() {
         }
       }, 5000); // Wait 5 seconds for server to fully initialize
 
-      // Initialize UnifiedEventStream in shadow mode after alert monitoring
-      setTimeout(async () => {
-        try {
-          console.log('🌟 Starting UnifiedEventStream in shadow mode...');
-          const { LegacyBridge } = await import('./services/event-stream/legacy-bridge');
-
-          // Create and initialize the legacy bridge
-          const legacyBridge = new LegacyBridge({
-            enabled: true,
-            enableComparison: true,
-            logDifferences: true,
-            forwardEvents: true,
-            comparisonTimeout: 5000
-          });
-
-          // Initialize the bridge (this will set up the event stream and processors)
-          await legacyBridge.initialize();
-
-          console.log('✅ UnifiedEventStream initialized in shadow mode');
-          console.log('🌟 Event stream running alongside existing system for validation');
-
-          // Store reference globally for potential shutdown
-          (global as any).legacyBridge = legacyBridge;
-
-        } catch (error) {
-          console.error('❌ Failed to start UnifiedEventStream:', error);
-          console.log('🔄 Continuing with legacy system only');
-        }
-      }, 7000); // Wait 7 seconds to start after alert monitoring
 
       // Start Weather-on-Live service after server is ready
       setTimeout(async () => {
