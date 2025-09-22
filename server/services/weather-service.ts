@@ -1,6 +1,6 @@
 import { db } from '../db';
 
-interface WeatherData {
+export interface WeatherData {
   temperature: number;
   condition: string;
   windSpeed: number;

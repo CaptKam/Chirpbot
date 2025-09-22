@@ -730,42 +730,56 @@ export class WeatherOnLiveService {
       }
       
       // Create weather alert
+      const alertKey = `weather_${change.gameId}_${change.changeType}_${Date.now()}`;
       const weatherAlert: Partial<InsertAlert> = {
+        alertKey: alertKey,
         type: `WEATHER_${change.changeType}`,
         sport: change.sport,
         gameId: change.gameId,
-        homeTeam: config.homeTeam,
-        awayTeam: config.awayTeam,
-        priority: this.getSeverityPriority(change.severity),
-        confidence: 0.9, // Weather data is highly reliable
-        message: this.generateWeatherAlertMessage(change, config),
-        context: this.generateWeatherAlertContext(change, config),
-        data: {
+        state: 'active',
+        score: this.getSeverityPriority(change.severity),
+        payload: {
+          homeTeam: config.homeTeam,
+          awayTeam: config.awayTeam,
+          confidence: 0.9,
+          message: this.generateWeatherAlertMessage(change, config),
+          context: this.generateWeatherAlertContext(change, config),
           changeType: change.changeType,
           severity: change.severity,
           thresholdExceeded: change.thresholdExceeded,
           previousWeather: change.previousWeather,
           currentWeather: change.currentWeather,
           venue: config.venue
-        },
-        createdAt: new Date(),
-        state: 'active'
+        }
       };
       
-      // Check for duplicates
-      const alertKey = `${change.gameId}-${change.changeType}-${change.severity}`;
-      if (unifiedDeduplicator.isDuplicate(alertKey)) {
+      // Check for duplicates using unified deduplicator
+      const dedupKey = {
+        gameId: change.gameId,
+        type: change.changeType,
+        sport: change.sport
+      };
+      if (!unifiedDeduplicator.shouldSendAlert(dedupKey)) {
         console.log(`🔄 Weather alert deduplicated: ${alertKey}`);
         return;
       }
       
-      // Store alert
-      const savedAlert = await storage.createAlert(weatherAlert);
+      // Store alert - ensure all required fields are present
+      const completeAlert = {
+        alertKey: alertKey,
+        sport: change.sport,
+        gameId: change.gameId,
+        type: `WEATHER_${change.changeType}`,
+        state: 'active',
+        payload: weatherAlert.payload,
+        score: weatherAlert.score || 5
+      };
+      const savedAlert = await storage.createAlert(completeAlert);
       if (!savedAlert) {
         throw new Error('Failed to save weather alert');
       }
       
-      console.log(`🌤️ Weather Alert Generated: ${weatherAlert.message} (Game: ${change.gameId})`);
+      console.log(`🌤️ Weather Alert Generated: ${(weatherAlert.payload as any)?.message} (Game: ${change.gameId})`);
       
       // Broadcast via SSE using global broadcast function
       try {
