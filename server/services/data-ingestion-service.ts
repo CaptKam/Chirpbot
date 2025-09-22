@@ -314,7 +314,7 @@ export class DataIngestionService extends EventEmitter {
       throw new Error(`No API service for sport: ${sport}`);
     }
 
-    const circuitBreaker = circuitBreakerManager.getBreaker(`data-ingestion-${sport.toLowerCase()}`);
+    const circuitBreaker = circuitBreakerManager.getBreaker('data-ingestion', sport.toLowerCase());
     
     try {
       const gamesData = await circuitBreaker.execute(async () => {
@@ -388,7 +388,7 @@ export class DataIngestionService extends EventEmitter {
       throw new Error(`No API service for sport: ${game.sport}`);
     }
 
-    const circuitBreaker = circuitBreakerManager.getBreaker(`data-ingestion-${game.sport.toLowerCase()}`);
+    const circuitBreaker = circuitBreakerManager.getBreaker('data-ingestion', game.sport.toLowerCase());
     
     try {
       // Fetch fresh game data
