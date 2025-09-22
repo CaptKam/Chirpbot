@@ -4677,5 +4677,42 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Gambling insights settings routes
+  app.get('/api/user/:userId/settings/gambling-insights', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      res.json({
+        enabled: user.oddsApiEnabled || false,
+        oddsApiKey: user.oddsApiKey ? '***' : null // Don't expose the actual key
+      });
+    } catch (error) {
+      console.error('Error fetching gambling insights settings:', error);
+      res.status(500).json({ message: 'Failed to fetch gambling insights settings' });
+    }
+  });
+
+  app.post('/api/user/:userId/settings/gambling-insights', requireUserAuth, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { enabled, oddsApiKey } = req.body;
+
+      // Verify user can only modify their own settings
+      if (req.session?.userId !== userId) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      await storage.updateUserGamblingInsights(userId, enabled, oddsApiKey);
+      res.json({ message: 'Gambling insights settings updated successfully' });
+    } catch (error) {
+      console.error('Error updating gambling insights settings:', error);
+      res.status(500).json({ message: 'Failed to update gambling insights settings' });
+    }
+  });
+
   return httpServer;
 }
