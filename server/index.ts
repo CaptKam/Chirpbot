@@ -33,60 +33,37 @@ if (!lockAcquired) {
 
 console.log(`🔒 Single instance lock acquired for PID ${process.pid}`);
 
-// 🔄 MIGRATION ADAPTER: TOP-LEVEL BOOTSTRAP (Replaces DataIngestion bootstrap)
-console.log("🔍 DEBUG: About to check __migration_adapter_bootstrapped__ flag");
-if (!(globalThis as any).__migration_adapter_bootstrapped__) {
-  console.log("🔍 DEBUG: __migration_adapter_bootstrapped__ is false, starting bootstrap");
-  console.log("🔄 DataIngestionService already running - MigrationAdapter will coordinate");
-  (globalThis as any).__migration_adapter_bootstrapped__ = true;
-  console.log("📋 MIGRATION ADAPTER: BOOTSTRAP FIRING (top‑level)");
+// 🔄 CALENDAR SYNC SERVICE: SINGLE DATA INGESTION SYSTEM
+console.log("🔍 DEBUG: Starting CalendarSyncService as primary data system");
+if (!(globalThis as any).__calendar_sync_bootstrapped__) {
+  console.log("🔍 DEBUG: __calendar_sync_bootstrapped__ is false, starting bootstrap");
+  (globalThis as any).__calendar_sync_bootstrapped__ = true;
+  console.log("📋 CALENDAR SYNC: BOOTSTRAP FIRING (simplified architecture)");
   void (async () => {
     try {
-      console.log("🔍 DEBUG: About to import MigrationAdapter");
-      const { MigrationAdapter } = await import('./services/migration-adapter');
+      console.log("🔍 DEBUG: About to import CalendarSyncService");
+      const { CalendarSyncService } = await import('./services/calendar-sync-service');
       console.log("🔍 DEBUG: Import successful, creating instance");
 
-      // Initialize MigrationAdapter with safe defaults
-      const migrationAdapter = new MigrationAdapter({
-        calendarSync: {
-          sports: ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL'],
-          enableMetrics: true
-        },
-        dataIngestion: {
-          shadowMode: true,
-          enableMetrics: true,
-          healthCheckIntervalMs: 30_000,
-          logLevel: 'detailed'
-        },
-        rollout: {
-          percentages: {}, // Start with 0% for all sports
-          mode: 'legacy', // Start in legacy mode
-          enableSafetyChecks: true,
-          maxRolloutPercentage: 50,
-          rolloutStepSize: 10
-        },
-        enableRolloutController: true,
-        enableHealthMonitoring: true,
-        enableMetrics: true,
-        enableOutputRouter: true,
-        logLevel: 'detailed'
+      // Initialize CalendarSyncService with comprehensive sports support
+      const calendarSyncService = new CalendarSyncService({
+        sports: ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL'],
+        enableMetrics: true
       });
 
-      console.log("🔍 DEBUG: Instance created, calling initialize()");
-      await migrationAdapter.initialize();
-      console.log("🔍 DEBUG: Initialize completed, calling start()");
-      await migrationAdapter.start();
+      console.log("🔍 DEBUG: Instance created, calling start()");
+      await calendarSyncService.start();
       console.log("🔍 DEBUG: Start completed, storing global reference");
 
-      (global as any).migrationAdapter = migrationAdapter;
-      console.log("✅ MIGRATION ADAPTER: STARTED - Both systems under adapter control");
+      (global as any).calendarSyncService = calendarSyncService;
+      console.log("✅ CALENDAR SYNC: STARTED - Single unified data system active");
     } catch (e) {
-      console.error("❌ MIGRATION ADAPTER: FAILED", e);
-      console.error("❌ MIGRATION ADAPTER: ERROR STACK:", e instanceof Error ? e.stack : 'No stack trace available');
+      console.error("❌ CALENDAR SYNC: FAILED", e);
+      console.error("❌ CALENDAR SYNC: ERROR STACK:", e instanceof Error ? e.stack : 'No stack trace available');
     }
   })();
 } else {
-  console.log("🔍 DEBUG: __migration_adapter_bootstrapped__ is true, skipping bootstrap");
+  console.log("🔍 DEBUG: __calendar_sync_bootstrapped__ is true, skipping bootstrap");
 }
 
 // Startup guard to prevent double initialization within same process

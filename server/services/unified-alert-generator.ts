@@ -37,7 +37,6 @@ import { NCAAFApiService } from "./ncaaf-api";
 import { NFLApiService } from "./nfl-api";
 import { WNBAApiService } from "./wnba-api";
 import { CFLApiService } from "./cfl-api";
-import { AdaptivePollingManager } from "./adaptive-polling-manager";
 
 // === UNIFIED INTERFACES ===
 
@@ -706,7 +705,7 @@ export class UnifiedAlertGenerator {
    * V3 Weather Enhancement - Enhance alerts with weather context for live games
    */
   private async enhanceAlertsWithWeatherContext(
-    alerts: AlertResult[], 
+    alerts: EngineAlertResult[], 
     gameState: GameState, 
     sport: string
   ): Promise<WeatherEnhancedAlert[]> {
@@ -1391,14 +1390,12 @@ export class UnifiedAlertGenerator {
 
   private async initializeNFLPollingManager(): Promise<void> {
     try {
-      if (this.nflApi && this.adaptivePollingManagers) {
-        this.adaptivePollingManagers.set('NFL', new AdaptivePollingManager('NFL', { NFL: this.nflApi }));
-        if (this.logLevel !== 'quiet') {
-          console.log('✅ NFL polling manager initialized');
-        }
+      // Polling managed by CalendarSyncService - no separate manager needed
+      if (this.logLevel !== 'quiet') {
+        console.log('✅ NFL polling managed by CalendarSyncService');
       }
-    } catch (error) {
-      console.error('❌ Error initializing NFL polling manager:', error);
+    } catch (error: any) {
+      console.error('❌ Error in NFL polling setup:', error?.message || 'Unknown error');
     }
   }
 

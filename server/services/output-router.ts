@@ -16,10 +16,8 @@
 
 import { EventEmitter } from 'events';
 import type { CalendarSyncService, CalendarUpdateEvent } from './calendar-sync-service';
-import type { DataIngestionService } from './data-ingestion-service';
 import type { UnifiedEventStream } from './event-stream/unified-event-stream';
 import type { UnifiedEvent, GameStateChangedEvent, AlertGeneratedEvent } from './event-stream/types';
-import type { RolloutController } from './migration-adapter';
 import { EventDeduper, type DeduplicationResult, type EventDeduplicationConfig } from './event-deduper';
 import type { EventComparator, MetricsCollector } from './event-comparison-system';
 import { v4 as uuidv4 } from 'uuid';
@@ -128,9 +126,7 @@ export class OutputRouter extends EventEmitter {
   private readonly metrics: OutputRouterMetrics;
   
   // Service references
-  private rolloutController?: RolloutController;
   private calendarSyncService?: CalendarSyncService;
-  private dataIngestionService?: DataIngestionService;
   private productionStream?: UnifiedEventStream;
   private shadowStream?: UnifiedEventStream;
   
@@ -143,7 +139,7 @@ export class OutputRouter extends EventEmitter {
   private readonly shadowQueue: RouteableEvent[] = [];
   
   // State management
-  private isRunning = false;
+  private outputRouterRunning = false;
   private subscriptions: string[] = [];
   private healthCheckInterval?: NodeJS.Timeout;
   private flushTimer?: NodeJS.Timeout;
@@ -239,10 +235,7 @@ export class OutputRouter extends EventEmitter {
   /**
    * Set rollout controller for routing decisions
    */
-  setRolloutController(rolloutController: RolloutController): void {
-    this.rolloutController = rolloutController;
-    console.log('📤 OutputRouter: RolloutController integration enabled');
-  }
+  // Simplified architecture - no rollout controller needed
 
   /**
    * Set calendar sync service for event subscription
@@ -255,10 +248,7 @@ export class OutputRouter extends EventEmitter {
   /**
    * Set data ingestion service for event subscription
    */
-  setDataIngestionService(dataIngestionService: DataIngestionService): void {
-    this.dataIngestionService = dataIngestionService;
-    console.log('📤 OutputRouter: DataIngestionService integration enabled');
-  }
+  // Simplified architecture - CalendarSyncService only
 
   /**
    * Set production stream for authoritative events
@@ -303,7 +293,7 @@ export class OutputRouter extends EventEmitter {
       return;
     }
 
-    if (this.isRunning) {
+    if (this.outputRouterRunning) {
       console.log('⚠️ OutputRouter: Already running');
       return;
     }
@@ -325,7 +315,7 @@ export class OutputRouter extends EventEmitter {
         this.startHealthMonitoring();
       }
       
-      this.isRunning = true;
+      this.outputRouterRunning = true;
       this.startTime = Date.now();
       
       console.log('✅ OutputRouter: Started successfully');
@@ -341,7 +331,7 @@ export class OutputRouter extends EventEmitter {
    * Stop the output router
    */
   async stop(): Promise<void> {
-    if (!this.isRunning) {
+    if (!this.outputRouterRunning) {
       console.log('📤 OutputRouter: Not running');
       return;
     }
@@ -349,7 +339,7 @@ export class OutputRouter extends EventEmitter {
     try {
       console.log('🛑 OutputRouter: Stopping...');
       
-      this.isRunning = false;
+      this.outputRouterRunning = false;
       
       // Clear timers
       if (this.healthCheckInterval) {
@@ -760,7 +750,7 @@ export class OutputRouter extends EventEmitter {
   private startProcessingLoops(): void {
     // Start periodic queue flushing
     const flushBoth = () => {
-      if (this.isRunning) {
+      if (this.outputRouterRunning) {
         this.flushQueue('production');
         this.flushQueue('shadow');
         setTimeout(flushBoth, 1000); // Process every second
@@ -956,7 +946,7 @@ export class OutputRouter extends EventEmitter {
    * Check if router is running
    */
   isRunning(): boolean {
-    return this.isRunning;
+    return this.outputRouterRunning;
   }
 
   /**

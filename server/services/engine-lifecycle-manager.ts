@@ -19,7 +19,6 @@ import { NBAEngine } from './engines/nba-engine';
 import { WNBAEngine } from './engines/wnba-engine';
 import { CFLEngine } from './engines/cfl-engine';
 import type { BaseSportEngine } from './engines/base-engine';
-import { AdaptivePollingManager } from './adaptive-polling-manager';
 import { unifiedSettings } from '../storage';
 import { getHealthMonitor } from './unified-health-monitor';
 import { memoryManager } from '../middleware/memory-manager';
@@ -39,7 +38,6 @@ export interface EngineStateInfo {
   sport: string;
   state: EngineState;
   instance?: BaseSportEngine;
-  pollingManager?: AdaptivePollingManager;
   
   // State tracking
   stateChangedAt: Date;
@@ -303,11 +301,8 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
     try {
       console.log(`⏸️ Pausing ${sport} engine for game ${gameInfo.gameId}`);
       
-      // Pause the polling manager if it exists
-      if (engine.pollingManager) {
-        // AdaptivePollingManager doesn't have pause, but we can adjust intervals
-        console.log(`⏸️ ${sport} polling adjusted for paused game`);
-      }
+      // Engine pausing handled by direct state management
+      console.log(`⏸️ ${sport} engine paused - polling handled by CalendarSyncService`);
       
       return true;
     } catch (error) {
@@ -472,12 +467,8 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
       await this.preWarmEngine(engine);
     }
     
-    // Create and start adaptive polling manager
-    if (!engine.pollingManager) {
-      const sportForManager = engine.sport as 'MLB' | 'NFL' | 'NCAAF' | 'WNBA' | 'NBA' | 'CFL';
-      engine.pollingManager = new AdaptivePollingManager(sportForManager, {});
-      console.log(`📡 Created ${engine.sport} polling manager`);
-    }
+    // Polling management handled by CalendarSyncService
+    console.log(`📡 ${engine.sport} polling managed by CalendarSyncService`);
     
     // Load all enabled alert modules
     const enabledAlerts = await this.getEnabledAlerts(engine.sport);
@@ -492,11 +483,8 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
   private async cooldownEngine(engine: EngineStateInfo): Promise<void> {
     console.log(`🛑 Starting cooldown for ${engine.sport} engine...`);
     
-    // Stop polling manager gracefully
-    if (engine.pollingManager) {
-      // AdaptivePollingManager doesn't have explicit stop, but we can mark it for cleanup
-      console.log(`⏹️ ${engine.sport} polling manager marked for cleanup`);
-    }
+    // Engine stopping handled by direct state management
+    console.log(`⏹️ ${engine.sport} engine cooldown - CalendarSyncService handles polling`);
     
     // Calculate total active time
     if (engine.startTime) {
@@ -510,11 +498,8 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
   private async deactivateEngine(engine: EngineStateInfo): Promise<void> {
     console.log(`🔌 Deactivating ${engine.sport} engine...`);
     
-    // Clean up polling manager
-    if (engine.pollingManager) {
-      engine.pollingManager = undefined;
-      console.log(`🗑️ ${engine.sport} polling manager cleaned up`);
-    }
+    // Polling cleanup handled by CalendarSyncService
+    console.log(`🗑️ ${engine.sport} engine deactivated - CalendarSyncService manages data`);
     
     // Clean up engine instance
     if (engine.instance) {
