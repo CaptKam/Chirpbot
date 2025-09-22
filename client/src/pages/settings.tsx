@@ -144,6 +144,11 @@ export default function Settings() {
   // Alert preferences query
   const { data: alertPreferences, isLoading: preferencesLoading } = useQuery({
     queryKey: queryKeySegments,
+    queryFn: async () => {
+      if (!user?.id) throw new Error('User ID required');
+      const response = await apiRequest("GET", `/api/user/${user.id}/alert-preferences?sport=${activeSport.toLowerCase()}`);
+      return response.json();
+    },
     enabled: !!user?.id && isAuthenticated,
     staleTime: 2 * 60 * 1000, // Cache for 2 minutes
     refetchInterval: false, // No automatic refetching - only manual invalidation
