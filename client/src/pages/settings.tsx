@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
@@ -241,6 +241,7 @@ export default function Settings() {
       return response.json();
     },
     onSuccess: (_, { alertType }) => {
+      console.log(`Toggle ${alertType} succeeded`);
       // 🔧 FIXED: Use hierarchical key for precise invalidation and clear pending state
       if (queryKeySegments) {
         queryClient.invalidateQueries({ queryKey: queryKeySegments });
@@ -248,14 +249,17 @@ export default function Settings() {
       setPendingAlerts(prev => {
         const newSet = new Set(prev);
         newSet.delete(alertType);
+        console.log(`Toggle ${alertType} settled, clearing pending state`);
         return newSet;
       });
     },
     onError: (error: any, { alertType }) => {
+      console.log(`Toggle ${alertType} failed:`, error);
       // 🔧 FIXED: Clear pending state on error
       setPendingAlerts(prev => {
         const newSet = new Set(prev);
         newSet.delete(alertType);
+        console.log(`Toggle ${alertType} error, clearing pending state`);
         return newSet;
       });
       
@@ -403,7 +407,8 @@ export default function Settings() {
     );
   };
 
-  const handleAlertToggle = (alertType: string, enabled: boolean) => {
+  // 🔧 FIXED: Debounced toggle handler to prevent rapid duplicate calls
+  const handleAlertToggle = useCallback((alertType: string, enabled: boolean) => {
     // Early validation
     if (!user?.id) {
       toast({
@@ -424,15 +429,24 @@ export default function Settings() {
       return;
     }
 
-    // 🔧 FIXED: Per-alert pending state prevents double-clicks on same alert
+    // 🔧 FIXED: Immediate pending state check with console logging for debugging
     if (pendingAlerts.has(alertType)) {
+      console.log(`Toggle ${alertType} blocked - already pending`);
       return;
     }
 
-    // Add to pending set
-    setPendingAlerts(prev => new Set([...prev, alertType]));
+    console.log(`Toggle ${alertType} starting...`);
+
+    // 🔧 FIXED: Immediate synchronous pending state update to prevent race conditions
+    setPendingAlerts(prev => {
+      const newSet = new Set(prev);
+      newSet.add(alertType);
+      return newSet;
+    });
+
+    // Execute mutation
     updateAlertPreferenceMutation.mutate({ alertType, enabled });
-  };
+  }, [user?.id, pendingAlerts, updateAlertPreferenceMutation]);
 
   // 🔧 FIXED: Clear pending alerts when switching sports
   useEffect(() => {
