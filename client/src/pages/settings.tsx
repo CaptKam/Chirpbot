@@ -123,8 +123,10 @@ export default function Settings() {
   const { data: globalSettingsResponse, isLoading: globalSettingsLoading } = useQuery({
     queryKey: [`/api/global-alert-settings/${activeSport}`],
     enabled: !!user?.id && isAuthenticated,
-    staleTime: 5 * 1000, // Cache for 5 seconds (reduced to match server cache)
-    refetchInterval: 10 * 1000, // Refetch every 10 seconds (more responsive)
+    staleTime: 10 * 60 * 1000, // Cache for 10 minutes (global settings rarely change)
+    refetchInterval: false, // No polling - only refetch on manual invalidation
+    refetchOnWindowFocus: false, // No refetch on window focus
+    refetchOnReconnect: false, // No refetch on network reconnect
   });
 
   // Extract settings from response (handles both old admin format and new public format)
@@ -135,7 +137,9 @@ export default function Settings() {
     queryKey: [`/api/available-alerts/${activeSport.toLowerCase()}`],
     enabled: !!user?.id && isAuthenticated,
     staleTime: 10 * 60 * 1000, // Cache for 10 minutes (rarely changes)
-    refetchInterval: 60 * 1000, // Refetch every 60 seconds
+    refetchInterval: false, // No polling - only refetch on manual invalidation
+    refetchOnWindowFocus: false, // No refetch on window focus
+    refetchOnReconnect: false, // No refetch on network reconnect
   });
 
   // 🔧 FIXED: Hierarchical query keys for proper cache invalidation
