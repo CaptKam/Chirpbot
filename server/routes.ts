@@ -488,7 +488,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   // Server-side deduplication for SSE broadcasts
   const recentBroadcasts = new Map<string, number>(); // alertKey -> timestamp
-  const BROADCAST_DEDUPE_TTL = 10000; // 10 seconds
+  const BROADCAST_DEDUPE_TTL = 2000; // 2 seconds - allows rapid toggling while preventing spam
 
   // SSE client tracking for fallback support
   const sseClients = new Set<express.Response>();
