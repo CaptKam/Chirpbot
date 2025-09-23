@@ -126,7 +126,7 @@ export default function Settings() {
     staleTime: 5 * 1000, // Cache for 5 seconds (reduced to match server cache)
     refetchInterval: 10 * 1000, // Refetch every 10 seconds (more responsive)
   });
-  
+
   // Extract settings from response (handles both old admin format and new public format)
   const globalSettings = (globalSettingsResponse as any)?.settings || globalSettingsResponse;
 
@@ -140,7 +140,7 @@ export default function Settings() {
 
   // 🔧 FIXED: Hierarchical query keys for proper cache invalidation
   const queryKeySegments = user?.id ? ['/api/user', user.id, 'alert-preferences', activeSport.toLowerCase()] : [];
-  
+
   // Alert preferences query
   const { data: alertPreferences, isLoading: preferencesLoading } = useQuery({
     queryKey: queryKeySegments,
@@ -244,12 +244,12 @@ export default function Settings() {
         alertType,
         enabled
       });
-      
+
       if (!response.ok) {
         const errorData = await response.text();
         throw new Error(`API Error: ${response.status} - ${errorData}`);
       }
-      
+
       return response.json();
     },
     onMutate: ({ alertType, enabled }) => {
@@ -257,17 +257,17 @@ export default function Settings() {
     },
     onSuccess: (data, { alertType, enabled }) => {
       console.log(`✅ Mutation success: ${alertType} = ${enabled}`, data);
-      
+
       // 🔧 FIXED: Invalidate both specific sport and general preferences cache
       if (queryKeySegments.length > 0) {
         queryClient.invalidateQueries({ queryKey: queryKeySegments });
         // Also invalidate the general user preferences cache
         queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/alert-preferences`] });
       }
-      
+
       // 🔧 FIXED: Force refetch to ensure UI updates immediately
       queryClient.refetchQueries({ queryKey: queryKeySegments });
-      
+
       // Clear pending state after successful update
       setPendingAlerts(prev => {
         const newSet = new Set(prev);
@@ -284,7 +284,7 @@ export default function Settings() {
     },
     onError: (error: any, { alertType, enabled }) => {
       console.error(`❌ Mutation error: ${alertType} = ${enabled}`, error);
-      
+
       // 🔧 FIXED: Clear pending state on error
       setPendingAlerts(prev => {
         const newSet = new Set(prev);
@@ -292,7 +292,7 @@ export default function Settings() {
         console.log(`🗑️ Removed ${alertType} from pending alerts (error)`);
         return newSet;
       });
-      
+
       const errorMessage = error?.message || 'Update failed';
       if (errorMessage.includes('401') || errorMessage.includes('not authenticated')) {
         toast({
@@ -426,10 +426,10 @@ export default function Settings() {
     if (gamblingInsightsPending || updateGamblingInsightsMutation.isPending) {
       return;
     }
-    
+
     setGamblingInsightsPending(true);
     setGamblingInsightsEnabled(enabled);
-    
+
     updateGamblingInsightsMutation.mutate(
       { enabled },
       {
@@ -511,7 +511,7 @@ export default function Settings() {
   const handleTelegramSave = () => {
     // Don't send placeholder dots - send empty string to keep existing token
     const tokenToSend = telegramBotToken.startsWith('••••') ? '' : telegramBotToken;
-    
+
     updateTelegramMutation.mutate({
       botToken: tokenToSend,
       chatId: telegramChatId,
@@ -530,7 +530,7 @@ export default function Settings() {
                            activeSport === 'CFL' ? 'text-red-400' :
                            activeSport === 'WNBA' ? 'text-pink-400' :
                            'text-emerald-400';
-    
+
     switch (category) {
       case "Game Situations":
         return <Target className={`w-4 h-4 ${iconColorClass}`} />;
@@ -726,7 +726,7 @@ export default function Settings() {
                         const userPreference = getAlertPreference(activeSport, alertType.key);
                         const isGloballyDisabled = isAlertGloballyDisabled(alertType.key);
                         const isPending = pendingAlerts.has(alertType.key);
-                        
+
                         // Show skeleton if preference is still loading or pending
                         if (userPreference === undefined || isPending) {
                           return (
@@ -748,7 +748,7 @@ export default function Settings() {
                             </div>
                           );
                         }
-                        
+
                         return (
                           <div key={alertType.key} className={`flex items-center justify-between p-4 rounded-lg border transition-all duration-300 group ${
                             isGloballyDisabled 
@@ -775,10 +775,9 @@ export default function Settings() {
                               </div>
                               <p className={`text-xs mt-1 ${isGloballyDisabled ? 'text-red-400/70' : 'text-slate-400'}`}>
                                 {isGloballyDisabled 
-                                  ? `Admin disabled system-wide. ${userPreference ? 'Your preference: ON, but overridden → Effective: OFF' : 'Your preference: OFF (matches system)'}` 
+                                  ? `Admin disabled system-wide. Your preference: ${userPreference ? 'ON' : 'OFF'}, but effective state: OFF` 
                                   : alertType.description
-                                }
-                              </p>
+                                }</p>
                             </div>
                             <Switch
                               checked={userPreference || false}
@@ -813,7 +812,7 @@ export default function Settings() {
                   )}
                 </div>
 
-                    
+
               </div>
             )}
           </div>
@@ -1044,8 +1043,8 @@ export default function Settings() {
             )}
           </div>
         )}
-        
-        
+
+
       </div>
     </div>
   );
