@@ -154,7 +154,8 @@ export default function Settings() {
       return response.json();
     },
     enabled: !!user?.id && isAuthenticated,
-    staleTime: 1000, // Very short cache time for immediate updates
+    staleTime: 0, // No cache - always fetch fresh to prevent conflicts
+    gcTime: 0, // Don't keep stale data
     refetchInterval: false, // No automatic refetching - only manual invalidation
   });
 
@@ -262,15 +263,25 @@ export default function Settings() {
     onSuccess: (data, { alertType, enabled }) => {
       console.log(`✅ Mutation success: ${alertType} = ${enabled}`, data);
 
-      // 🔧 FIXED: Invalidate both specific sport and general preferences cache
+      // 🔧 FIXED: Remove all caches related to alert preferences to prevent conflicts
       if (queryKeySegments.length > 0) {
-        queryClient.invalidateQueries({ queryKey: queryKeySegments });
-        // Also invalidate the general user preferences cache
-        queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/alert-preferences`] });
+        // Remove the specific sport cache
+        queryClient.removeQueries({ queryKey: queryKeySegments });
+        // Remove general preferences cache
+        queryClient.removeQueries({ queryKey: [`/api/user/${user?.id}/alert-preferences`] });
+        // Remove any cached sport-specific queries
+        queryClient.removeQueries({ 
+          predicate: (query) => {
+            const key = query.queryKey[0] as string;
+            return key?.includes('/alert-preferences') && key?.includes(user?.id || '');
+          }
+        });
       }
 
-      // 🔧 FIXED: Force refetch to ensure UI updates immediately
-      queryClient.refetchQueries({ queryKey: queryKeySegments });
+      // Force immediate refetch with a small delay to ensure backend is updated
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: queryKeySegments });
+      }, 100);
 
       // Clear pending state after successful update
       setPendingAlerts(prev => {
