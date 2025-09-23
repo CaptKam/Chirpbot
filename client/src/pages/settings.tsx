@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
@@ -154,8 +154,8 @@ export default function Settings() {
       return response.json();
     },
     enabled: !!user?.id && isAuthenticated,
-    staleTime: 0, // No cache - always fetch fresh to prevent conflicts
-    gcTime: 0, // Don't keep stale data
+    staleTime: 30000, // Cache for 30 seconds - reasonable freshness
+    gcTime: 5 * 60 * 1000, // 5 minute garbage collection
     refetchInterval: false, // No automatic refetching - only manual invalidation
   });
 
@@ -263,25 +263,10 @@ export default function Settings() {
     onSuccess: (data, { alertType, enabled }) => {
       console.log(`✅ Mutation success: ${alertType} = ${enabled}`, data);
 
-      // 🔧 FIXED: Remove all caches related to alert preferences to prevent conflicts
+      // Optimized: Only invalidate the specific sport's cache
       if (queryKeySegments.length > 0) {
-        // Remove the specific sport cache
-        queryClient.removeQueries({ queryKey: queryKeySegments });
-        // Remove general preferences cache
-        queryClient.removeQueries({ queryKey: [`/api/user/${user?.id}/alert-preferences`] });
-        // Remove any cached sport-specific queries
-        queryClient.removeQueries({ 
-          predicate: (query) => {
-            const key = query.queryKey[0] as string;
-            return key?.includes('/alert-preferences') && key?.includes(user?.id || '');
-          }
-        });
+        queryClient.invalidateQueries({ queryKey: queryKeySegments });
       }
-
-      // Force immediate refetch with a small delay to ensure backend is updated
-      setTimeout(() => {
-        queryClient.refetchQueries({ queryKey: queryKeySegments });
-      }, 100);
 
       // Clear pending state after successful update
       setPendingAlerts(prev => {
@@ -558,16 +543,39 @@ export default function Settings() {
     }
   };
 
-  // Helper functions for sport-specific dynamic classes
-  const getHoverBgClass = () => {
-    return activeSport === 'MLB' ? 'hover:bg-green-500/20' :
-           activeSport === 'NFL' ? 'hover:bg-orange-500/20' :
-           activeSport === 'NBA' ? 'hover:bg-purple-500/20' :
-           activeSport === 'NCAAF' ? 'hover:bg-blue-500/20' :
-           activeSport === 'CFL' ? 'hover:bg-red-500/20' :
-           activeSport === 'WNBA' ? 'hover:bg-pink-500/20' :
-           'hover:bg-emerald-500/20';
-  };
+  // Memoized helper functions for sport-specific dynamic classes
+  const sportClasses = useMemo(() => ({
+    hoverBg: activeSport === 'MLB' ? 'hover:bg-green-500/20' :
+             activeSport === 'NFL' ? 'hover:bg-orange-500/20' :
+             activeSport === 'NBA' ? 'hover:bg-purple-500/20' :
+             activeSport === 'NCAAF' ? 'hover:bg-blue-500/20' :
+             activeSport === 'CFL' ? 'hover:bg-red-500/20' :
+             activeSport === 'WNBA' ? 'hover:bg-pink-500/20' :
+             'hover:bg-emerald-500/20',
+    hoverBorder: activeSport === 'MLB' ? 'hover:border-green-500' :
+                 activeSport === 'NFL' ? 'hover:border-orange-500' :
+                 activeSport === 'NBA' ? 'hover:border-purple-500' :
+                 activeSport === 'NCAAF' ? 'hover:border-blue-500' :
+                 activeSport === 'CFL' ? 'hover:border-red-500' :
+                 activeSport === 'WNBA' ? 'hover:border-pink-500' :
+                 'hover:border-emerald-500',
+    cardBg: activeSport === 'MLB' ? 'bg-green-500/5' :
+            activeSport === 'NFL' ? 'bg-orange-500/5' :
+            activeSport === 'NBA' ? 'bg-purple-500/5' :
+            activeSport === 'NCAAF' ? 'bg-blue-500/5' :
+            activeSport === 'CFL' ? 'bg-red-500/5' :
+            activeSport === 'WNBA' ? 'bg-pink-500/5' :
+            'bg-emerald-500/5',
+    checkedBg: activeSport === 'MLB' ? 'data-[state=checked]:bg-green-500' :
+               activeSport === 'NFL' ? 'data-[state=checked]:bg-orange-500' :
+               activeSport === 'NBA' ? 'data-[state=checked]:bg-purple-500' :
+               activeSport === 'NCAAF' ? 'data-[state=checked]:bg-blue-500' :
+               activeSport === 'CFL' ? 'data-[state=checked]:bg-red-500' :
+               activeSport === 'WNBA' ? 'data-[state=checked]:bg-pink-500' :
+               'data-[state=checked]:bg-emerald-500'
+  }), [activeSport]);
+
+  const getHoverBgClass = () => sportClasses.hoverBg;
 
   const getHoverBorderClass = () => {
     return activeSport === 'MLB' ? 'hover:border-green-500' :
@@ -768,7 +776,7 @@ export default function Settings() {
                           <div key={alertType.key} className={`flex items-center justify-between p-4 rounded-lg border transition-all duration-300 group ${
                             isGloballyDisabled 
                               ? 'bg-red-500/5 border-red-500/20 opacity-60' 
-                              : `${getCardBgClass()} ${getCardBorderClass()} ${getCardHoverBgClass()} hover:ring-1 ${getHoverRingClass()}`
+                              : `${sportClasses.cardBg} border-white/10 ${sportClasses.hoverBg} hover:ring-1 ring-white/20`
                           }`}>
                             <div className="flex-1">
                               <div className="flex items-center space-x-2">
@@ -802,7 +810,7 @@ export default function Settings() {
                               }}
                               disabled={isPending || isGloballyDisabled || updateAlertPreferenceMutation.isPending}
                               data-testid={`toggle-${alertType.key.toLowerCase()}`}
-                              className={`${isGloballyDisabled ? 'opacity-50' : getCheckedBgClass()} transition-all duration-200 ${isPending ? 'pointer-events-none' : ''}`}
+                              className={`${isGloballyDisabled ? 'opacity-50' : sportClasses.checkedBg} transition-all duration-200 ${isPending ? 'pointer-events-none' : ''}`}
                             />
                           </div>
                         );

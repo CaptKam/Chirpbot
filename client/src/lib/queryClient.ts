@@ -59,8 +59,8 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false, // Avoid unnecessary refetches in production
-      staleTime: 5000, // Shorter cache time to reduce conflicts
-      gcTime: 60 * 1000, // Shorter garbage collection time
+      staleTime: 30000, // 30 seconds - good balance of freshness and performance
+      gcTime: 5 * 60 * 1000, // 5 minutes - reasonable cache retention
       retry: false,
     },
     mutations: {
