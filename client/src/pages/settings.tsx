@@ -241,7 +241,6 @@ export default function Settings() {
       return response.json();
     },
     onSuccess: (_, { alertType }) => {
-      console.log(`Toggle ${alertType} succeeded`);
       // 🔧 FIXED: Use hierarchical key for precise invalidation and clear pending state
       if (queryKeySegments) {
         queryClient.invalidateQueries({ queryKey: queryKeySegments });
@@ -249,17 +248,14 @@ export default function Settings() {
       setPendingAlerts(prev => {
         const newSet = new Set(prev);
         newSet.delete(alertType);
-        console.log(`Toggle ${alertType} settled, clearing pending state`);
         return newSet;
       });
     },
     onError: (error: any, { alertType }) => {
-      console.log(`Toggle ${alertType} failed:`, error);
       // 🔧 FIXED: Clear pending state on error
       setPendingAlerts(prev => {
         const newSet = new Set(prev);
         newSet.delete(alertType);
-        console.log(`Toggle ${alertType} error, clearing pending state`);
         return newSet;
       });
       
@@ -429,13 +425,10 @@ export default function Settings() {
       return;
     }
 
-    // 🔧 FIXED: Immediate pending state check with console logging for debugging
+    // 🔧 FIXED: Immediate pending state check
     if (pendingAlerts.has(alertType)) {
-      console.log(`Toggle ${alertType} blocked - already pending`);
       return;
     }
-
-    console.log(`Toggle ${alertType} starting...`);
 
     // 🔧 FIXED: Immediate synchronous pending state update to prevent race conditions
     setPendingAlerts(prev => {
