@@ -233,29 +233,47 @@ export default function Settings() {
         throw new Error('User not authenticated or ID missing');
       }
 
+      console.log(`📤 API Request: ${alertType} = ${enabled}`);
       const response = await apiRequest("POST", `/api/user/${user.id}/alert-preferences`, {
         sport: activeSport.toLowerCase(),
         alertType,
         enabled
       });
+      
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`API Error: ${response.status} - ${errorData}`);
+      }
+      
       return response.json();
     },
-    onSuccess: (_, { alertType }) => {
+    onMutate: ({ alertType, enabled }) => {
+      console.log(`🔄 Mutation starting: ${alertType} = ${enabled}`);
+    },
+    onSuccess: (data, { alertType, enabled }) => {
+      console.log(`✅ Mutation success: ${alertType} = ${enabled}`, data);
+      
       // 🔧 FIXED: Use hierarchical key for precise invalidation and clear pending state
       if (queryKeySegments) {
         queryClient.invalidateQueries({ queryKey: queryKeySegments });
       }
+      
+      // Clear pending state after successful update
       setPendingAlerts(prev => {
         const newSet = new Set(prev);
         newSet.delete(alertType);
+        console.log(`🗑️ Removed ${alertType} from pending alerts`);
         return newSet;
       });
     },
-    onError: (error: any, { alertType }) => {
+    onError: (error: any, { alertType, enabled }) => {
+      console.error(`❌ Mutation error: ${alertType} = ${enabled}`, error);
+      
       // 🔧 FIXED: Clear pending state on error
       setPendingAlerts(prev => {
         const newSet = new Set(prev);
         newSet.delete(alertType);
+        console.log(`🗑️ Removed ${alertType} from pending alerts (error)`);
         return newSet;
       });
       
@@ -269,10 +287,13 @@ export default function Settings() {
       } else {
         toast({
           title: "Error",
-          description: "Failed to update alert preference. Please try again.",
+          description: `Failed to update ${alertType}: ${errorMessage}`,
           variant: "destructive",
         });
       }
+    },
+    onSettled: (data, error, { alertType }) => {
+      console.log(`🏁 Mutation settled: ${alertType}`, { success: !error, error: error?.message });
     },
   });
 
@@ -425,10 +446,20 @@ export default function Settings() {
       return;
     }
 
-    // 🔧 FIXED: Immediate pending state check
-    if (pendingAlerts.has(alertType)) {
+    // 🔧 FIXED: Immediate pending state check with mutex protection
+    if (pendingAlerts.has(alertType) || updateAlertPreferenceMutation.isPending) {
+      console.log(`🚫 Toggle blocked for ${alertType} - already pending or mutation in progress`);
       return;
     }
+
+    // Get current preference to prevent unnecessary toggles
+    const currentPreference = getAlertPreference(activeSport, alertType);
+    if (currentPreference === enabled) {
+      console.log(`🚫 Toggle ignored for ${alertType} - already in desired state: ${enabled}`);
+      return;
+    }
+
+    console.log(`🔄 Toggle ${alertType} from ${currentPreference} to ${enabled}`);
 
     // 🔧 FIXED: Immediate synchronous pending state update to prevent race conditions
     setPendingAlerts(prev => {
@@ -439,7 +470,7 @@ export default function Settings() {
 
     // Execute mutation
     updateAlertPreferenceMutation.mutate({ alertType, enabled });
-  }, [user?.id, pendingAlerts, updateAlertPreferenceMutation]);
+  }, [user?.id, pendingAlerts, updateAlertPreferenceMutation, activeSport, getAlertPreference, isAlertGloballyDisabled]);
 
   // 🔧 FIXED: Clear pending alerts when switching sports
   useEffect(() => {
@@ -731,11 +762,14 @@ export default function Settings() {
                               </p>
                             </div>
                             <Switch
-                              checked={isPending ? !userPreference : userPreference}
-                              onCheckedChange={(enabled) => handleAlertToggle(alertType.key, enabled)}
-                              disabled={isPending || isGloballyDisabled}
+                              checked={userPreference || false}
+                              onCheckedChange={(enabled) => {
+                                console.log(`🎯 Switch toggled: ${alertType.key} from ${userPreference} to ${enabled}`);
+                                handleAlertToggle(alertType.key, enabled);
+                              }}
+                              disabled={isPending || isGloballyDisabled || updateAlertPreferenceMutation.isPending}
                               data-testid={`toggle-${alertType.key.toLowerCase()}`}
-                              className={`${isGloballyDisabled ? 'opacity-50' : getCheckedBgClass()} transition-all duration-200`}
+                              className={`${isGloballyDisabled ? 'opacity-50' : getCheckedBgClass()} transition-all duration-200 ${isPending ? 'pointer-events-none' : ''}`}
                             />
                           </div>
                         );
