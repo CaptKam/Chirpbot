@@ -131,14 +131,15 @@ export class UnifiedAlertGenerator {
   private nflApi?: NFLApiService;
   private cflApi?: CFLApiService;
 
-  // Error recovery tracking (production only) 
+  // Error recovery tracking (production only) - DISABLED to prevent duplicates
   private readonly retryConfig: RetryConfig = {
     maxRetries: 3,
     initialDelay: 1000,
     maxDelay: 30000,
     backoffMultiplier: 2
   };
-  private fallbackPollingActive: Map<string, NodeJS.Timeout> = new Map();
+  // DISABLED: Fallback polling system to prevent duplicate API calls
+  // private fallbackPollingActive: Map<string, NodeJS.Timeout> = new Map();
 
   // Engine status cache for performance
   private engineStatusCache: Map<string, SportEngineStatus> = new Map();
@@ -171,7 +172,9 @@ export class UnifiedAlertGenerator {
 
       // V3 Architecture: Initialize new services
       this.engineLifecycleManager = new EngineLifecycleManagerClass();
-      this.calendarSyncService = new CalendarSyncService({
+      
+      // 🔧 FIX: Use singleton CalendarSyncService instead of creating duplicate
+      this.calendarSyncService = CalendarSyncService.getInstance({
         sports: ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL'],
         defaultPollInterval: RUNTIME.calendarPoll.defaultMs,
         preStartWindowMinutes: RUNTIME.calendarPoll.preStartWindowMin,
@@ -179,6 +182,8 @@ export class UnifiedAlertGenerator {
         enableMetrics: true
       });
       this.weatherOnLiveService = new WeatherOnLiveService();
+      
+      console.log('🔧 Using singleton CalendarSyncService to prevent duplicate API calls');
 
       // CRITICAL FIX: Connect GameStateManager to EngineLifecycleManager
       this.gameStateManager = gameStateManager;
@@ -192,12 +197,15 @@ export class UnifiedAlertGenerator {
 
       console.log('🔗 GameStateManager connected to EngineLifecycleManager - engines will start when games go LIVE');
 
-      // Initialize backward compatibility API services (used for fallback only)
-      this.mlbApi = new MLBApiService();
-      this.ncaafApi = new NCAAFApiService();
-      this.nflApi = new NFLApiService();
-      this.wnbaApi = new WNBAApiService();
-      this.cflApi = new CFLApiService();
+      // DISABLED: Backward compatibility API services to prevent duplicate calls
+      // These were causing duplicate NBA/WNBA API calls
+      // this.mlbApi = new MLBApiService();
+      // this.ncaafApi = new NCAAFApiService();
+      // this.nflApi = new NFLApiService();
+      // this.wnbaApi = new WNBAApiService();
+      // this.cflApi = new CFLApiService();
+      
+      console.log('🚫 Backward compatibility API services disabled to prevent duplicates');
 
       console.log('✅ V3 Weather-on-Live architecture initialized successfully');
 
@@ -263,11 +271,13 @@ export class UnifiedAlertGenerator {
       this.engineStatusCache.clear();
       this.lastEngineStatusCheck = 0;
 
-      // Clear any remaining fallback polling
-      for (const [sport, interval] of this.fallbackPollingActive) {
-        clearInterval(interval);
-      }
-      this.fallbackPollingActive.clear();
+      // DISABLED: Fallback polling system to prevent duplicates
+      // for (const [sport, interval] of this.fallbackPollingActive) {
+      //   clearInterval(interval);
+      // }
+      // this.fallbackPollingActive.clear();
+      
+      console.log('🚫 Fallback polling system disabled');
 
       console.log('✅ V3 Weather-on-Live monitoring stopped successfully');
 
@@ -282,7 +292,7 @@ export class UnifiedAlertGenerator {
       mode: 'production',
       architecture: 'weather-on-live-v3',
       engineFailures: 0, // Legacy - no longer applicable in V3
-      fallbackPollingActive: this.fallbackPollingActive.size,
+      fallbackPollingActive: 0, // Disabled to prevent duplicates
       healthMonitor: this.healthMonitor?.getHealthStatus() || null,
       // V3 specific stats
       engineStatusCacheSize: this.engineStatusCache.size,
@@ -395,7 +405,9 @@ export class UnifiedAlertGenerator {
             } catch (processError) {
               console.error(`❌ Error processing ${sport} games:`, processError);
               this.healthMonitor?.recordError(processError as Error);
-              await this.activateFallbackPolling(sport);
+              // DISABLED: Fallback polling to prevent duplicate API calls
+              // await this.activateFallbackPolling(sport);
+              console.log(`🚫 Fallback polling disabled for ${sport} to prevent duplicates`);
             }
           }
         } catch (sportError) {
@@ -1395,85 +1407,12 @@ export class UnifiedAlertGenerator {
     }
   }
 
+  // DISABLED: Fallback polling method to prevent duplicate API calls
   private async activateFallbackPolling(sport: string): Promise<void> {
-    try {
-      // Clear any existing fallback polling for this sport
-      const existingInterval = this.fallbackPollingActive.get(sport);
-      if (existingInterval) {
-        clearInterval(existingInterval);
-      }
-
-      // Set up fallback polling with exponential backoff
-      const failureRecord = this.engineFailures.get(sport);
-      const retryDelay = Math.min(
-        this.retryConfig.initialDelay * Math.pow(this.retryConfig.backoffMultiplier, failureRecord?.failureCount || 0),
-        this.retryConfig.maxDelay
-      );
-
-      console.log(`🔄 Activating fallback polling for ${sport} with ${retryDelay}ms interval`);
-
-      const interval = setInterval(async () => {
-        try {
-          console.log(`⚡ Fallback polling: Checking ${sport} alerts...`);
-
-          // Try to generate alerts for this sport
-          let games: any[] = [];
-          switch (sport) {
-            case 'MLB':
-              games = await this.mlbApi!.getTodaysGames();
-              break;
-            case 'NFL':
-              games = await this.getNFLGames();
-              break;
-            case 'NCAAF':
-              games = await this.ncaafApi!.getTodaysGames();
-              break;
-            case 'WNBA':
-              games = await this.getWNBAGames();
-              break;
-            case 'CFL':
-              games = await this.getCFLGames();
-              break;
-          }
-
-          if (games.length > 0) {
-            const alerts = await this.processGamesWithEngine(sport, games);
-            if (alerts > 0) {
-              console.log(`✅ Fallback polling recovered for ${sport}: ${alerts} alerts generated`);
-              // Clear the failure record and stop fallback polling
-              this.engineFailures.delete(sport);
-              clearInterval(interval);
-              this.fallbackPollingActive.delete(sport);
-            }
-          }
-        } catch (error) {
-          console.error(`❌ Fallback polling failed for ${sport}:`, error);
-          // Update failure record
-          const existingRecord = this.engineFailures.get(sport);
-          const record: EngineFailureRecord = existingRecord || {
-            sport,
-            failureCount: 0,
-            lastFailureTime: new Date(),
-            isInRecovery: true,
-            nextRetryTime: new Date(Date.now() + retryDelay)
-          };
-          record.failureCount++;
-          record.lastFailureTime = new Date();
-          this.engineFailures.set(sport, record);
-
-          // Stop fallback polling if we've exceeded max retries
-          if (record.failureCount >= this.retryConfig.maxRetries) {
-            console.error(`❌ Fallback polling exhausted for ${sport} after ${this.retryConfig.maxRetries} attempts`);
-            clearInterval(interval);
-            this.fallbackPollingActive.delete(sport);
-          }
-        }
-      }, retryDelay);
-
-      this.fallbackPollingActive.set(sport, interval);
-    } catch (error) {
-      console.error(`❌ Error setting up fallback polling for ${sport}:`, error);
-    }
+    console.log(`🚫 Fallback polling disabled for ${sport} to prevent duplicate API calls`);
+    console.log(`🔧 Using CalendarSyncService singleton for all ${sport} data instead`);
+    // This method is intentionally disabled to prevent architectural duplication
+    return;
   }
 
 

@@ -99,6 +99,9 @@ interface SportPollingState {
 
 // === CALENDAR SYNC SERVICE IMPLEMENTATION ===
 
+// Process-wide singleton symbol
+const CALENDAR_SYNC_SINGLETON_KEY = Symbol.for('calendarSyncService');
+
 export class CalendarSyncService implements ICalendarSyncService {
   private readonly config: CalendarSyncConfig;
   private readonly apiServices: Map<string, any> = new Map();
@@ -112,7 +115,7 @@ export class CalendarSyncService implements ICalendarSyncService {
   private isRunning = false;
   private startTime = Date.now();
 
-  constructor(config: Partial<CalendarSyncConfig> = {}) {
+  private constructor(config: Partial<CalendarSyncConfig> = {}) {
     this.config = {
       sports: ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL'],
       defaultPollInterval: RUNTIME.calendarPoll.defaultMs,
@@ -137,6 +140,26 @@ export class CalendarSyncService implements ICalendarSyncService {
 
     this.initializeApiServices();
     this.initializeSportStates();
+  }
+
+  // Singleton factory method
+  static getInstance(config?: Partial<CalendarSyncConfig>): CalendarSyncService {
+    const globalSymbols = globalThis as any;
+    
+    if (!globalSymbols[CALENDAR_SYNC_SINGLETON_KEY]) {
+      console.log('📅 Creating new CalendarSyncService singleton instance');
+      globalSymbols[CALENDAR_SYNC_SINGLETON_KEY] = new CalendarSyncService(config);
+    } else {
+      console.log('📅 Using existing CalendarSyncService singleton instance');
+    }
+    
+    return globalSymbols[CALENDAR_SYNC_SINGLETON_KEY];
+  }
+
+  // Static method to get existing instance
+  static getExistingInstance(): CalendarSyncService | null {
+    const globalSymbols = globalThis as any;
+    return globalSymbols[CALENDAR_SYNC_SINGLETON_KEY] || null;
   }
 
   // === INITIALIZATION ===
@@ -173,11 +196,11 @@ export class CalendarSyncService implements ICalendarSyncService {
 
   async start(): Promise<void> {
     if (this.isRunning) {
-      console.log('📅 Calendar Sync: Already running');
+      console.log('📅 Calendar Sync: Already running (idempotent start)');
       return;
     }
 
-    console.log('📅 Calendar Sync: Starting lightweight calendar synchronization...');
+    console.log('📅 Calendar Sync: Starting lightweight calendar synchronization (singleton)...');
     this.isRunning = true;
     this.startTime = Date.now();
 
@@ -189,7 +212,7 @@ export class CalendarSyncService implements ICalendarSyncService {
       this.cleanupOldGames();
     }, this.config.cleanupIntervalMs);
 
-    console.log('📅 Calendar Sync: Service started successfully');
+    console.log('📅 Calendar Sync: Service started successfully (singleton)');
   }
 
   async stop(): Promise<void> {

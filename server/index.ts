@@ -52,11 +52,13 @@ if (!(globalThis as any).__calendar_sync_bootstrapped__) {
       const { CalendarSyncService } = await import('./services/calendar-sync-service');
       console.log("🔍 DEBUG: Import successful, creating instance");
 
-      // Initialize CalendarSyncService with comprehensive sports support
-      const calendarSyncService = new CalendarSyncService({
+      // 🔧 FIX: Use singleton CalendarSyncService instead of creating duplicate
+      const calendarSyncService = CalendarSyncService.getInstance({
         sports: ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL'],
         enableMetrics: true
       });
+      
+      console.log('🔧 Using singleton CalendarSyncService from server/index.ts');
 
       console.log("🔍 DEBUG: Instance created, calling start()");
       await calendarSyncService.start();
