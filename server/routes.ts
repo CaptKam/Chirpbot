@@ -172,9 +172,8 @@ const adminSessionParser = session({
 
 export async function registerRoutes(app: Express, httpServer: Server): Promise<Server> {
 
-  // Add memory management and request deduplication middleware FIRST (before any logging)
+  // Add memory management middleware FIRST (before any logging)
   app.use(memoryManager.middleware());
-  app.use(unifiedDeduplicator.requestMiddleware());
 
   // CRITICAL FIX: Ensure API routes are protected from Vite catch-all
   app.use('/api/*', (req, res, next) => {
@@ -203,6 +202,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
     return userSessionParser(req, res, next);
   });
+
+  // SECURITY FIX: Move request deduplication AFTER session parsing so cache keys include userId
+  app.use(unifiedDeduplicator.requestMiddleware());
 
   // MigrationAdapter diagnostic endpoint for runtime verification
   app.get('/api/diagnostics/ingestion-status', async (req, res) => {

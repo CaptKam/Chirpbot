@@ -328,8 +328,15 @@ export class UnifiedDeduplicator {
         return next();
       }
 
-      // Skip deduplication for certain paths that should always be fresh
-      const skipPaths = ['/api/auth/', '/api/admin/', '/api/alerts/live'];
+      // Skip deduplication for paths that should always be fresh (especially user preferences)
+      const skipPaths = [
+        '/api/auth/', 
+        '/api/admin/', 
+        '/api/alerts/live',
+        '/api/user/',           // CRITICAL: All user endpoints must be fresh
+        '/api/global-alert-settings/', // Settings must be fresh
+        '/api/environment-status'      // Diagnostics must be fresh
+      ];
       if (skipPaths.some(path => req.path.startsWith(path))) {
         return next();
       }
