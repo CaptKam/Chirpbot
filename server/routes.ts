@@ -3260,8 +3260,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Update the global alert setting in database using atomic upsert
       await storage.upsertGlobalAlertSetting(sport, alertType, enabled, req.session.adminUserId!);
 
-      // Clear cache for this sport using the proper public method
-      await unifiedSettings.invalidateCache(sport);
+      // ✅ Cache invalidation handled by storage layer
 
       console.log(`✅ Admin toggled ${sport} ${alertType} to ${enabled ? 'enabled' : 'disabled'}`);
 
@@ -3551,8 +3550,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         results.push({ alertType, enabled: true });
       }
 
-      // Invalidate cache so changes show immediately in user settings
-      await unifiedSettings.invalidateCache('MLB');
+      // ✅ Cache invalidation handled by storage layer
 
       res.json({
         message: 'Critical MLB alerts enabled successfully',
@@ -3579,8 +3577,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         results.push({ alertType, enabled: true });
       }
 
-      // Invalidate cache so changes show immediately in user settings
-      await unifiedSettings.invalidateCache('MLB');
+      // ✅ Cache invalidation handled by storage layer
 
       res.json({
         message: 'All MLB alerts enabled for testing',
@@ -3647,8 +3644,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           }
         }
 
-        // Invalidate cache for this sport so changes show immediately in user settings
-        await unifiedSettings.invalidateCache(sport);
+        // ✅ Cache invalidation handled by storage layer
       }
 
       // Disable Telegram for all users

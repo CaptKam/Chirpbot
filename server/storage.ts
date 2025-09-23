@@ -406,8 +406,9 @@ export const storage = {
         eq(userAlertPreferences.alertType, alertType)
       ));
 
+    let result;
     if (existing.length > 0) {
-      const result = await db.update(userAlertPreferences)
+      result = await db.update(userAlertPreferences)
         .set({ enabled, updatedAt: new Date() })
         .where(and(
           eq(userAlertPreferences.userId, userId),
@@ -416,14 +417,19 @@ export const storage = {
         ))
         .returning();
       console.log(`🔧 RULE 1: Updated user preference ${userId} ${sport}.${alertType} = ${enabled}`);
-      return result[0];
     } else {
-      const result = await db.insert(userAlertPreferences)
+      result = await db.insert(userAlertPreferences)
         .values({ userId, sport, alertType, enabled })
         .returning();
       console.log(`🔧 RULE 1: Created user preference ${userId} ${sport}.${alertType} = ${enabled}`);
-      return result[0];
     }
+
+    // 🎯 CACHE FIX: Invalidate cache after user preference changes to ensure consistency
+    const canonicalSport = sport.toLowerCase();
+    await unifiedSettingsInstance.invalidateCache(canonicalSport);
+    console.log(`🗑️ Cache invalidated for ${canonicalSport} after user preference update`);
+
+    return result[0];
   },
 
   async bulkSetUserAlertPreferences(userId: string, sport: string, preferences: Array<{alertType: string, enabled: boolean}>) {
