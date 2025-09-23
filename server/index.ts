@@ -21,17 +21,24 @@ console.log('🔒 Checking for existing ChirpBot instances...');
 const TARGET_PORT = parseInt(process.env.PORT || "3000", 10);
 const ALLOW_DYNAMIC_PORT = process.env.ALLOW_DYNAMIC_PORT === 'true';
 
-// Create and acquire singleton lock
+// Create and acquire singleton lock with development restart support
 const instanceLock = new SingleInstanceLock();
-const lockAcquired = instanceLock.acquire(TARGET_PORT);
 
-if (!lockAcquired) {
-  // Another healthy instance is already running - exit gracefully
-  console.log('✅ Exiting gracefully - no port conflicts will occur');
-  process.exit(0);
-}
+// Use async IIFE to handle the promise
+(async () => {
+  const lockAcquired = await instanceLock.acquire(TARGET_PORT);
 
-console.log(`🔒 Single instance lock acquired for PID ${process.pid}`);
+  if (!lockAcquired) {
+    // Another healthy instance is already running - exit gracefully
+    console.log('✅ Exiting gracefully - no port conflicts will occur');
+    process.exit(0);
+  }
+
+  console.log(`🔒 Single instance lock acquired for PID ${process.pid}`);
+})().catch((error) => {
+  console.error('❌ Failed to acquire singleton lock:', error);
+  process.exit(1);
+});
 
 // 🔄 CALENDAR SYNC SERVICE: SINGLE DATA INGESTION SYSTEM
 console.log("🔍 DEBUG: Starting CalendarSyncService as primary data system");

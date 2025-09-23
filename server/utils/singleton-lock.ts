@@ -20,7 +20,7 @@ export class SingleInstanceLock {
   /**
    * Attempts to acquire the lock. Returns true if successful, false if another instance is running.
    */
-  acquire(port: number): boolean {
+  async acquire(port: number): Promise<boolean> {
     try {
       // Try to create exclusive lock file
       this.lockFd = fs.openSync(this.lockPath, 'wx');
@@ -48,19 +48,32 @@ export class SingleInstanceLock {
     } catch (error: any) {
       if (error.code === 'EEXIST') {
         // Lock file exists, check if process is still alive
-        return this.handleExistingLock();
+        return await this.handleExistingLock(port);
       }
       throw error;
     }
   }
 
-  private handleExistingLock(): boolean {
+  private async handleExistingLock(port: number): Promise<boolean> {
     try {
       const lockContent = fs.readFileSync(this.lockPath, 'utf8');
       const lockData: LockData = JSON.parse(lockContent);
       
       // Check if the process is still alive
       if (this.isProcessAlive(lockData.pid)) {
+        // In development mode, wait for the old process to die during restarts
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`🔄 Development restart detected - waiting for PID ${lockData.pid} to finish shutting down...`);
+          await this.waitForProcessToDie(lockData.pid, 5000);
+          
+          // Check again if process is still alive after waiting
+          if (!this.isProcessAlive(lockData.pid)) {
+            console.log(`✅ Previous process finished - acquiring lock`);
+            fs.unlinkSync(this.lockPath);
+            return await this.acquire(port);
+          }
+        }
+        
         console.log(`🔒 ChirpBot instance already running (PID: ${lockData.pid}, Port: ${lockData.port})`);
         console.log('   Existing instance is healthy - exiting gracefully');
         return false;
@@ -70,7 +83,7 @@ export class SingleInstanceLock {
         fs.unlinkSync(this.lockPath);
         
         // Try to acquire again
-        return this.acquire(lockData.port);
+        return await this.acquire(port);
       }
     } catch (error) {
       // Corrupted lock file, remove it
@@ -78,7 +91,7 @@ export class SingleInstanceLock {
       try {
         fs.unlinkSync(this.lockPath);
       } catch {}
-      return this.acquire(5000); // Try again with default port
+      return await this.acquire(5000); // Try again with default port
     }
   }
 
@@ -89,6 +102,29 @@ export class SingleInstanceLock {
       return true;
     } catch (error: any) {
       return error.code !== 'ESRCH'; // ESRCH means process doesn't exist
+    }
+  }
+
+  /**
+   * Waits for a process to die during development restarts
+   */
+  private async waitForProcessToDie(pid: number, maxWaitMs: number): Promise<void> {
+    const start = Date.now();
+    const checkInterval = 500; // Check every 500ms
+    
+    while (this.isProcessAlive(pid) && (Date.now() - start) < maxWaitMs) {
+      await new Promise(resolve => setTimeout(resolve, checkInterval));
+      
+      const elapsed = Date.now() - start;
+      if (elapsed % 1000 < checkInterval) { // Log every second
+        console.log(`⏳ Waiting for PID ${pid} to shutdown... (${Math.floor(elapsed/1000)}s/${Math.floor(maxWaitMs/1000)}s)`);
+      }
+    }
+    
+    if (this.isProcessAlive(pid)) {
+      console.log(`⚠️ Process ${pid} still running after ${maxWaitMs}ms wait`);
+    } else {
+      console.log(`✅ Process ${pid} successfully shutdown`);
     }
   }
 
