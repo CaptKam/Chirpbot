@@ -146,11 +146,11 @@ export default function Settings() {
     queryKey: queryKeySegments,
     queryFn: async () => {
       if (!user?.id) throw new Error('User ID required');
-      const response = await apiRequest("GET", `/api/user/${user.id}/alert-preferences?sport=${activeSport.toLowerCase()}`);
+      const response = await apiRequest("GET", `/api/user/${user.id}/alert-preferences/${activeSport.toLowerCase()}`);
       return response.json();
     },
     enabled: !!user?.id && isAuthenticated,
-    staleTime: 2 * 60 * 1000, // Cache for 2 minutes
+    staleTime: 1000, // Very short cache time for immediate updates
     refetchInterval: false, // No automatic refetching - only manual invalidation
   });
 
@@ -198,6 +198,11 @@ export default function Settings() {
   const getAlertPreference = (sport: string, alertType: string): boolean | undefined => {
     // Return undefined while loading to show skeleton UI
     if (isSettingsLoading) return undefined;
+
+    // Check if this alert is currently pending
+    if (pendingAlerts.has(alertType)) {
+      return undefined; // Show loading state for pending alerts
+    }
 
     // Return user's actual preference from the map (don't mask with global settings)
     const serverPreference = preferenceMap.get(alertType);
@@ -253,10 +258,15 @@ export default function Settings() {
     onSuccess: (data, { alertType, enabled }) => {
       console.log(`✅ Mutation success: ${alertType} = ${enabled}`, data);
       
-      // 🔧 FIXED: Use hierarchical key for precise invalidation and clear pending state
-      if (queryKeySegments) {
+      // 🔧 FIXED: Invalidate both specific sport and general preferences cache
+      if (queryKeySegments.length > 0) {
         queryClient.invalidateQueries({ queryKey: queryKeySegments });
+        // Also invalidate the general user preferences cache
+        queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/alert-preferences`] });
       }
+      
+      // 🔧 FIXED: Force refetch to ensure UI updates immediately
+      queryClient.refetchQueries({ queryKey: queryKeySegments });
       
       // Clear pending state after successful update
       setPendingAlerts(prev => {
@@ -264,6 +274,12 @@ export default function Settings() {
         newSet.delete(alertType);
         console.log(`🗑️ Removed ${alertType} from pending alerts`);
         return newSet;
+      });
+
+      // Show success toast
+      toast({
+        title: "Setting Updated",
+        description: `${alertType.replace(/[A-Z]+_/g, '').replace(/_/g, ' ')} ${enabled ? 'enabled' : 'disabled'}`,
       });
     },
     onError: (error: any, { alertType, enabled }) => {
@@ -711,8 +727,8 @@ export default function Settings() {
                         const isGloballyDisabled = isAlertGloballyDisabled(alertType.key);
                         const isPending = pendingAlerts.has(alertType.key);
                         
-                        // Show skeleton if preference is still loading
-                        if (userPreference === undefined) {
+                        // Show skeleton if preference is still loading or pending
+                        if (userPreference === undefined || isPending) {
                           return (
                             <div key={alertType.key} className={`flex items-center justify-between p-3 rounded-lg border opacity-60 ${getCardBgClass()} ${getCardBorderClass()}`}>
                               <div className="flex-1">
@@ -720,9 +736,12 @@ export default function Settings() {
                                   <h4 className="text-sm font-semibold text-slate-100">
                                     {alertType.label}
                                   </h4>
+                                  {isPending && (
+                                    <div className={`w-4 h-4 border-2 ${getBorderClass()} border-t-transparent rounded-full animate-spin`}></div>
+                                  )}
                                 </div>
                                 <p className="text-xs text-slate-400 mt-1">
-                                  {alertType.description}
+                                  {isPending ? 'Updating preference...' : alertType.description}
                                 </p>
                               </div>
                               <div className="w-10 h-6 bg-slate-600 rounded-full animate-pulse"></div>
