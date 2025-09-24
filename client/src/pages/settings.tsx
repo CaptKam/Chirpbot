@@ -144,8 +144,10 @@ export default function Settings() {
     retry: 2, // Retry failed requests twice
   });
 
-  // 🔧 FIXED: Hierarchical query keys for proper cache invalidation
-  const queryKeySegments = user?.id ? ['/api/user', user.id, 'alert-preferences', activeSport.toLowerCase()] : [];
+  // 🔧 FIXED: Hierarchical query keys for proper cache invalidation with stable sentinel for unauthenticated users
+  const queryKeySegments = user?.id 
+    ? ['/api/user', user.id, 'alert-preferences', activeSport.toLowerCase()] 
+    : ['/api/user', 'alert-preferences', 'disabled', activeSport.toLowerCase()];
 
   // Alert preferences query
   const { data: alertPreferences, isLoading: preferencesLoading, error: preferencesError } = useQuery({
