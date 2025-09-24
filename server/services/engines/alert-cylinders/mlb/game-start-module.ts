@@ -1,134 +1,85 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { mlbPerformanceTracker } from '../../mlb-performance-tracker';
 import { cleanAlertFormatter } from '../../../clean-alert-formatter';
+
+type NormStatus = 'scheduled' | 'live' | 'final' | 'other';
 
 export default class GameStartModule extends BaseAlertModule {
   alertType = 'MLB_GAME_START';
   sport = 'MLB';
 
-  // Track triggered games to prevent duplicates
+  // One-and-done per game
   private triggeredGames = new Set<string>();
 
+  private normStatus(raw?: string): NormStatus {
+    const s = (raw || '').trim().toLowerCase();
+    if (s === 'live' || s === 'in progress' || s === 'inprogress') return 'live';
+    if (s === 'final' || s === 'completed') return 'final';
+    if (s === 'scheduled' || s === 'pregame' || s === 'pre') return 'scheduled';
+    return 'other';
+  }
+
+  private isTopFirstNow(gs: GameState): boolean {
+    return gs.isLive === true && gs.inning === 1 && gs.isTopInning === true;
+  }
+
   isTriggered(gameState: GameState): boolean {
-    // Only trigger once per game, specifically at top of 1st inning
-    if (this.triggeredGames.has(gameState.gameId)) {
-      return false; // Already triggered for this game
+    const id = gameState.gameId;
+    if (!id) return false;
+
+    // If feed marks final, ensure we won't fire again (hygiene)
+    if (this.normStatus(gameState.status) === 'final') {
+      this.triggeredGames.delete(id);
+      return false;
     }
-    
-    // Trigger only for inning 1, top half
-    return gameState.inning === 1 && gameState.isTopInning === true && gameState.isLive;
+
+    // Already fired for this game?
+    if (this.triggeredGames.has(id)) return false;
+
+    // Fire exactly when we see Top 1st in a live game
+    if (this.isTopFirstNow(gameState)) {
+      this.triggeredGames.add(id);
+      return true;
+    }
+    return false;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    // Fire for any early inning situation - removed exact timing requirement
-    // No restrictions - alert for any game start scenario
-
-    const alertKey = `mlb_game_start_${gameState.gameId}`;
-
-    // Rich context for game start
-    const context = {
-      gameId: gameState.gameId,
-      sport: 'MLB',
-      inning: gameState.inning,
-      homeTeam: gameState.homeTeam,
-      awayTeam: gameState.awayTeam,
-      isLive: gameState.isLive,
-
-      // Enhanced context for game start
-      reasons: [
-        'Fresh game with maximum betting opportunities',
-        'Starting pitcher advantage before fatigue sets in',
-        'Weather conditions locked in for 9 innings'
-      ],
-
-      // Betting context
-      bettingOpportunities: [
-        'First inning props available',
-        'Full game totals at opening lines',
-        'Pitcher strikeout props'
-      ],
-
-      // Game flow context
-      gameFlow: {
-        expectedDuration: '3 hours',
-        pitcherDuel: gameState.currentPitcher ? 'Elite matchup expected' : 'Standard matchup',
-        momentum: 'Neutral - fresh start for both teams'
+    const alert = {
+      alertKey: `mlb_game_start_${gameState.gameId}`,
+      type: this.alertType,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | Top 1st — First pitch`,
+      context: {
+        gameId: gameState.gameId,
+        sport: this.sport,
+        homeTeam: gameState.homeTeam,
+        awayTeam: gameState.awayTeam,
+        homeScore: gameState.homeScore,
+        awayScore: gameState.awayScore,
+        inning: gameState.inning,
+        isTopInning: gameState.isTopInning,
+        outs: gameState.outs,
+        isLive: gameState.isLive,
       },
-
-      // Strategic context
-      strategicFactors: [
-        'Home field advantage in play',
-        'Starting lineups optimized',
-        'Bullpen fully rested'
-      ],
-
-      // Weather impact if available
-      weatherImpact: gameState.weatherContext ? 
-        `${gameState.weatherContext.temperature}°F, Wind: ${gameState.weatherContext.windSpeed}mph` : 
-        'Indoor/neutral conditions',
-
-      // Time sensitivity
-      urgency: 'First pitch imminent - last chance for optimal betting lines',
-
-      // Historical context
-      historical: 'Game start alerts have 89% betting accuracy in first 3 innings'
+      // Low–mid priority so it shows, but doesn’t drown later high-leverage alerts
+      priority: 50,
     };
 
-    // Mark this game as triggered to prevent duplicates
-    this.triggeredGames.add(gameState.gameId);
-
-    const alertResult = {
-      alertKey,
-      type: 'MLB_GAME_START',
-      priority: 40,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | Game starting`,
-      context
-    };
-
-    // Add clean display message
-    const displayMessage = cleanAlertFormatter.format({
-      type: alertResult.type,
-      sport: 'MLB',
-      context: alertResult.context,
-      gameState: gameState
+    const display = cleanAlertFormatter.format({
+      type: alert.type,
+      sport: this.sport,
+      gameState,
+      context: alert.context,
+      riskReward: { probability: 100 },
     });
 
     return {
-      ...alertResult,
-      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
+      ...alert,
+      displayMessage: display.primary + (display.secondary ? ` | ${display.secondary}` : ''),
     };
   }
 
+  // PURE: no state writes here
   calculateProbability(gameState: GameState): number {
-    return this.isTriggered(gameState) ? 100 : 0;
-  }
-
-  private generateEnhancedGameStartMessage(gameState: GameState): string {
-    // Get performance context for current players
-    const batterContext = gameState.currentBatter ? 
-      mlbPerformanceTracker.generateBatterContext(gameState.gameId, gameState.currentBatter) : null;
-    const pitcherContext = gameState.currentPitcher ? 
-      mlbPerformanceTracker.generatePitcherContext(gameState.gameId, gameState.currentPitcher) : null;
-    
-    // Build enhanced message with performance context (team names removed - already in header)
-    let message = `⚾ FIRST PITCH`;
-    
-    // Add performance context if available
-    const contexts: string[] = [];
-    if (pitcherContext) {
-      contexts.push(`Starting P: ${pitcherContext}`);
-    }
-    if (batterContext) {
-      contexts.push(`Lead-off: ${batterContext}`);
-    }
-    
-    // Add standard game start context
-    contexts.push('Fresh lines active', 'Full game props available');
-    
-    if (contexts.length > 0) {
-      message += ` | ${contexts.join(' | ')}`;
-    }
-    
-    return message;
+    return this.isTopFirstNow(gameState) ? 100 : 0;
   }
 }
