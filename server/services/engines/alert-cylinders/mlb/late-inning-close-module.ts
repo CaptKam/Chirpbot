@@ -1,131 +1,74 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { mlbPerformanceTracker } from '../../mlb-performance-tracker';
 import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
+type NormStatus = 'scheduled' | 'live' | 'final' | 'other';
+
 export default class LateInningCloseModule extends BaseAlertModule {
+  // Keep the existing identifiers so you don't have to touch settings/routes
   alertType = 'MLB_LATE_INNING_CLOSE';
   sport = 'MLB';
-  
-  // Track last alert per game/inning to avoid spam
-  private lastAlerts: Map<string, number> = new Map();
-  private readonly COOLDOWN_MS = 180000; // 3 minutes between alerts
+
+  // Fire-once tracking
+  private top7Triggered = new Set<string>();
+
+  // (Optional) track last seen inning/half for debugging or future needs
+  private lastSeenHalf = new Map<string, { inning: number; isTop: boolean }>();
+
+  private normStatus(raw?: string): NormStatus {
+    const s = (raw || '').trim().toLowerCase();
+    if (s === 'live' || s === 'in progress' || s === 'inprogress') return 'live';
+    if (s === 'final' || s === 'completed') return 'final';
+    if (s === 'scheduled' || s === 'pregame' || s === 'pre') return 'scheduled';
+    return 'other';
+    }
 
   isTriggered(gameState: GameState): boolean {
-    console.log(`🔍 MLB Late Inning Close check for ${gameState.gameId}: inning=${gameState.inning}, scores=${gameState.homeScore}-${gameState.awayScore}`);
-    
-    // Must be a live game
-    if (!gameState.isLive) {
-      console.log(`❌ Late Inning: Game not live`);
+    const { gameId } = gameState;
+    if (!gameId) return false;
+
+    // Optional hygiene: if the feed marks final, clear memory for this game
+    if (this.normStatus(gameState.status) === 'final') {
+      this.top7Triggered.delete(gameId);
+      this.lastSeenHalf.delete(gameId);
       return false;
     }
-    
-    // Must be 7th inning or later
-    if (!gameState.inning || gameState.inning < 7) {
-      console.log(`❌ Late Inning: Too early (inning ${gameState.inning})`);
+
+    if (!gameState.isLive) return false;
+
+    // We only care about the *first* entry into Top 7
+    const inning = gameState.inning ?? 0;
+    const isTop = !!gameState.isTopInning;
+
+    // Update last seen (non-mutating for trigger decision)
+    const prev = this.lastSeenHalf.get(gameId);
+
+    const isTop7Now = inning === 7 && isTop;
+
+    // Already fired for this game?
+    if (this.top7Triggered.has(gameId)) {
+      this.lastSeenHalf.set(gameId, { inning, isTop });
       return false;
     }
-    
-    // Check score difference
-    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-    if (scoreDiff > 3) {
-      console.log(`❌ Late Inning: Score difference too large (${scoreDiff})`);
-      return false;
+
+    // Trigger as soon as we detect Top 7 (transition-friendly)
+    if (isTop7Now) {
+      this.top7Triggered.add(gameId);
+      this.lastSeenHalf.set(gameId, { inning, isTop });
+      return true;
     }
-    
-    // Check cooldown
-    const alertKey = `${gameState.gameId}_late_close_${gameState.inning}`;
-    const lastAlert = this.lastAlerts.get(alertKey);
-    if (lastAlert && (Date.now() - lastAlert) < this.COOLDOWN_MS) {
-      console.log(`❌ Late Inning: Cooldown active`);
-      return false;
-    }
-    
-    console.log(`🎯 MLB LATE INNING CLOSE GAME TRIGGERED!`);
-    this.lastAlerts.set(alertKey, Date.now());
-    return true;
+
+    // Keep state fresh for future transition checks
+    this.lastSeenHalf.set(gameId, { inning, isTop });
+    return false;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-    const inningText = gameState.isTopInning ? `Top ${gameState.inning}` : `Bottom ${gameState.inning}`;
-    
-    // Get performance context for late-game situations
-    const pitcherPerformance = gameState.currentPitcher ? 
-      mlbPerformanceTracker.generatePitcherContext(gameState.gameId, gameState.currentPitcher) : null;
-    const homeTeamMomentum = mlbPerformanceTracker.generateTeamMomentumContext(gameState.gameId, gameState.homeTeam);
-    const awayTeamMomentum = mlbPerformanceTracker.generateTeamMomentumContext(gameState.gameId, gameState.awayTeam);
-    const batterContext = gameState.currentBatter ? 
-      mlbPerformanceTracker.generateBatterContext(gameState.gameId, gameState.currentBatter) : null;
-    
-    // Build leverage-focused message without duplicate team/score info
-    let message = `${inningText}`;
-    
-    if (scoreDiff === 0) {
-      message += `, tied game`;
-    } else {
-      message += `, ${scoreDiff}-run lead`;
-    }
-    
-    if (gameState.inning === 9) {
-      message += `, final inning`;
-    }
-    
-    // Add betting-critical leverage indicators
-    const leverageIndicators: string[] = [];
-    
-    // High pressure situation indicator
-    if (gameState.inning >= 8) {
-      leverageIndicators.push('High leverage');
-    }
-    
-    if (scoreDiff <= 1) {
-      leverageIndicators.push('Clutch moment');
-    }
-    
-    if (leverageIndicators.length > 0) {
-      message += ` | ${leverageIndicators.join(', ')}`;
-    }
-    
-    // Add enhanced performance context
-    const contexts: string[] = [];
-    
-    if (pitcherPerformance) {
-      contexts.push(`P: ${pitcherPerformance}`);
-    }
-    
-    if (batterContext) {
-      contexts.push(`Batter: ${batterContext}`);
-    }
-    
-    // Add team momentum context
-    const leadingTeam = gameState.homeScore > gameState.awayScore ? gameState.homeTeam : 
-                        gameState.awayScore > gameState.homeScore ? gameState.awayTeam : null;
-    const trailingTeam = gameState.homeScore > gameState.awayScore ? gameState.awayTeam : 
-                         gameState.awayScore > gameState.homeScore ? gameState.homeTeam : null;
-    
-    if (trailingTeam && scoreDiff > 0) {
-      const trailingMomentum = trailingTeam === gameState.homeTeam ? homeTeamMomentum : awayTeamMomentum;
-      if (trailingMomentum) {
-        contexts.push(`Trailing team: ${trailingMomentum}`);
-      }
-    } else if (scoreDiff === 0) {
-      // Tied game - show most relevant momentum without team names
-      if (homeTeamMomentum) {
-        contexts.push(`Home momentum: ${homeTeamMomentum}`);
-      } else if (awayTeamMomentum) {
-        contexts.push(`Away momentum: ${awayTeamMomentum}`);
-      }
-    }
-    
-    // Add contexts to message
-    if (contexts.length > 0) {
-      message += ` | ${contexts.join(' | ')}`;
-    }
-    
-    const alertResult = {
-      alertKey: `${gameState.gameId}_late_close_${gameState.inning}_${gameState.isTopInning ? 'T' : 'B'}_${scoreDiff}`,
+    const inningText = 'Top 7';
+
+    const alert = {
+      alertKey: `${gameState.gameId}_top7_start`,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | Late inning close game`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${inningText}`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
@@ -134,33 +77,33 @@ export default class LateInningCloseModule extends BaseAlertModule {
         awayScore: gameState.awayScore,
         inning: gameState.inning,
         isTopInning: gameState.isTopInning,
-        scoreDifference: scoreDiff,
-        outs: gameState.outs
+        outs: gameState.outs,
       },
-      priority: gameState.inning === 9 ? 55 : 50
+      // Mid-level priority; bump if you want it to sit higher in the feed
+      priority: 60,
     };
 
-    // Add clean display message
-    const displayMessage = cleanAlertFormatter.format({
+    const display = cleanAlertFormatter.format({
       type: this.alertType,
-      sport: 'MLB',
-      context: alertResult.context,
-      gameState: gameState
+      sport: this.sport,
+      gameState,
+      context: alert.context,
+      riskReward: { probability: 100 },
     });
 
     return {
-      ...alertResult,
-      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
+      ...alert,
+      displayMessage:
+        display.primary + (display.secondary ? ` | ${display.secondary}` : ''),
     };
   }
 
+  // PURE: no state writes here
   calculateProbability(gameState: GameState): number {
-    if (!this.isTriggered(gameState)) return 0;
-    
-    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-    if (scoreDiff === 0) return 95;
-    if (scoreDiff === 1) return 90;
-    if (scoreDiff === 2) return 85;
-    return 80;
+    const isTop7 =
+      gameState.isLive === true &&
+      gameState.inning === 7 &&
+      gameState.isTopInning === true;
+    return isTop7 ? 100 : 0;
   }
 }
