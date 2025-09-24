@@ -76,7 +76,6 @@ export default class FirstAndThirdTwoOutsModule extends BaseAlertModule {
     };
 
     return alertResult;
-    };
   }
 
   calculateProbability(): number {
