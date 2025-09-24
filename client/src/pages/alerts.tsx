@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Component, ErrorInfo, ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { UniversalAlertCard } from '@/components/UniversalAlertCard';
 import { useQuery } from '@tanstack/react-query';
@@ -13,6 +13,43 @@ import { PageHeader } from '@/components/PageHeader';
 import { getSeasonAwareSports, getSportTabColors } from '@shared/season-manager';
 import { Alert } from '@/types';
 
+// Error Boundary Component
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+}
+
+class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('AlertCard error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="bg-white/5 backdrop-blur-sm ring-1 ring-red-500/30 border-0 rounded-xl p-6 shadow-xl shadow-red-500/5">
+          <div className="flex items-center space-x-3">
+            <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />
+            <div>
+              <h3 className="text-sm font-bold text-red-400 mb-1">Alert Display Error</h3>
+              <p className="text-xs text-slate-300">This alert couldn't be displayed properly</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 interface AlertStats {
   totalAlerts: number;
@@ -320,26 +357,29 @@ export default function AlertsPage() {
               className={`mb-4 ${index === filteredAlerts.length - 1 ? 'mb-8' : ''}`}
               data-testid={`alert-container-${alert.id}`}
             >
-              <UniversalAlertCard 
-                alert={{
-                  id: alert.id,
-                  type: alert.type,
-                  message: alert.message || '',
-                  gameId: alert.gameId || '',
-                  sport: alert.sport,
-                  homeTeam: typeof alert.homeTeam === 'string' ? alert.homeTeam : alert.homeTeam?.name || '',
-                  awayTeam: typeof alert.awayTeam === 'string' ? alert.awayTeam : alert.awayTeam?.name || '',
-                  confidence: alert.confidence || 0,
-                  priority: alert.priority || 0,
-                  createdAt: alert.createdAt || alert.timestamp,
-                  homeScore: alert.context?.homeScore || alert.homeScore,
-                  awayScore: alert.context?.awayScore || alert.awayScore,
-                  context: alert.context,
-                  sentToTelegram: alert.sentToTelegram || false,
-                  weather: alert.context?.weather || alert.weather || alert.weatherData,
-                  gameInfo: alert.context?.gameInfo || alert.gameInfo
-                }}
-              />
+              <ErrorBoundary>
+                <UniversalAlertCard 
+                  alert={{
+                    id: alert.id || 'unknown',
+                    type: alert.type || 'UNKNOWN',
+                    message: alert.message || '',
+                    gameId: alert.gameId || '',
+                    sport: alert.sport || 'UNKNOWN',
+                    homeTeam: typeof alert.homeTeam === 'string' ? alert.homeTeam : alert.homeTeam?.name || 'Unknown',
+                    awayTeam: typeof alert.awayTeam === 'string' ? alert.awayTeam : alert.awayTeam?.name || 'Unknown',
+                    confidence: alert.confidence || 0,
+                    priority: alert.priority || 0,
+                    createdAt: alert.createdAt || alert.timestamp || new Date().toISOString(),
+                    homeScore: alert.context?.homeScore || alert.homeScore,
+                    awayScore: alert.context?.awayScore || alert.awayScore,
+                    context: alert.context,
+                    sentToTelegram: alert.sentToTelegram || false,
+                    weather: alert.context?.weather || alert.weather || alert.weatherData,
+                    gameInfo: alert.context?.gameInfo || alert.gameInfo,
+                    gamblingInsights: alert.gamblingInsights || alert.context?.gamblingInsights
+                  }}
+                />
+              </ErrorBoundary>
             </div>
           ))
         )}

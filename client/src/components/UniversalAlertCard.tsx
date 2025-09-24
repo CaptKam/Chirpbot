@@ -38,13 +38,32 @@ interface UniversalAlertProps {
 }
 
 export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
-  const formattedTime = format(parseISO(alert.createdAt), 'HH:mm');
-  const isPriorityHigh = alert.priority >= 80;
-  const isConfidenceHigh = alert.confidence >= 75;
+  // Safe date parsing with fallback
+  const formattedTime = (() => {
+    try {
+      if (!alert.createdAt) return 'Unknown';
+      const parsed = parseISO(alert.createdAt);
+      if (isNaN(parsed.getTime())) return 'Unknown';
+      return format(parsed, 'HH:mm');
+    } catch (error) {
+      console.warn('Date parsing error for alert:', alert.id, error);
+      return 'Unknown';
+    }
+  })();
+  
+  const isPriorityHigh = (alert.priority || 0) >= 80;
+  const isConfidenceHigh = (alert.confidence || 0) >= 75;
   const { user, isAuthenticated } = useAuth();
 
-  // Get optimal display content
-  const { content: displayContent, isStructured } = getDisplayContent(alert);
+  // Get optimal display content with error handling
+  const { content: displayContent, isStructured } = (() => {
+    try {
+      return getDisplayContent(alert);
+    } catch (error) {
+      console.warn('Display content error for alert:', alert.id, error);
+      return { content: alert.message || 'Alert content unavailable', isStructured: false };
+    }
+  })();
 
   // Query user settings for gambling insights preference
   const { data: userSettings } = useQuery({
