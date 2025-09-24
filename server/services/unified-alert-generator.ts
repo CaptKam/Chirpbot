@@ -821,14 +821,14 @@ export class UnifiedAlertGenerator {
       // Convert WeatherEnhancedAlert to SharedAlertResult for the composer
       const alertResults: SharedAlertResult[] = alerts.map(alert => ({
         ...alert,
-        // Ensure required AlertResult properties are present
-        gameId: alert.gameId || gameState.gameId,
-        homeTeam: alert.homeTeam || gameState.homeTeam,
-        awayTeam: alert.awayTeam || gameState.awayTeam,
-        homeScore: alert.homeScore || gameState.homeScore,
-        awayScore: alert.awayScore || gameState.awayScore,
-        status: alert.status || gameState.status,
-        isLive: alert.isLive !== undefined ? alert.isLive : gameState.isLive,
+        // Add game state context properties to alert context
+        gameId: gameState.gameId,
+        homeTeam: gameState.homeTeam,
+        awayTeam: gameState.awayTeam,
+        homeScore: gameState.homeScore,
+        awayScore: gameState.awayScore,
+        status: gameState.status,
+        isLive: gameState.isLive,
         // Add weather context from alert to context property for composer
         context: {
           ...alert.context,
@@ -864,7 +864,7 @@ export class UnifiedAlertGenerator {
           windSpeed: alert.weatherContext?.currentWeather?.windSpeed,
           windDirection: alert.weatherContext?.currentWeather?.windDirection,
           temperature: alert.weatherContext?.currentWeather?.temperature,
-          conditions: alert.weatherContext?.currentWeather?.conditions,
+          condition: alert.weatherContext?.currentWeather?.condition,
           severity: alert.weatherSeverity as 'low' | 'medium' | 'high'
         } : undefined
       }));
@@ -876,10 +876,10 @@ export class UnifiedAlertGenerator {
       let bulletsTotal = 0;
       enhancedAlerts.forEach(alert => {
         const bullets = alert.gamblingInsights?.bullets || [];
-        const mapperUsed = alert.gamblingInsights?.mapperUsed || 'unknown';
+        // Note: mapperUsed is not a property of GamblingInsights interface
         bulletsTotal += bullets.length;
         
-        console.log(`🎯 Composer bullets: alertKey=${alert.alertKey}, sport=${sport}, mapper=${mapperUsed}, bullets=${bullets.length}`);
+        console.log(`🎯 Composer bullets: alertKey=${alert.alertKey}, sport=${sport}, bullets=${bullets.length}`);
         
         // Log bullet content for debugging
         if (bullets.length > 0) {
@@ -904,9 +904,10 @@ export class UnifiedAlertGenerator {
 
     } catch (error) {
       // ENHANCED ERROR HANDLING: Detailed error logging
+      const err = error as Error;
       console.error(`❌ ERROR in gambling insights enhancement for ${sport}:`, {
-        errorMessage: error.message,
-        errorStack: error.stack,
+        errorMessage: err.message,
+        errorStack: err.stack,
         alertsCount: alerts.length,
         gameId: gameState.gameId,
         sport: sport,
@@ -944,7 +945,8 @@ export class UnifiedAlertGenerator {
     const currentWeather = weatherContext.currentWeather;
     const windSpeed = currentWeather?.windSpeed || 0;
     const temperature = currentWeather?.temperature || 70;
-    const precipitation = currentWeather?.precipitation || 0;
+    // Note: WeatherData interface doesn't have precipitation property
+    const hasRain = currentWeather?.condition?.toLowerCase().includes('rain') || false;
 
     let severityScore = 0;
 
@@ -957,9 +959,9 @@ export class UnifiedAlertGenerator {
     if (temperature > 95 || temperature < 40) severityScore += 2;
     else if (temperature > 90 || temperature < 50) severityScore += 1;
 
-    // Precipitation impact
-    if (precipitation && precipitation > 0.5) severityScore += 2;
-    else if (precipitation && precipitation > 0.1) severityScore += 1;
+    // Weather condition impact (rain, snow, etc.)
+    if (hasRain) severityScore += 2;
+    else if (currentWeather?.condition?.toLowerCase().includes('cloud')) severityScore += 1;
 
     if (severityScore >= 5) return 'extreme';
     if (severityScore >= 3) return 'high';

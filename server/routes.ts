@@ -689,6 +689,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             continue;
           }
 
+          // Check global admin settings as final filter before sending alerts
+          // This allows users to set preferences, but enforces admin settings at delivery time
+          const isGloballyEnabled = await storage.isAlertGloballyEnabled(sportKey, alert.type);
+          if (!isGloballyEnabled) {
+            skippedCount++;
+            console.log(`🚫 Alert ${alert.type} globally disabled by admin for user ${userGame.userId}, skipping`);
+            continue;
+          }
+
           console.log(`✅ Alert ${alert.type} enabled for user ${userGame.userId}, proceeding to duplicate check`);
 
           // FIXED DEDUPLICATION BUG: Check if this specific alert already exists AND is still active (non-expired)
@@ -1185,14 +1194,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(400).json({ message: 'Missing required fields: sport, alertType, enabled' });
       }
 
-      // Check if alert type is globally enabled first
-      const isGloballyEnabled = await storage.isAlertGloballyEnabled(sport.toLowerCase(), alertType);
-      if (!isGloballyEnabled && enabled) {
-        return res.status(400).json({
-          message: `Alert type ${alertType} is globally disabled by admin`,
-          globallyDisabled: true
-        });
-      }
+      // REMOVED: Global settings validation that was causing 400 errors
+      // Users should be able to set their preferences regardless of global admin settings
+      // Global enforcement will happen at alert generation/delivery time instead
 
       const preference = await storage.setUserAlertPreference(userId, sport.toLowerCase(), alertType, enabled);
       res.json(preference);
@@ -1216,17 +1220,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(400).json({ message: 'Missing required fields: sport, preferences array' });
       }
 
-      // Validate each preference against global settings
-      const globalSettings = await unifiedSettings.getGlobalSettings(sport.toLowerCase());
-      const filteredPreferences = [];
-
-      for (const pref of preferences) {
-        if (pref.enabled && !globalSettings[pref.alertType]) {
-          console.log(`🚫 Skipping ${pref.alertType} - globally disabled by admin`);
-          continue;
-        }
-        filteredPreferences.push(pref);
-      }
+      // REMOVED: Global settings validation that was filtering user preferences
+      // Users should be able to set their preferences regardless of global admin settings
+      // Global enforcement will happen at alert generation/delivery time instead
+      const filteredPreferences = preferences; // Save all user preferences as-is
 
       const result = await storage.bulkSetUserAlertPreferences(userId, sport.toLowerCase(), filteredPreferences);
       res.json({
