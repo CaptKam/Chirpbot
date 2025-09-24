@@ -1,48 +1,74 @@
-
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 
-export default class FinalMinutesModule extends BaseAlertModule {
+export default class FinalMinutesOnceModule extends BaseAlertModule {
   alertType = 'WNBA_FINAL_MINUTES';
   sport = 'WNBA';
 
-  isTriggered(gameState: GameState): boolean {
-    // Trigger for any 4th quarter situation - removed time and score restrictions
-    return gameState.quarter >= 4;
+  // One-and-done per game
+  private firedGameIds = new Set<string>();
+
+  private readonly FINAL_WINDOW_Q4_SEC = 120; // 2:00
+  private readonly FINAL_WINDOW_OT_SEC = 60;  // 1:00
+
+  private parseClockToSeconds(clock?: string): number | null {
+    if (!clock) return null;
+    const token = clock.trim().split(' ')[0];
+    const [m, s] = token.split(':').map(v => parseInt(v, 10));
+    if (Number.isNaN(m) || Number.isNaN(s)) return null;
+    return m * 60 + s;
   }
 
-  generateAlert(gameState: GameState): AlertResult | null {
-    // isTriggered() already called by engine - removed duplicate check
-    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-    const timeRemaining = gameState.timeRemaining;
-    
+  private inFinalWindow(gs: GameState): boolean {
+    const q = gs.quarter ?? 0;
+    if (q < 4) return false;
+    const sec = this.parseClockToSeconds(gs.timeRemaining);
+    if (sec == null) return false;
+    return q === 4 ? sec <= this.FINAL_WINDOW_Q4_SEC : sec <= this.FINAL_WINDOW_OT_SEC;
+  }
+
+  isTriggered(gs: GameState): boolean {
+    if (!gs.gameId) return false;
+    if (!gs.isLive && (gs.status || '').toLowerCase() !== 'live') return false;
+    if (this.firedGameIds.has(gs.gameId)) return false;
+
+    if (this.inFinalWindow(gs)) {
+      this.firedGameIds.add(gs.gameId);
+      return true;
+    }
+    return false;
+  }
+
+  generateAlert(gs: GameState): AlertResult | null {
+    const diff = Math.abs((gs.homeScore ?? 0) - (gs.awayScore ?? 0));
+    const q = gs.quarter ?? 4;
+    const sec = this.parseClockToSeconds(gs.timeRemaining);
+    const timeTxt = sec != null ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2,'0')} left` : '';
+
+    // Stable key → guarantees one message per game
     return {
-      alertKey: `${gameState.gameId}_final_minutes_${timeRemaining.replace(/[:\s]/g, '')}`,
+      alertKey: `${gs.gameId}_final_alert`,
       type: this.alertType,
-      message: `⏰ WNBA FINAL MINUTE! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - ${timeRemaining} left`,
+      message: `⏰ Final stretch: ${gs.awayTeam} ${gs.awayScore} @ ${gs.homeTeam} ${gs.homeScore} ${timeTxt}`,
       context: {
-        gameId: gameState.gameId,
-        homeTeam: gameState.homeTeam,
-        awayTeam: gameState.awayTeam,
-        homeScore: gameState.homeScore,
-        awayScore: gameState.awayScore,
-        quarter: gameState.quarter,
-        timeRemaining,
-        scoreDiff
+        gameId: gs.gameId,
+        sport: this.sport,
+        homeTeam: gs.homeTeam,
+        awayTeam: gs.awayTeam,
+        homeScore: gs.homeScore ?? 0,
+        awayScore: gs.awayScore ?? 0,
+        quarter: q,
+        timeRemaining: gs.timeRemaining,
+        scoreDiff: diff,
+        isOvertime: q >= 5,
       },
-      priority: scoreDiff <= 3 ? 95 : 85
+      // Close games float higher
+      priority: Math.min(95, 85 + (diff <= 3 ? 8 : diff <= 5 ? 4 : 0) + (q >= 5 ? 2 : 0)),
     };
   }
 
-  calculateProbability(gameState: GameState): number {
-    return this.isTriggered(gameState) ? 90 : 0;
-  }
-
-  private parseTimeToSeconds(timeString: string): number {
-    const cleanTime = timeString.trim().split(' ')[0];
-    if (cleanTime.includes(':')) {
-      const [minutes, seconds] = cleanTime.split(':').map(t => parseInt(t) || 0);
-      return (minutes * 60) + seconds;
-    }
-    return parseInt(cleanTime) || 0;
+  // PURE
+  calculateProbability(gs: GameState): number {
+    if (!gs.isLive && (gs.status || '').toLowerCase() !== 'live') return 0;
+    return this.inFinalWindow(gs) ? 95 : 0;
   }
 }
