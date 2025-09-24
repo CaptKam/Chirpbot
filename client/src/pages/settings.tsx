@@ -120,33 +120,35 @@ export default function Settings() {
   const [pendingAlerts, setPendingAlerts] = useState<Set<string>>(new Set());
 
   // Global settings query to check admin-disabled alerts (now available for ALL authenticated users)
-  const { data: globalSettingsResponse, isLoading: globalSettingsLoading } = useQuery({
+  const { data: globalSettingsResponse, isLoading: globalSettingsLoading, error: globalSettingsError } = useQuery({
     queryKey: [`/api/global-alert-settings/${activeSport}`],
     enabled: !!user?.id && isAuthenticated,
     staleTime: 10 * 60 * 1000, // Cache for 10 minutes (global settings rarely change)
     refetchInterval: false, // No polling - only refetch on manual invalidation
     refetchOnWindowFocus: false, // No refetch on window focus
     refetchOnReconnect: false, // No refetch on network reconnect
+    retry: 2, // Retry failed requests twice
   });
 
   // Extract settings from response (handles both old admin format and new public format)
   const globalSettings = (globalSettingsResponse as any)?.settings || globalSettingsResponse;
 
   // Available alert types query from cylinders (accessible to all authenticated users)
-  const { data: availableAlerts, isLoading: availableAlertsLoading } = useQuery({
+  const { data: availableAlerts, isLoading: availableAlertsLoading, error: availableAlertsError } = useQuery({
     queryKey: [`/api/available-alerts/${activeSport.toLowerCase()}`],
     enabled: !!user?.id && isAuthenticated,
     staleTime: 10 * 60 * 1000, // Cache for 10 minutes (rarely changes)
     refetchInterval: false, // No polling - only refetch on manual invalidation
     refetchOnWindowFocus: false, // No refetch on window focus
     refetchOnReconnect: false, // No refetch on network reconnect
+    retry: 2, // Retry failed requests twice
   });
 
   // 🔧 FIXED: Hierarchical query keys for proper cache invalidation
   const queryKeySegments = user?.id ? ['/api/user', user.id, 'alert-preferences', activeSport.toLowerCase()] : [];
 
   // Alert preferences query
-  const { data: alertPreferences, isLoading: preferencesLoading } = useQuery({
+  const { data: alertPreferences, isLoading: preferencesLoading, error: preferencesError } = useQuery({
     queryKey: queryKeySegments,
     queryFn: async () => {
       if (!user?.id) throw new Error('User ID required');
@@ -157,6 +159,7 @@ export default function Settings() {
     staleTime: 30000, // Cache for 30 seconds - reasonable freshness
     gcTime: 5 * 60 * 1000, // 5 minute garbage collection
     refetchInterval: false, // No automatic refetching - only manual invalidation
+    retry: 2, // Retry failed requests twice
   });
 
   // 🔧 FIXED: Clear pending state when data loads
@@ -167,29 +170,30 @@ export default function Settings() {
   }, [alertPreferences, preferencesLoading]);
 
   // Telegram settings query
-  const { data: telegramSettings, isLoading: telegramLoading } = useQuery({
+  const { data: telegramSettings, isLoading: telegramLoading, error: telegramError } = useQuery({
     queryKey: [`/api/user/${user?.id}/telegram`],
     enabled: !!user?.id && isAuthenticated,
+    retry: 2, // Retry failed requests twice
   });
 
   // Gambling insights settings query
-  const { data: gamblingInsightsSettings, isLoading: gamblingInsightsLoading } = useQuery({
+  const { data: gamblingInsightsSettings, isLoading: gamblingInsightsLoading, error: gamblingInsightsError } = useQuery({
     queryKey: [`/api/user/${user?.id}/settings/gambling-insights`],
     enabled: !!user?.id && isAuthenticated,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: 2, // Retry failed requests twice
   });
 
   // Odds API settings query
-  const { data: oddsApiSettings, isLoading: oddsApiLoading } = useQuery({
+  const { data: oddsApiSettings, isLoading: oddsApiLoading, error: oddsApiError } = useQuery({
     queryKey: [`/api/user/${user?.id}/settings/odds-api`],
     enabled: !!user?.id && isAuthenticated,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: 2, // Retry failed requests twice
   });
 
-  // Unified loading state - coordinate all loading states (now includes global settings for all users)
-  const isSettingsLoading = preferencesLoading || 
-                           availableAlertsLoading || 
-                           globalSettingsLoading;
+  // REMOVED: Combined loading state that caused cascade failures
+  // Each section now handles its own loading states independently
 
   // Create a map of current preferences for easy lookup
   const preferenceMap = new Map();
@@ -200,13 +204,16 @@ export default function Settings() {
   }
 
   // Helper to get alert preference - returns user's actual preference (not masked by global settings)
+  // Now handles individual loading states instead of combined state to prevent cascade failures
   const getAlertPreference = (sport: string, alertType: string): boolean | undefined => {
-    // Return undefined while loading to show skeleton UI
-    if (isSettingsLoading) return undefined;
-
-    // Check if this alert is currently pending
+    // Check if this alert is currently pending a mutation
     if (pendingAlerts.has(alertType)) {
       return undefined; // Show loading state for pending alerts
+    }
+
+    // If preferences are still loading, show skeleton for this specific alert
+    if (preferencesLoading) {
+      return undefined;
     }
 
     // Return user's actual preference from the map (don't mask with global settings)
@@ -730,7 +737,33 @@ export default function Settings() {
               </div>
             </div>
 
-            {isSettingsLoading || !availableAlerts ? (
+            {/* Error boundary for alert preferences section */}
+            {(preferencesError || availableAlertsError) ? (
+              <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                <AlertTriangle className="w-8 h-8 text-red-400" />
+                <div className="text-center">
+                  <h3 className="text-sm font-medium text-slate-200">Unable to Load Alert Preferences</h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {availableAlertsError ? 'Failed to load available alerts. ' : ''}
+                    {preferencesError ? 'Failed to load your preferences. ' : ''}
+                    Please refresh the page or try again later.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    queryClient.invalidateQueries({ queryKey: [`/api/available-alerts/${activeSport.toLowerCase()}`] });
+                    if (queryKeySegments.length > 0) {
+                      queryClient.invalidateQueries({ queryKey: queryKeySegments });
+                    }
+                  }}
+                  className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-all duration-300"
+                >
+                  Try Again
+                </Button>
+              </div>
+            ) : (preferencesLoading || availableAlertsLoading) && !availableAlerts ? (
               <div className="flex items-center justify-center py-12">
                 <div className={`w-8 h-8 border-4 ${getBorderClass()} border-t-transparent rounded-full animate-spin`}></div>
               </div>
@@ -856,7 +889,26 @@ export default function Settings() {
               </div>
             </div>
 
-            {gamblingInsightsLoading ? (
+            {/* Error boundary for gambling insights section */}
+            {gamblingInsightsError ? (
+              <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                <AlertTriangle className="w-6 h-6 text-red-400" />
+                <div className="text-center">
+                  <h3 className="text-sm font-medium text-slate-200">Unable to Load Gambling Insights Settings</h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Failed to load gambling insights configuration. You can still modify other settings.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/settings/gambling-insights`] })}
+                  className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-all duration-300"
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : gamblingInsightsLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="w-8 h-8 border-4 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
               </div>
@@ -952,7 +1004,26 @@ export default function Settings() {
               </div>
             </div>
 
-            {telegramLoading ? (
+            {/* Error boundary for telegram settings section */}
+            {telegramError ? (
+              <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                <AlertTriangle className="w-6 h-6 text-red-400" />
+                <div className="text-center">
+                  <h3 className="text-sm font-medium text-slate-200">Unable to Load Telegram Settings</h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Failed to load your Telegram configuration. Please try again.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/telegram`] })}
+                  className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-all duration-300"
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : telegramLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="w-8 h-8 border-4 border-[#10B981] border-t-transparent rounded-full animate-spin"></div>
               </div>
