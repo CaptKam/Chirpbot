@@ -763,7 +763,6 @@ export default function Settings() {
               isRetrying={alertPreferencesRetry.isRetrying || availableAlertsRetry.isRetrying}
               retryAttempt={Math.max(alertPreferencesRetry.retryAttempt, availableAlertsRetry.retryAttempt)}
               error={preferencesError || availableAlertsError}
-              operation="Loading alert preferences"
             />
 
             <SettingsErrorBoundary
@@ -881,7 +880,7 @@ export default function Settings() {
 
 
               </div>
-            )}
+            </SettingsErrorBoundary>
           </div>
         )}
 
@@ -905,7 +904,6 @@ export default function Settings() {
               isRetrying={gamblingInsightsRetry.isRetrying}
               retryAttempt={gamblingInsightsRetry.retryAttempt}
               error={gamblingInsightsError}
-              operation="Loading gambling insights settings"
             />
 
             <SettingsErrorBoundary
@@ -967,7 +965,7 @@ export default function Settings() {
                   </div>
                 )}
               </div>
-            )}
+            </SettingsErrorBoundary>
           </div>
         )}
 
@@ -1011,7 +1009,6 @@ export default function Settings() {
               isRetrying={telegramSettingsRetry.isRetrying}
               retryAttempt={telegramSettingsRetry.retryAttempt}
               error={telegramError}
-              operation="Loading Telegram settings"
             />
 
             <SettingsErrorBoundary
@@ -1127,7 +1124,7 @@ export default function Settings() {
                   </ol>
                 </div>
               </div>
-            )}
+            </SettingsErrorBoundary>
           </div>
         )}
 
