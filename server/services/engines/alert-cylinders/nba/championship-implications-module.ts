@@ -433,4 +433,19 @@ export default class ChampionshipImplicationsModule extends BaseAlertModule {
   private getLegacyBonus(gameState: GameState, seasonContext: any): number { return 0; }
   private getMarketPressureBonus(gameState: GameState): number { return 0; }
   private getRivalryBonus(gameState: GameState): number { return 0; }
+
+  private parseTimeToSeconds(timeString: string): number {
+    if (!timeString || timeString === '0:00') return 0;
+    
+    try {
+      const cleanTime = timeString.trim().split(' ')[0];
+      if (cleanTime.includes(':')) {
+        const [minutes, seconds] = cleanTime.split(':').map(t => parseInt(t) || 0);
+        return (minutes * 60) + seconds;
+      }
+      return parseInt(cleanTime) || 0;
+    } catch (error) {
+      return 0;
+    }
+  }
 }
