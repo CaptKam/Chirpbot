@@ -110,8 +110,13 @@ export default function Settings() {
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
-  // Gambling insights settings state
-  const [gamblingInsightsEnabled, setGamblingInsightsEnabled] = useState(false);
+  // Single user profile query for gambling insights (replaces broken gambling insights query)
+  const { data: userProfile, isLoading: userProfileLoading, error: userProfileError } = useQuery({
+    queryKey: ['/api/users/me'],
+    enabled: !!user?.id && isAuthenticated,
+    staleTime: 30000, // Cache for 30 seconds - reasonable freshness
+    retry: 0, // Disabled - p-retry handles all retry logic in apiRequest/getQueryFn
+  });
 
   // Odds API settings state
   const [oddsApiEnabled, setOddsApiEnabled] = useState(false);
@@ -189,13 +194,7 @@ export default function Settings() {
     retry: 0, // Disabled - p-retry handles all retry logic in apiRequest/getQueryFn
   });
 
-  // Gambling insights settings query
-  const { data: gamblingInsightsSettings, isLoading: gamblingInsightsLoading, error: gamblingInsightsError } = useQuery({
-    queryKey: [`/api/user/${user?.id}/settings/gambling-insights`],
-    enabled: !!user?.id && isAuthenticated,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    retry: 0, // Disabled - p-retry handles all retry logic in apiRequest/getQueryFn
-  });
+  // REMOVED: Broken gambling insights query - replaced with single user profile query above
 
   // Odds API settings query
   const { data: oddsApiSettings, isLoading: oddsApiLoading, error: oddsApiError } = useQuery({
@@ -293,7 +292,6 @@ export default function Settings() {
       setPendingAlerts(prev => {
         const newSet = new Set(prev);
         newSet.delete(alertType);
-        console.log(`🗑️ Removed ${alertType} from pending alerts`);
         return newSet;
       });
 
@@ -306,11 +304,10 @@ export default function Settings() {
     onError: (error: any, { alertType, enabled }) => {
       console.error(`❌ Mutation error: ${alertType} = ${enabled}`, error);
 
-      // 🔧 FIXED: Clear pending state on error
+      // Clear pending state on error
       setPendingAlerts(prev => {
         const newSet = new Set(prev);
         newSet.delete(alertType);
-        console.log(`🗑️ Removed ${alertType} from pending alerts (error)`);
         return newSet;
       });
 
@@ -325,7 +322,7 @@ export default function Settings() {
       });
     },
     onSettled: (data, error, { alertType }) => {
-      console.log(`🏁 Mutation settled: ${alertType}`, { success: !error, error: error?.message });
+      // Mutation completed - no additional actions needed
     },
   });
 
@@ -412,25 +409,37 @@ export default function Settings() {
     }
   };
 
-  // Gambling insights settings mutation
+  // Optimistic gambling insights mutation using PATCH /api/users/me
   const updateGamblingInsightsMutation = useMutation({
     mutationFn: async ({ enabled }: { enabled: boolean }) => {
-      const response = await apiRequest("POST", `/api/user/${user?.id}/settings/gambling-insights`, {
-        gamblingInsightsEnabled: enabled
+      const response = await apiRequest("PATCH", `/api/users/me`, {
+        oddsApiEnabled: enabled
       });
       return response.json();
     },
     retry: 0, // Disabled - p-retry handles all retry logic in apiRequest
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: [`/api/user/${user?.id}/settings/gambling-insights`]
-      });
-      toast({
-        title: "Gambling insights updated",
-        description: `Gambling insights ${gamblingInsightsEnabled ? 'enabled' : 'disabled'} successfully.`,
-      });
+    onMutate: async ({ enabled }) => {
+      // Cancel any outgoing refetches to prevent overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['/api/users/me'] });
+      
+      // Snapshot the previous value
+      const previousUser = queryClient.getQueryData(['/api/users/me']);
+      
+      // Optimistically update the cache
+      queryClient.setQueryData(['/api/users/me'], (old: any) => ({
+        ...old,
+        oddsApiEnabled: enabled
+      }));
+      
+      // Return context object with snapshot
+      return { previousUser };
     },
-    onError: (error: any) => {
+    onError: (error: any, variables, context) => {
+      // Rollback on error using the snapshot
+      if (context?.previousUser) {
+        queryClient.setQueryData(['/api/users/me'], context.previousUser);
+      }
+      
       // Parse error to get specific, actionable error message
       const parsedError = parseApiError(error, 'gambling-insights');
       
@@ -440,44 +449,31 @@ export default function Settings() {
         variant: "destructive",
       });
     },
+    onSettled: () => {
+      // Always refetch to ensure we have latest server state
+      queryClient.invalidateQueries({ queryKey: ['/api/users/me'] });
+    },
+    onSuccess: (data, { enabled }) => {
+      toast({
+        title: "Gambling insights updated",
+        description: `Gambling insights ${enabled ? 'enabled' : 'disabled'} successfully.`,
+      });
+    },
   });
 
   const handleLogout = () => {
     logoutMutation.mutate();
   };
 
-  // Track pending state for gambling insights toggle
-  const [gamblingInsightsPending, setGamblingInsightsPending] = useState(false);
-
+  // Simple optimistic toggle handler - no local state needed
   const handleGamblingInsightsToggle = (enabled: boolean) => {
     // Prevent concurrent toggles
-    if (gamblingInsightsPending || updateGamblingInsightsMutation.isPending) {
+    if (updateGamblingInsightsMutation.isPending) {
       return;
     }
 
-    console.log(`🎯 Gambling Insights toggle: ${gamblingInsightsEnabled} → ${enabled}`);
-    
-    setGamblingInsightsPending(true);
-    setGamblingInsightsEnabled(enabled);
-
-    updateGamblingInsightsMutation.mutate(
-      { enabled },
-      {
-        onSuccess: () => {
-          console.log(`✅ Gambling Insights toggle succeeded: ${enabled}`);
-          // State should stay as set - don't reset it here
-        },
-        onError: (error) => {
-          console.error(`❌ Gambling Insights toggle failed:`, error);
-          // Revert state on error
-          setGamblingInsightsEnabled(!enabled);
-        },
-        onSettled: () => {
-          console.log(`🏁 Gambling Insights toggle settled`);
-          setGamblingInsightsPending(false);
-        }
-      }
-    );
+    // Execute optimistic mutation
+    updateGamblingInsightsMutation.mutate({ enabled });
   };
 
   // 🔧 FIXED: Debounced toggle handler to prevent rapid duplicate calls
@@ -504,18 +500,14 @@ export default function Settings() {
 
     // 🔧 FIXED: Immediate pending state check with mutex protection
     if (pendingAlerts.has(alertType) || updateAlertPreferenceMutation.isPending) {
-      console.log(`🚫 Toggle blocked for ${alertType} - already pending or mutation in progress`);
       return;
     }
 
     // Get current preference to prevent unnecessary toggles
     const currentPreference = getAlertPreference(activeSport, alertType);
     if (currentPreference === enabled) {
-      console.log(`🚫 Toggle ignored for ${alertType} - already in desired state: ${enabled}`);
       return;
     }
-
-    console.log(`🔄 Toggle ${alertType} from ${currentPreference} to ${enabled}`);
 
     // 🔧 FIXED: Immediate synchronous pending state update to prevent race conditions
     setPendingAlerts(prev => {
@@ -548,13 +540,7 @@ export default function Settings() {
     }
   }, [telegramSettings]);
 
-  // Populate gambling insights settings from query data (but not during pending mutations)
-  useEffect(() => {
-    if (gamblingInsightsSettings && typeof gamblingInsightsSettings === 'object' && !gamblingInsightsPending && !updateGamblingInsightsMutation.isPending) {
-      const settings = gamblingInsightsSettings as any;
-      setGamblingInsightsEnabled(settings.gamblingInsightsEnabled || false);
-    }
-  }, [gamblingInsightsSettings, gamblingInsightsPending, updateGamblingInsightsMutation.isPending]);
+  // REMOVED: useEffect state syncing that causes race conditions and flickering
 
   const handleTelegramSave = () => {
     // Don't send placeholder dots - send empty string to keep existing token
@@ -919,18 +905,18 @@ export default function Settings() {
               </div>
             </div>
 
-            {/* Retry feedback for gambling insights */}
+            {/* Retry feedback for user profile */}
             <RetryFeedback
               isRetrying={gamblingInsightsRetry.isRetrying}
               retryAttempt={gamblingInsightsRetry.retryAttempt}
-              error={gamblingInsightsError}
+              error={userProfileError}
             />
 
             <SettingsErrorBoundary
-              error={gamblingInsightsError}
+              error={userProfileError}
               context="gambling-insights"
-              onRetry={() => queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/settings/gambling-insights`] })}
-              isLoading={gamblingInsightsLoading}
+              onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/users/me'] })}
+              isLoading={userProfileLoading}
               isRetrying={gamblingInsightsRetry.isRetrying}
             >
               <div className="space-y-4">
@@ -958,16 +944,16 @@ export default function Settings() {
                     </div>
                   </div>
                   <Switch
-                    checked={gamblingInsightsEnabled}
+                    checked={(userProfile as any)?.oddsApiEnabled || false}
                     onCheckedChange={handleGamblingInsightsToggle}
-                    disabled={gamblingInsightsPending || updateGamblingInsightsMutation.isPending}
+                    disabled={updateGamblingInsightsMutation.isPending}
                     data-testid="toggle-gambling-insights"
                     className="data-[state=checked]:bg-purple-400 ml-4"
                   />
                 </div>
 
                 {/* Feature Description */}
-                {gamblingInsightsEnabled && (
+                {(userProfile as any)?.oddsApiEnabled && (
                   <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
                     <div className="flex items-start gap-3">
                       <Star className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />

@@ -9,6 +9,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
+import { z } from "zod";
 import { oddsApiService } from './services/odds-api-service';
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
 import { UnifiedAlertGenerator } from "./services/unified-alert-generator";
@@ -116,6 +117,40 @@ function validateCSRF(req: express.Request, res: express.Response, next: express
 
   next();
 }
+
+// Helper function to sanitize user objects before sending to client
+// SECURITY: Never expose sensitive fields like telegramBotToken, oddsApiKey, or password
+const sanitizeUserForClient = (user: any) => {
+  const { telegramBotToken, oddsApiKey, password, ...safe } = user;
+  
+  // Add boolean flags if frontend needs to know if tokens are set
+  return {
+    ...safe,
+    hasTelegramToken: !!telegramBotToken,
+    hasOddsApiKey: !!oddsApiKey
+  };
+};
+
+// Helper function to redact sensitive fields from logs
+const redactSensitiveFields = (data: any) => {
+  if (!data || typeof data !== 'object') return data;
+  
+  const redacted = { ...data };
+  if (redacted.telegramBotToken) redacted.telegramBotToken = '[REDACTED]';
+  if (redacted.oddsApiKey) redacted.oddsApiKey = '[REDACTED]';
+  if (redacted.password) redacted.password = '[REDACTED]';
+  
+  return redacted;
+};
+
+// Validation schema for user profile updates - whitelist only safe fields
+const updateUserProfileSchema = z.object({
+  telegramEnabled: z.boolean().optional(),
+  telegramBotToken: z.string().optional(),
+  telegramChatId: z.string().optional(),
+  oddsApiEnabled: z.boolean().optional(),
+  oddsApiKey: z.string().optional(),
+}).strict(); // strict() ensures no additional fields are allowed
 
 // Helper function for validating and normalizing sport names
 function validateSportName(sport: string): { valid: boolean; normalized: string; error?: string } {
@@ -1429,6 +1464,68 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error('Error updating telegram settings:', error);
       res.status(500).json({ message: 'Failed to update telegram settings' });
+    }
+  });
+
+  // User profile endpoints - for current authenticated user only
+  app.get('/api/users/me', requireUserAuth, async (req, res) => {
+    try {
+      console.log('GET /api/users/me: Fetching profile for user', req.user.id);
+      
+      const user = await storage.getUserById(req.user.id);
+      if (!user) {
+        console.error('GET /api/users/me: User not found', req.user.id);
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // SECURITY: Return user profile with all sensitive fields removed
+      const safeUserProfile = sanitizeUserForClient(user);
+      res.json(safeUserProfile);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      res.status(500).json({ message: 'Failed to fetch user profile' });
+    }
+  });
+
+  app.patch('/api/users/me', requireUserAuth, async (req, res) => {
+    try {
+      // SECURITY: Log with sensitive fields redacted to prevent secret exposure
+      console.log('PATCH /api/users/me: Updating profile for user', req.user.id, 'with data:', redactSensitiveFields(req.body));
+      
+      // Validate request body with whitelist schema
+      const validationResult = updateUserProfileSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        console.error('PATCH /api/users/me: Validation failed:', validationResult.error.flatten());
+        return res.status(400).json({ 
+          message: 'Invalid request data',
+          errors: validationResult.error.flatten()
+        });
+      }
+
+      const updateData = validationResult.data;
+      
+      // Add timestamp for update tracking
+      const updatePayload = {
+        ...updateData,
+        updatedAt: new Date()
+      };
+
+      const updatedUser = await storage.updateUser(req.user.id, updatePayload);
+      if (!updatedUser) {
+        console.error('PATCH /api/users/me: Failed to update user', req.user.id);
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // SECURITY: Return updated user profile with all sensitive fields removed
+      const safeUserProfile = sanitizeUserForClient(updatedUser);
+      console.log('PATCH /api/users/me: Successfully updated user profile for', req.user.id);
+      res.json({ 
+        message: 'Profile updated successfully',
+        user: safeUserProfile 
+      });
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      res.status(500).json({ message: 'Failed to update user profile' });
     }
   });
 
