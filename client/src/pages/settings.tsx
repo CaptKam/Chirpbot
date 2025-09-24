@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, createRetryFunction } from "@/lib/queryClient";
+import { RetryFeedback, useRetryState } from "@/components/RetryFeedback";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -119,6 +120,14 @@ export default function Settings() {
   // 🔧 FIXED: Per-alert pending state instead of global mutex
   const [pendingAlerts, setPendingAlerts] = useState<Set<string>>(new Set());
 
+  // Retry state management for each query section
+  const globalSettingsRetry = useRetryState();
+  const availableAlertsRetry = useRetryState();
+  const alertPreferencesRetry = useRetryState();
+  const telegramSettingsRetry = useRetryState();
+  const gamblingInsightsRetry = useRetryState();
+  const oddsApiRetry = useRetryState();
+
   // Global settings query to check admin-disabled alerts (now available for ALL authenticated users)
   const { data: globalSettingsResponse, isLoading: globalSettingsLoading, error: globalSettingsError } = useQuery({
     queryKey: [`/api/global-alert-settings/${activeSport}`],
@@ -127,7 +136,8 @@ export default function Settings() {
     refetchInterval: false, // No polling - only refetch on manual invalidation
     refetchOnWindowFocus: false, // No refetch on window focus
     refetchOnReconnect: false, // No refetch on network reconnect
-    retry: 2, // Retry failed requests twice
+    retry: createRetryFunction(globalSettingsRetry.onRetry), // Smart retry with exponential backoff
+    retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000), // Exponential backoff with 10s max
   });
 
   // Extract settings from response (handles both old admin format and new public format)
@@ -141,7 +151,8 @@ export default function Settings() {
     refetchInterval: false, // No polling - only refetch on manual invalidation
     refetchOnWindowFocus: false, // No refetch on window focus
     refetchOnReconnect: false, // No refetch on network reconnect
-    retry: 2, // Retry failed requests twice
+    retry: createRetryFunction(availableAlertsRetry.onRetry), // Smart retry with exponential backoff
+    retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000), // Exponential backoff with 10s max
   });
 
   // 🔧 FIXED: Hierarchical query keys for proper cache invalidation with stable sentinel for unauthenticated users
@@ -161,7 +172,8 @@ export default function Settings() {
     staleTime: 30000, // Cache for 30 seconds - reasonable freshness
     gcTime: 5 * 60 * 1000, // 5 minute garbage collection
     refetchInterval: false, // No automatic refetching - only manual invalidation
-    retry: 2, // Retry failed requests twice
+    retry: createRetryFunction(alertPreferencesRetry.onRetry), // Smart retry with exponential backoff
+    retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000), // Exponential backoff with 10s max
   });
 
   // 🔧 FIXED: Clear pending state when data loads
@@ -175,7 +187,8 @@ export default function Settings() {
   const { data: telegramSettings, isLoading: telegramLoading, error: telegramError } = useQuery({
     queryKey: [`/api/user/${user?.id}/telegram`],
     enabled: !!user?.id && isAuthenticated,
-    retry: 2, // Retry failed requests twice
+    retry: createRetryFunction(telegramSettingsRetry.onRetry), // Smart retry with exponential backoff
+    retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000), // Exponential backoff with 10s max
   });
 
   // Gambling insights settings query
@@ -183,7 +196,8 @@ export default function Settings() {
     queryKey: [`/api/user/${user?.id}/settings/gambling-insights`],
     enabled: !!user?.id && isAuthenticated,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    retry: 2, // Retry failed requests twice
+    retry: createRetryFunction(gamblingInsightsRetry.onRetry), // Smart retry with exponential backoff
+    retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000), // Exponential backoff with 10s max
   });
 
   // Odds API settings query
@@ -191,7 +205,8 @@ export default function Settings() {
     queryKey: [`/api/user/${user?.id}/settings/odds-api`],
     enabled: !!user?.id && isAuthenticated,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    retry: 2, // Retry failed requests twice
+    retry: createRetryFunction(oddsApiRetry.onRetry), // Smart retry with exponential backoff
+    retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000), // Exponential backoff with 10s max
   });
 
   // REMOVED: Combined loading state that caused cascade failures
@@ -266,6 +281,8 @@ export default function Settings() {
 
       return response.json();
     },
+    retry: createRetryFunction(alertPreferencesRetry.onRetry), // Smart retry with exponential backoff
+    retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000), // Exponential backoff with 10s max
     onMutate: ({ alertType, enabled }) => {
       console.log(`🔄 Mutation starting: ${alertType} = ${enabled}`);
     },
@@ -332,6 +349,8 @@ export default function Settings() {
       });
       return response.json();
     },
+    retry: createRetryFunction(telegramSettingsRetry.onRetry), // Smart retry with exponential backoff
+    retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000), // Exponential backoff with 10s max
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [`/api/user/${user?.id}/telegram`]
@@ -405,6 +424,8 @@ export default function Settings() {
       });
       return response.json();
     },
+    retry: createRetryFunction(gamblingInsightsRetry.onRetry), // Smart retry with exponential backoff
+    retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000), // Exponential backoff with 10s max
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [`/api/user/${user?.id}/settings/gambling-insights`]
@@ -739,8 +760,16 @@ export default function Settings() {
               </div>
             </div>
 
+            {/* Retry feedback for alert preferences */}
+            <RetryFeedback
+              isRetrying={alertPreferencesRetry.isRetrying || availableAlertsRetry.isRetrying}
+              retryAttempt={Math.max(alertPreferencesRetry.retryAttempt, availableAlertsRetry.retryAttempt)}
+              error={preferencesError || availableAlertsError}
+              operation="Loading alert preferences"
+            />
+
             {/* Error boundary for alert preferences section */}
-            {(preferencesError || availableAlertsError) ? (
+            {(preferencesError || availableAlertsError) && !alertPreferencesRetry.isRetrying && !availableAlertsRetry.isRetrying ? (
               <div className="flex flex-col items-center justify-center py-12 space-y-4">
                 <AlertTriangle className="w-8 h-8 text-red-400" />
                 <div className="text-center">
@@ -765,7 +794,7 @@ export default function Settings() {
                   Try Again
                 </Button>
               </div>
-            ) : (preferencesLoading || availableAlertsLoading) && !availableAlerts ? (
+            ) : ((preferencesLoading || availableAlertsLoading) && !availableAlerts) || alertPreferencesRetry.isRetrying || availableAlertsRetry.isRetrying ? (
               <div className="flex items-center justify-center py-12">
                 <div className={`w-8 h-8 border-4 ${getBorderClass()} border-t-transparent rounded-full animate-spin`}></div>
               </div>
@@ -891,8 +920,16 @@ export default function Settings() {
               </div>
             </div>
 
+            {/* Retry feedback for gambling insights */}
+            <RetryFeedback
+              isRetrying={gamblingInsightsRetry.isRetrying}
+              retryAttempt={gamblingInsightsRetry.retryAttempt}
+              error={gamblingInsightsError}
+              operation="Loading gambling insights settings"
+            />
+
             {/* Error boundary for gambling insights section */}
-            {gamblingInsightsError ? (
+            {gamblingInsightsError && !gamblingInsightsRetry.isRetrying ? (
               <div className="flex flex-col items-center justify-center py-8 space-y-4">
                 <AlertTriangle className="w-6 h-6 text-red-400" />
                 <div className="text-center">
@@ -910,7 +947,7 @@ export default function Settings() {
                   Retry
                 </Button>
               </div>
-            ) : gamblingInsightsLoading ? (
+            ) : gamblingInsightsLoading || gamblingInsightsRetry.isRetrying ? (
               <div className="flex items-center justify-center py-8">
                 <div className="w-8 h-8 border-4 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
               </div>
@@ -1006,8 +1043,16 @@ export default function Settings() {
               </div>
             </div>
 
+            {/* Retry feedback for telegram settings */}
+            <RetryFeedback
+              isRetrying={telegramSettingsRetry.isRetrying}
+              retryAttempt={telegramSettingsRetry.retryAttempt}
+              error={telegramError}
+              operation="Loading Telegram settings"
+            />
+
             {/* Error boundary for telegram settings section */}
-            {telegramError ? (
+            {telegramError && !telegramSettingsRetry.isRetrying ? (
               <div className="flex flex-col items-center justify-center py-8 space-y-4">
                 <AlertTriangle className="w-6 h-6 text-red-400" />
                 <div className="text-center">
@@ -1025,7 +1070,7 @@ export default function Settings() {
                   Retry
                 </Button>
               </div>
-            ) : telegramLoading ? (
+            ) : telegramLoading || telegramSettingsRetry.isRetrying ? (
               <div className="flex items-center justify-center py-8">
                 <div className="w-8 h-8 border-4 border-[#10B981] border-t-transparent rounded-full animate-spin"></div>
               </div>
