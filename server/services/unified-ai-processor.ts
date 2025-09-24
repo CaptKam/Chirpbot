@@ -220,9 +220,10 @@ export class UnifiedAIProcessor {
       'NBA_MOMENTUM_SHIFT', 'NBA_BUZZER_BEATER', 'NBA_FREE_THROW_SITUATION'
     ],
     'NCAAF': [
-      'NCAAF_RED_ZONE_EFFICIENCY', 'NCAAF_FOURTH_DOWN_DECISION', 'NCAAF_TWO_MINUTE_WARNING',
-      'NCAAF_OVERTIME', 'NCAAF_GOAL_LINE', 'NCAAF_GAME_START', 'NCAAF_HALFTIME',
-      'NCAAF_SCORING_CHANGE', 'NCAAF_TURNOVER', 'NCAAF_THIRD_DOWN'
+      'NCAAF_GAME_START', 'NCAAF_SECOND_HALF_KICKOFF', 'NCAAF_CLOSE_GAME', 'NCAAF_FOURTH_QUARTER', 
+      'NCAAF_HALFTIME', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_COMEBACK_POTENTIAL', 'NCAAF_FOURTH_DOWN_DECISION',
+      'NCAAF_MASSIVE_WEATHER', 'NCAAF_RED_ZONE_EFFICIENCY', 'NCAAF_RED_ZONE', 'NCAAF_SCORING_PLAY',
+      'NCAAF_UPSET_OPPORTUNITY'
     ],
     'CFL': [
       'CFL_ROUGE_OPPORTUNITY', 'CFL_TWO_MINUTE_WARNING', 'CFL_OVERTIME', 'CFL_FOURTH_DOWN',
@@ -660,12 +661,13 @@ export class UnifiedAIProcessor {
       // Explicitly preserve gambling insights from pipeline
       gamblingInsights: originalAlert.gamblingInsights,
       hasComposerEnhancement: originalAlert.hasComposerEnhancement,
-      // Preserve weather enhancement fields 
-      weatherContext: originalAlert.weatherContext,
-      isWeatherTriggered: originalAlert.isWeatherTriggered,
-      weatherSeverity: originalAlert.weatherSeverity,
       context: {
         ...originalAlert.context,
+        // Preserve weather enhancement fields in context where they belong
+        weatherContext: originalAlert.context?.weatherContext,
+        isWeatherTriggered: originalAlert.context?.isWeatherTriggered,
+        weatherSeverity: originalAlert.context?.weatherSeverity,
+        // AI enhancement data
         aiEnhanced: true,
         aiInsights: aiResponse.contextualInsights,
         bettingAdvice: aiResponse.bettingContext?.recommendation,

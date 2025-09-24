@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient, createRetryFunction } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { RetryFeedback, useRetryState } from "@/components/RetryFeedback";
+import { EnhancedErrorDisplay, SettingsErrorBoundary, InlineErrorDisplay } from "@/components/EnhancedErrorDisplay";
+import { parseApiError, parseTelegramError } from "@/utils/error-messages";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -136,8 +138,7 @@ export default function Settings() {
     refetchInterval: false, // No polling - only refetch on manual invalidation
     refetchOnWindowFocus: false, // No refetch on window focus
     refetchOnReconnect: false, // No refetch on network reconnect
-    retry: createRetryFunction(globalSettingsRetry.onRetry), // Smart retry with exponential backoff
-    retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000), // Exponential backoff with 10s max
+    retry: 0, // Disabled - p-retry handles all retry logic in apiRequest/getQueryFn
   });
 
   // Extract settings from response (handles both old admin format and new public format)
@@ -151,8 +152,7 @@ export default function Settings() {
     refetchInterval: false, // No polling - only refetch on manual invalidation
     refetchOnWindowFocus: false, // No refetch on window focus
     refetchOnReconnect: false, // No refetch on network reconnect
-    retry: createRetryFunction(availableAlertsRetry.onRetry), // Smart retry with exponential backoff
-    retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000), // Exponential backoff with 10s max
+    retry: 0, // Disabled - p-retry handles all retry logic in apiRequest/getQueryFn
   });
 
   // 🔧 FIXED: Hierarchical query keys for proper cache invalidation with stable sentinel for unauthenticated users
@@ -172,8 +172,7 @@ export default function Settings() {
     staleTime: 30000, // Cache for 30 seconds - reasonable freshness
     gcTime: 5 * 60 * 1000, // 5 minute garbage collection
     refetchInterval: false, // No automatic refetching - only manual invalidation
-    retry: createRetryFunction(alertPreferencesRetry.onRetry), // Smart retry with exponential backoff
-    retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000), // Exponential backoff with 10s max
+    retry: 0, // Disabled - p-retry handles all retry logic in apiRequest/getQueryFn
   });
 
   // 🔧 FIXED: Clear pending state when data loads
@@ -187,8 +186,7 @@ export default function Settings() {
   const { data: telegramSettings, isLoading: telegramLoading, error: telegramError } = useQuery({
     queryKey: [`/api/user/${user?.id}/telegram`],
     enabled: !!user?.id && isAuthenticated,
-    retry: createRetryFunction(telegramSettingsRetry.onRetry), // Smart retry with exponential backoff
-    retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000), // Exponential backoff with 10s max
+    retry: 0, // Disabled - p-retry handles all retry logic in apiRequest/getQueryFn
   });
 
   // Gambling insights settings query
@@ -196,8 +194,7 @@ export default function Settings() {
     queryKey: [`/api/user/${user?.id}/settings/gambling-insights`],
     enabled: !!user?.id && isAuthenticated,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    retry: createRetryFunction(gamblingInsightsRetry.onRetry), // Smart retry with exponential backoff
-    retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000), // Exponential backoff with 10s max
+    retry: 0, // Disabled - p-retry handles all retry logic in apiRequest/getQueryFn
   });
 
   // Odds API settings query
@@ -205,8 +202,7 @@ export default function Settings() {
     queryKey: [`/api/user/${user?.id}/settings/odds-api`],
     enabled: !!user?.id && isAuthenticated,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    retry: createRetryFunction(oddsApiRetry.onRetry), // Smart retry with exponential backoff
-    retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000), // Exponential backoff with 10s max
+    retry: 0, // Disabled - p-retry handles all retry logic in apiRequest/getQueryFn
   });
 
   // REMOVED: Combined loading state that caused cascade failures
@@ -281,8 +277,7 @@ export default function Settings() {
 
       return response.json();
     },
-    retry: createRetryFunction(alertPreferencesRetry.onRetry), // Smart retry with exponential backoff
-    retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000), // Exponential backoff with 10s max
+    retry: 0, // Disabled - p-retry handles all retry logic in apiRequest
     onMutate: ({ alertType, enabled }) => {
       console.log(`🔄 Mutation starting: ${alertType} = ${enabled}`);
     },
@@ -319,20 +314,15 @@ export default function Settings() {
         return newSet;
       });
 
-      const errorMessage = error?.message || 'Update failed';
-      if (errorMessage.includes('401') || errorMessage.includes('not authenticated')) {
-        toast({
-          title: "Authentication Required",
-          description: "Please log in to save your alert preferences.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: `Failed to update ${alertType}: ${errorMessage}`,
-          variant: "destructive",
-        });
-      }
+      // Parse error to get specific, actionable error message
+      const parsedError = parseApiError(error, 'alert-preferences');
+      const alertDisplayName = alertType.replace(/[A-Z]+_/g, '').replace(/_/g, ' ');
+      
+      toast({
+        title: parsedError.title,
+        description: parsedError.message,
+        variant: "destructive",
+      });
     },
     onSettled: (data, error, { alertType }) => {
       console.log(`🏁 Mutation settled: ${alertType}`, { success: !error, error: error?.message });
@@ -349,8 +339,7 @@ export default function Settings() {
       });
       return response.json();
     },
-    retry: createRetryFunction(telegramSettingsRetry.onRetry), // Smart retry with exponential backoff
-    retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000), // Exponential backoff with 10s max
+    retry: 0, // Disabled - p-retry handles all retry logic in apiRequest
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [`/api/user/${user?.id}/telegram`]
@@ -360,10 +349,13 @@ export default function Settings() {
         description: "Your Telegram configuration has been saved.",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      // Parse error to get specific, actionable error message
+      const parsedError = parseApiError(error, 'telegram-settings');
+      
       toast({
-        title: "Error",
-        description: "Failed to update Telegram settings. Please try again.",
+        title: parsedError.title,
+        description: parsedError.message,
         variant: "destructive",
       });
     },
@@ -406,9 +398,13 @@ export default function Settings() {
       }
     } catch (error) {
       setConnectionTestResult('error');
+      
+      // Parse Telegram-specific error to get actionable message
+      const parsedError = parseTelegramError(error);
+      
       toast({
-        title: "Connection Failed",
-        description: "Please check your bot token and chat ID.",
+        title: parsedError.title,
+        description: parsedError.message,
         variant: "destructive",
       });
     } finally {
@@ -424,8 +420,7 @@ export default function Settings() {
       });
       return response.json();
     },
-    retry: createRetryFunction(gamblingInsightsRetry.onRetry), // Smart retry with exponential backoff
-    retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000), // Exponential backoff with 10s max
+    retry: 0, // Disabled - p-retry handles all retry logic in apiRequest
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [`/api/user/${user?.id}/settings/gambling-insights`]
@@ -435,10 +430,13 @@ export default function Settings() {
         description: `Gambling insights ${gamblingInsightsEnabled ? 'enabled' : 'disabled'} successfully.`,
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      // Parse error to get specific, actionable error message
+      const parsedError = parseApiError(error, 'gambling-insights');
+      
       toast({
-        title: "Error",
-        description: "Failed to update gambling insights setting. Please try again.",
+        title: parsedError.title,
+        description: parsedError.message,
         variant: "destructive",
       });
     },
@@ -768,37 +766,19 @@ export default function Settings() {
               operation="Loading alert preferences"
             />
 
-            {/* Error boundary for alert preferences section */}
-            {(preferencesError || availableAlertsError) && !alertPreferencesRetry.isRetrying && !availableAlertsRetry.isRetrying ? (
-              <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                <AlertTriangle className="w-8 h-8 text-red-400" />
-                <div className="text-center">
-                  <h3 className="text-sm font-medium text-slate-200">Unable to Load Alert Preferences</h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    {availableAlertsError ? 'Failed to load available alerts. ' : ''}
-                    {preferencesError ? 'Failed to load your preferences. ' : ''}
-                    Please refresh the page or try again later.
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    queryClient.invalidateQueries({ queryKey: [`/api/available-alerts/${activeSport.toLowerCase()}`] });
-                    if (queryKeySegments.length > 0) {
-                      queryClient.invalidateQueries({ queryKey: queryKeySegments });
-                    }
-                  }}
-                  className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-all duration-300"
-                >
-                  Try Again
-                </Button>
-              </div>
-            ) : ((preferencesLoading || availableAlertsLoading) && !availableAlerts) || alertPreferencesRetry.isRetrying || availableAlertsRetry.isRetrying ? (
-              <div className="flex items-center justify-center py-12">
-                <div className={`w-8 h-8 border-4 ${getBorderClass()} border-t-transparent rounded-full animate-spin`}></div>
-              </div>
-            ) : (
+            <SettingsErrorBoundary
+              error={preferencesError || availableAlertsError}
+              context="alert-preferences"
+              onRetry={() => {
+                queryClient.invalidateQueries({ queryKey: [`/api/available-alerts/${activeSport.toLowerCase()}`] });
+                if (queryKeySegments.length > 0) {
+                  queryClient.invalidateQueries({ queryKey: queryKeySegments });
+                }
+              }}
+              isLoading={(preferencesLoading || availableAlertsLoading) && !availableAlerts}
+              isRetrying={alertPreferencesRetry.isRetrying || availableAlertsRetry.isRetrying}
+            >
+              {/* Alert preferences content */}
               <div className="w-full">
                 {/* Dynamic Alert Types Section */}
                 <div className="space-y-6">
@@ -928,30 +908,13 @@ export default function Settings() {
               operation="Loading gambling insights settings"
             />
 
-            {/* Error boundary for gambling insights section */}
-            {gamblingInsightsError && !gamblingInsightsRetry.isRetrying ? (
-              <div className="flex flex-col items-center justify-center py-8 space-y-4">
-                <AlertTriangle className="w-6 h-6 text-red-400" />
-                <div className="text-center">
-                  <h3 className="text-sm font-medium text-slate-200">Unable to Load Gambling Insights Settings</h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Failed to load gambling insights configuration. You can still modify other settings.
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/settings/gambling-insights`] })}
-                  className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-all duration-300"
-                >
-                  Retry
-                </Button>
-              </div>
-            ) : gamblingInsightsLoading || gamblingInsightsRetry.isRetrying ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="w-8 h-8 border-4 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
-              </div>
-            ) : (
+            <SettingsErrorBoundary
+              error={gamblingInsightsError}
+              context="gambling-insights"
+              onRetry={() => queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/settings/gambling-insights`] })}
+              isLoading={gamblingInsightsLoading}
+              isRetrying={gamblingInsightsRetry.isRetrying}
+            >
               <div className="space-y-4">
                 {/* Enable/Disable Toggle */}
                 <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 hover:ring-1 hover:ring-purple-400/30 transition-all duration-300 group">
@@ -1051,30 +1014,13 @@ export default function Settings() {
               operation="Loading Telegram settings"
             />
 
-            {/* Error boundary for telegram settings section */}
-            {telegramError && !telegramSettingsRetry.isRetrying ? (
-              <div className="flex flex-col items-center justify-center py-8 space-y-4">
-                <AlertTriangle className="w-6 h-6 text-red-400" />
-                <div className="text-center">
-                  <h3 className="text-sm font-medium text-slate-200">Unable to Load Telegram Settings</h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Failed to load your Telegram configuration. Please try again.
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/telegram`] })}
-                  className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-all duration-300"
-                >
-                  Retry
-                </Button>
-              </div>
-            ) : telegramLoading || telegramSettingsRetry.isRetrying ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="w-8 h-8 border-4 border-[#10B981] border-t-transparent rounded-full animate-spin"></div>
-              </div>
-            ) : (
+            <SettingsErrorBoundary
+              error={telegramError}
+              context="telegram-settings"
+              onRetry={() => queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/telegram`] })}
+              isLoading={telegramLoading}
+              isRetrying={telegramSettingsRetry.isRetrying}
+            >
               <div className="space-y-6">
                 {/* Enable/Disable Toggle */}
                 <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 hover:ring-1 hover:ring-[#10B981]/30 transition-all duration-300 group">

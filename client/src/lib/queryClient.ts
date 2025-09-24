@@ -138,30 +138,8 @@ export const getQueryFn: <T>(options: {
     });
   };
 
-// Enhanced retry function for React Query with callback support
-export const createRetryFunction = (onRetry?: (attempt: number, error: any) => void) => {
-  return (failureCount: number, error: any) => {
-    if (failureCount >= 3) return false; // Max 3 attempts (0, 1, 2)
-    
-    if (!shouldRetryError(error)) return false;
-    
-    if (onRetry) {
-      onRetry(failureCount + 1, error);
-    }
-    
-    return true;
-  };
-};
-
-// Enhanced retry delay function with exponential backoff
-export const createRetryDelay = (attempt: number) => {
-  const baseDelay = 1000; // 1 second
-  const factor = 2;
-  const maxDelay = 10000; // 10 seconds
-  
-  const delay = Math.min(baseDelay * Math.pow(factor, attempt), maxDelay);
-  return delay;
-};
+// NOTE: createRetryFunction and createRetryDelay removed as they're no longer needed
+// All retry logic is now handled by p-retry in apiRequest/getQueryFn functions
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -171,12 +149,12 @@ export const queryClient = new QueryClient({
       refetchOnWindowFocus: false, // Avoid unnecessary refetches in production
       staleTime: 30000, // 30 seconds - good balance of freshness and performance
       gcTime: 5 * 60 * 1000, // 5 minutes - reasonable cache retention
-      retry: createRetryFunction(), // Enable smart retry with exponential backoff
-      retryDelay: createRetryDelay, // Use exponential backoff delay
+      retry: 0, // Disable React Query retries - p-retry handles all retry logic
+      retryDelay: undefined, // No retry delay needed since retry is disabled
     },
     mutations: {
-      retry: createRetryFunction(), // Enable smart retry for mutations too
-      retryDelay: createRetryDelay, // Use exponential backoff delay
+      retry: 0, // Disable React Query retries - p-retry handles all retry logic
+      retryDelay: undefined, // No retry delay needed since retry is disabled
       onError: (error) => {
         console.error('Mutation error:', error);
       }
