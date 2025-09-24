@@ -647,10 +647,10 @@ export class WNBAEngine extends BaseSportEngine {
     return [
       'WNBA_GAME_START',
       'WNBA_TWO_MINUTE_WARNING',
-      'FINAL_MINUTES',
-      'HIGH_SCORING_QUARTER',
-      'LOW_SCORING_QUARTER',
-      'FOURTH_QUARTER',
+      'WNBA_FINAL_MINUTES',
+      'WNBA_HIGH_SCORING_QUARTER',
+      'WNBA_LOW_SCORING_QUARTER',
+      'WNBA_FOURTH_QUARTER',
       // V3-10: New WNBA predictive alert types
       'WNBA_CLUTCH_TIME_OPPORTUNITY',
       'WNBA_COMEBACK_POTENTIAL',
