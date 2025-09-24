@@ -455,13 +455,25 @@ export default function Settings() {
       return;
     }
 
+    console.log(`🎯 Gambling Insights toggle: ${gamblingInsightsEnabled} → ${enabled}`);
+    
     setGamblingInsightsPending(true);
     setGamblingInsightsEnabled(enabled);
 
     updateGamblingInsightsMutation.mutate(
       { enabled },
       {
+        onSuccess: () => {
+          console.log(`✅ Gambling Insights toggle succeeded: ${enabled}`);
+          // State should stay as set - don't reset it here
+        },
+        onError: (error) => {
+          console.error(`❌ Gambling Insights toggle failed:`, error);
+          // Revert state on error
+          setGamblingInsightsEnabled(!enabled);
+        },
         onSettled: () => {
+          console.log(`🏁 Gambling Insights toggle settled`);
           setGamblingInsightsPending(false);
         }
       }
@@ -536,13 +548,13 @@ export default function Settings() {
     }
   }, [telegramSettings]);
 
-  // Populate gambling insights settings from query data
+  // Populate gambling insights settings from query data (but not during pending mutations)
   useEffect(() => {
-    if (gamblingInsightsSettings && typeof gamblingInsightsSettings === 'object') {
+    if (gamblingInsightsSettings && typeof gamblingInsightsSettings === 'object' && !gamblingInsightsPending && !updateGamblingInsightsMutation.isPending) {
       const settings = gamblingInsightsSettings as any;
       setGamblingInsightsEnabled(settings.gamblingInsightsEnabled || false);
     }
-  }, [gamblingInsightsSettings]);
+  }, [gamblingInsightsSettings, gamblingInsightsPending, updateGamblingInsightsMutation.isPending]);
 
   const handleTelegramSave = () => {
     // Don't send placeholder dots - send empty string to keep existing token
