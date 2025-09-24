@@ -363,6 +363,7 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_SCORING_OPPORTUNITY',
         'MLB_PITCHING_CHANGE',
         'MLB_BASES_LOADED_TWO_OUTS',
+        'MLB_HIGH_SCORING_SITUATION',
         'MLB_STRIKEOUT'
       ];
 
@@ -711,6 +712,7 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_BASES_LOADED_ONE_OUT',
         'MLB_RUNNER_ON_THIRD_TWO_OUTS',
         'MLB_FIRST_AND_THIRD_TWO_OUTS',
+        'MLB_RUNNER_ON_SECOND_NO_OUTS',
         'MLB_BATTER_DUE',
         'MLB_STEAL_LIKELIHOOD',
         'MLB_ON_DECK_PREDICTION',
@@ -718,10 +720,8 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_LATE_INNING_CLOSE',
         'MLB_SCORING_OPPORTUNITY',
         'MLB_PITCHING_CHANGE',
-        'MLB_FIRST_AND_THIRD_ONE_OUT',
-        'MLB_FIRST_AND_THIRD_TWO_OUTS',
-        'MLB_RUNNER_ON_THIRD_TWO_OUTS',
         'MLB_BASES_LOADED_TWO_OUTS',
+        'MLB_HIGH_SCORING_SITUATION',
         'MLB_STRIKEOUT'
       ];
 
