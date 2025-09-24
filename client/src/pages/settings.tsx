@@ -111,7 +111,7 @@ export default function Settings() {
   const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
   // Gambling insights settings state
-  const [gamblingInsightsEnabled, setGamblingInsightsEnabled] = useState(true);
+  const [gamblingInsightsEnabled, setGamblingInsightsEnabled] = useState(false);
 
   // Odds API settings state
   const [oddsApiEnabled, setOddsApiEnabled] = useState(false);
@@ -535,6 +535,14 @@ export default function Settings() {
       }
     }
   }, [telegramSettings]);
+
+  // Populate gambling insights settings from query data
+  useEffect(() => {
+    if (gamblingInsightsSettings && typeof gamblingInsightsSettings === 'object') {
+      const settings = gamblingInsightsSettings as any;
+      setGamblingInsightsEnabled(settings.gamblingInsightsEnabled || false);
+    }
+  }, [gamblingInsightsSettings]);
 
   const handleTelegramSave = () => {
     // Don't send placeholder dots - send empty string to keep existing token
