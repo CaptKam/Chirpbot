@@ -688,39 +688,4 @@ export class NCAAFEngine extends BaseSportEngine {
     }
   }
 
-  // FIXED: Get available alert types with proper NCAAF prefixes (similar to WNBA fix)
-  async getAvailableAlertTypes(): Promise<string[]> {
-    try {
-      const fs = await import('fs');
-      const path = await import('path');
-      const { fileURLToPath } = await import('url');
-      
-      // Get the directory path in ES modules
-      const currentDir = path.dirname(fileURLToPath(import.meta.url));
-      const cylinderPath = path.join(currentDir, `alert-cylinders/ncaaf`);
-      
-      if (!fs.existsSync(cylinderPath)) {
-        console.log(`⚠️ No cylinder directory found for NCAAF at ${cylinderPath}`);
-        return [];
-      }
-
-      const files = fs.readdirSync(cylinderPath);
-      const alertTypes = files
-        .filter(file => file.endsWith('-module.ts'))
-        .map(file => {
-          // Convert filename back to alert type with NCAAF prefix
-          const alertName = file
-            .replace('-module.ts', '')
-            .replace(/-/g, '_')
-            .toUpperCase();
-          return `NCAAF_${alertName}`;
-        });
-
-      console.log(`🔍 NCAAF Engine: Found ${alertTypes.length} available alert types:`, alertTypes);
-      return alertTypes;
-    } catch (error) {
-      console.error(`❌ Error getting available alert types for NCAAF:`, error);
-      return [];
-    }
-  }
 }
