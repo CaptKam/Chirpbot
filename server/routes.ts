@@ -746,8 +746,45 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             .limit(1);
 
           if (existingAlerts.length > 0) {
-            skippedCount++;
-            console.log(`⏭️ Active alert already exists for user ${userGame.userId}, skipping`);
+            const existingAlert = existingAlerts[0];
+            let existingPayload: any = {};
+            try {
+              existingPayload = JSON.parse(existingAlert.payload || '{}');
+            } catch (parseError) {
+              console.log(`⚠️ Failed to parse existing alert payload, using empty object:`, parseError);
+              existingPayload = {};
+            }
+            const hasExistingGamblingInsights = existingPayload.gamblingInsights && 
+              (existingPayload.gamblingInsights.structuredTemplate || (existingPayload.gamblingInsights.bullets && existingPayload.gamblingInsights.bullets.length > 0));
+            const hasNewGamblingInsights = alert.gamblingInsights && 
+              (alert.gamblingInsights.structuredTemplate || (alert.gamblingInsights.bullets && alert.gamblingInsights.bullets.length > 0));
+
+            // If new alert has gambling insights and existing doesn't, UPDATE the existing alert
+            if (hasNewGamblingInsights && !hasExistingGamblingInsights) {
+              console.log(`🔄 Updating existing alert with AI-enhanced gambling insights for user ${userGame.userId}`);
+              
+              const updatedPayload = {
+                ...existingPayload,
+                gamblingInsights: alert.gamblingInsights,
+                hasComposerEnhancement: alert.hasComposerEnhancement || false,
+                aiEnhanced: true,
+                lastUpdated: new Date().toISOString()
+              };
+
+              await db.update(alertsTable)
+                .set({
+                  payload: JSON.stringify(updatedPayload),
+                  score: (alert as any).confidence || alert.priority || existingAlert.score
+                })
+                .where(eq(alertsTable.id, existingAlert.id));
+
+              savedCount++;
+              console.log(`✅ Alert updated with gambling insights for user ${userGame.userId}: ${alert.alertKey}`);
+            } else {
+              // Both alerts are the same type (both basic or both enhanced) - skip duplicate
+              skippedCount++;
+              console.log(`⏭️ Active alert already exists for user ${userGame.userId}, skipping`);
+            }
             continue;
           }
 
