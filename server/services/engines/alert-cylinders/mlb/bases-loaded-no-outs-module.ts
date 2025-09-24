@@ -1,6 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 import { mlbPerformanceTracker } from '../../mlb-performance-tracker';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class BasesLoadedNoOutsModule extends BaseAlertModule {
   alertType = 'MLB_BASES_LOADED_NO_OUTS';
@@ -110,18 +109,7 @@ export default class BasesLoadedNoOutsModule extends BaseAlertModule {
       priority: 97
     };
 
-    // Add clean display message
-    const displayMessage = cleanAlertFormatter.format({
-      type: this.alertType,
-      sport: 'MLB',
-      context: alertResult.context,
-      gameState: gameState
-    });
-
-    return {
-      ...alertResult,
-      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
-    };
+    return alertResult;
   }
   
   private analyzePitcherSituation(gameState: GameState): any {

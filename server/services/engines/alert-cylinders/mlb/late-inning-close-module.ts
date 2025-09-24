@@ -1,5 +1,4 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 type NormStatus = 'scheduled' | 'live' | 'final' | 'other';
 
@@ -83,27 +82,3 @@ export default class LateInningCloseModule extends BaseAlertModule {
       priority: 60,
     };
 
-    const display = cleanAlertFormatter.format({
-      type: this.alertType,
-      sport: this.sport,
-      gameState,
-      context: alert.context,
-      riskReward: { probability: 100 },
-    });
-
-    return {
-      ...alert,
-      displayMessage:
-        display.primary + (display.secondary ? ` | ${display.secondary}` : ''),
-    };
-  }
-
-  // PURE: no state writes here
-  calculateProbability(gameState: GameState): number {
-    const isTop7 =
-      gameState.isLive === true &&
-      gameState.inning === 7 &&
-      gameState.isTopInning === true;
-    return isTop7 ? 100 : 0;
-  }
-}

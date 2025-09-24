@@ -1,6 +1,5 @@
 
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class RunnerOnThirdOneOutModule extends BaseAlertModule {
   alertType = 'MLB_RUNNER_ON_THIRD_ONE_OUT';
@@ -51,17 +50,7 @@ export default class RunnerOnThirdOneOutModule extends BaseAlertModule {
       priority: 45
     };
 
-    // Add clean display message
-    const displayMessage = cleanAlertFormatter.format({
-      type: this.alertType,
-      sport: 'MLB',
-      context: alertResult.context,
-      gameState: gameState
-    });
-
-    return {
-      ...alertResult,
-      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
+    return alertResult;
     };
   }
 

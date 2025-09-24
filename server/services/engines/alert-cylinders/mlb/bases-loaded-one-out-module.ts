@@ -1,7 +1,6 @@
 
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 import { mlbPerformanceTracker } from '../../mlb-performance-tracker';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class BasesLoadedOneOutModule extends BaseAlertModule {
   alertType = 'MLB_BASES_LOADED_ONE_OUT';
@@ -51,18 +50,7 @@ export default class BasesLoadedOneOutModule extends BaseAlertModule {
       priority: 75
     };
 
-    // Add clean display message
-    const displayMessage = cleanAlertFormatter.format({
-      type: this.alertType,
-      sport: 'MLB',
-      context: alertResult.context,
-      gameState: gameState
-    });
-
-    return {
-      ...alertResult,
-      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
-    };
+    return alertResult;
   }
 
   calculateProbability(): number {

@@ -1,5 +1,4 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class PitchingChangeModule extends BaseAlertModule {
   alertType = 'MLB_PITCHING_CHANGE';
@@ -102,17 +101,7 @@ export default class PitchingChangeModule extends BaseAlertModule {
       priority: 50
     };
 
-    // Add clean display message
-    const displayMessage = cleanAlertFormatter.format({
-      type: this.alertType,
-      sport: 'MLB',
-      context: alertResult.context,
-      gameState: gameState
-    });
-
-    return {
-      ...alertResult,
-      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
+    return alertResult;
     };
   }
 

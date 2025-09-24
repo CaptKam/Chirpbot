@@ -1,6 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 import { WeatherService, type WeatherData } from '../../../weather-service';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 // Weather-related types for stealing factors
 interface StealingWeatherFactors {
@@ -164,17 +163,7 @@ export default class StealLikelihoodModule extends BaseAlertModule {
       priority: Math.min(95, 55 + Math.round(stealProbability * 0.4))
     };
 
-    // Add clean display message
-    const displayMessage = cleanAlertFormatter.format({
-      type: alertResult.type,
-      sport: 'MLB',
-      context: alertResult.context,
-      gameState: gameState
-    });
-
-    return {
-      ...alertResult,
-      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
+    return alertResult;
     };
   }
 

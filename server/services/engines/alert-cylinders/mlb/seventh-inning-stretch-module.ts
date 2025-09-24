@@ -1,6 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 import { mlbPerformanceTracker } from '../../mlb-performance-tracker';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class SeventhInningStretchModule extends BaseAlertModule {
   alertType = 'MLB_SEVENTH_INNING_STRETCH';
@@ -111,18 +110,7 @@ export default class SeventhInningStretchModule extends BaseAlertModule {
     // Mark this game as triggered to prevent duplicates
     this.triggeredGames.add(gameState.gameId);
 
-    // Add clean display message
-    const displayMessage = cleanAlertFormatter.format({
-      type: alertResult.type,
-      sport: 'MLB',
-      context: alertResult.context,
-      gameState: gameState
-    });
-
-    return {
-      ...alertResult,
-      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
-    };
+    return alertResult;
   }
 
   calculateProbability(gameState: GameState): number {

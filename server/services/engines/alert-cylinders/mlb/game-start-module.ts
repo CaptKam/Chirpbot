@@ -1,5 +1,4 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 type NormStatus = 'scheduled' | 'live' | 'final' | 'other';
 
@@ -64,18 +63,7 @@ export default class GameStartModule extends BaseAlertModule {
       priority: 50,
     };
 
-    const display = cleanAlertFormatter.format({
-      type: alert.type,
-      sport: this.sport,
-      gameState,
-      context: alert.context,
-      riskReward: { probability: 100 },
-    });
-
-    return {
-      ...alert,
-      displayMessage: display.primary + (display.secondary ? ` | ${display.secondary}` : ''),
-    };
+    return alert;
   }
 
   // PURE: no state writes here

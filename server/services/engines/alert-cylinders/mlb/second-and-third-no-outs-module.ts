@@ -1,6 +1,5 @@
 
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class SecondAndThirdNoOutsModule extends BaseAlertModule {
   alertType = 'MLB_SECOND_AND_THIRD_NO_OUTS';
@@ -41,17 +40,7 @@ export default class SecondAndThirdNoOutsModule extends BaseAlertModule {
       priority: 96
     };
 
-    // Add clean display message
-    const displayMessage = cleanAlertFormatter.format({
-      type: alertResult.type,
-      sport: 'MLB',
-      context: alertResult.context,
-      gameState: gameState
-    });
-
-    return {
-      ...alertResult,
-      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
+    return alertResult;
     };
   }
 

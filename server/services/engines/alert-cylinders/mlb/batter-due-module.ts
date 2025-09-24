@@ -1,6 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 import { advancedPlayerStats, PlayerAdvancedStats, PitcherAdvancedStats, HandednessMatchup } from '../../../advanced-player-stats';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class BatterDueModule extends BaseAlertModule {
   alertType = 'MLB_BATTER_DUE';
@@ -162,17 +161,7 @@ export default class BatterDueModule extends BaseAlertModule {
       priority: Math.min(95, 60 + Math.round(scoringProbability * 0.4)) // More conservative priority scaling
     };
 
-    // Add clean display message
-    const displayMessage = cleanAlertFormatter.format({
-      type: alertResult.type,
-      sport: 'MLB',
-      context: alertResult.context,
-      gameState: gameState
-    });
-
-    return {
-      ...alertResult,
-      displayMessage: displayMessage.primary + (displayMessage.secondary ? ` | ${displayMessage.secondary}` : '')
+    return alertResult;
     };
   }
 
