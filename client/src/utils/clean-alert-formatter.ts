@@ -1,540 +1,310 @@
 /**
  * Clean Alert Formatter (Client-side version)
- * Transforms verbose alert messages into concise, scannable formats
- * Structure: [Sport Icon] | [Key Data] | [Action]
- * Maximum 15 words per line, essential data only
+ * Structure: [Icon + ShortType] | [State] | [Action/Why]
+ * Primary/secondary lines each ≤ 15 words.
  */
 
 export interface CleanAlertInput {
   type: string;
   sport: string;
   context?: any;
-  timing?: {
-    whyNow?: string;
-    urgencyLevel?: string;
-  };
-  action?: {
-    primaryAction?: string;
-    confidence?: number;
-  };
-  insight?: {
-    keyFactor?: string;
-  };
-  riskReward?: {
-    probability?: number;
-  };
+  timing?: { whyNow?: string; urgencyLevel?: string };
+  action?: { primaryAction?: string; confidence?: number };
+  insight?: { keyFactor?: string };
+  riskReward?: { probability?: number };
   gameState?: any;
   message?: string;
   headline?: string;
 }
 
 export interface CleanAlertOutput {
-  primary: string;      // Main formatted message
-  secondary?: string;   // Optional action line
-  icon: string;        // Sport or action icon
-  confidence?: number; // Confidence percentage if available
+  primary: string;
+  secondary?: string;
+  icon: string;
+  confidence?: number;
 }
 
 export class CleanAlertFormatter {
+  private readonly WORD_LIMIT_PRIMARY = 15;
+  private readonly WORD_LIMIT_SECONDARY = 15;
+
   private readonly sportIcons: Record<string, string> = {
-    MLB: '⚾',
-    NFL: '🏈',
-    NBA: '🏀',
-    WNBA: '🏀',
-    NCAAF: '🏈',
-    CFL: '🍁'
+    MLB: '⚾', NFL: '🏈', NBA: '🏀', WNBA: '🏀', NCAAF: '🏈', CFL: '🍁', NHL: '🏒'
   };
 
   private readonly actionIcons: Record<string, string> = {
-    OVER: '📈',
-    UNDER: '📉',
-    BET: '💡',
-    WATCH: '👀',
-    ALERT: '🔔',
-    HOT: '🔥',
-    COLD: '❄️'
+    OVER: '📈', UNDER: '📉', BET: '💡', WATCH: '👀', ALERT: '🔔', HOT: '🔥', COLD: '❄️'
   };
 
-  /**
-   * Main formatter entry point
-   */
+  // ===== Public API =====
   format(alert: CleanAlertInput): CleanAlertOutput {
-    const sport = alert.sport?.toUpperCase() || 'GAME';
-    const type = alert.type || '';
-    
-    // Route to sport-specific formatter
+    const sport = (alert.sport || '').toUpperCase() || 'GAME';
     switch (sport) {
-      case 'MLB':
-        return this.formatMLB(alert);
-      case 'NFL':
-        return this.formatNFL(alert);
-      case 'NBA':
-        return this.formatNBA(alert);
-      case 'WNBA':
-        return this.formatWNBA(alert);
-      case 'NCAAF':
-        return this.formatNCAAF(alert);
-      case 'CFL':
-        return this.formatCFL(alert);
-      default:
-        return this.formatGeneric(alert);
+      case 'MLB':  return this.formatMLB(alert);
+      case 'NFL':  return this.formatNFL(alert);
+      case 'NBA':  return this.formatNBA(alert);
+      case 'WNBA': return this.formatWNBA(alert);
+      case 'NCAAF':return this.formatNCAAF(alert);
+      case 'CFL':  return this.formatCFL(alert);
+      default:     return this.formatGeneric(alert);
     }
   }
 
-  /**
-   * MLB Alert Formatter
-   */
+  // ===== MLB =====
   private formatMLB(alert: CleanAlertInput): CleanAlertOutput {
     const type = alert.type || '';
-    const gameState = alert.gameState || alert.context || {};
-    const confidence = alert.action?.confidence || alert.riskReward?.probability || 0;
-    
-    // Extract key MLB data
-    const outs = gameState.outs || 0;
-    const inning = gameState.inning || 0;
-    const inningHalf = gameState.isTopInning ? 'T' : 'B';
-    const runners = this.getMLBRunners(gameState);
-    const scoringProb = this.extractPercentage(alert);
+    const gs = alert.gameState || alert.context || {};
+    const icon = this.iconFor('MLB');
+    const conf = this.getProbability(alert);
+    const sev = this.severityBadge(conf);
+    const inning = this.inningHalf(gs); // e.g. "T7"
+    const outs = this.outsToken(gs.outs);
+    const runners = this.runnersToken(gs);
 
-    // Format based on alert type
+    const shortType = this.shortType(type);
+    const baseState = this.compose(
+      `${icon} ${shortType}`, // Icon + Type
+      [inning, outs, runners].filter(Boolean).join(' • ') // compact state
+    );
+
+    // Type-specific tweaks
     if (type.includes('BASES_LOADED')) {
-      return {
-        primary: `⚾ Bases Loaded | ${outs} out | ${scoringProb}% scoring`,
-        secondary: scoringProb > 80 ? '📈 OVER 0.5 runs' : undefined,
-        icon: '⚾',
-        confidence: scoringProb
-      };
+      return this.output(baseState, this.actionLine(alert, 'OVER 0.5 runs', sev), icon, conf);
     }
-    
-    if (type.includes('RUNNER_ON_THIRD')) {
-      return {
-        primary: `⚾ Runner 3rd | ${outs} out | ${scoringProb}% score`,
-        secondary: outs === 0 ? '💡 Next run YES' : undefined,
-        icon: '⚾',
-        confidence: scoringProb
-      };
-    }
-    
-    if (type.includes('FIRST_AND_SECOND')) {
-      return {
-        primary: `⚾ 1st/2nd | ${outs} out | ${scoringProb}% score`,
-        icon: '⚾',
-        confidence: scoringProb
-      };
-    }
-    
-    if (type.includes('SCORING_OPPORTUNITY')) {
-      return {
-        primary: `⚾ ${runners} | ${inningHalf}${inning} | ${scoringProb}%`,
-        icon: '⚾',
-        confidence: scoringProb
-      };
-    }
-    
-    if (type.includes('SEVENTH_INNING')) {
-      return {
-        primary: `⚾ 7th Stretch | Bullpen time`,
-        secondary: '👀 Watch totals',
-        icon: '⚾'
-      };
-    }
-    
     if (type.includes('LATE_INNING_CLOSE')) {
-      const scoreDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
-      return {
-        primary: `⚾ ${inningHalf}${inning} | ${scoreDiff} run game`,
-        secondary: '🔥 High leverage',
-        icon: '⚾'
-      };
+      const diff = Math.abs((gs.homeScore ?? 0) - (gs.awayScore ?? 0));
+      const state = this.compose(`${icon} ${shortType}`, [inning, `${diff} run game`].join(' • '));
+      return this.output(state, this.actionLine(alert, 'High leverage', sev), icon, conf);
     }
-    
     if (type.includes('PITCHING_CHANGE')) {
-      return {
-        primary: `⚾ New pitcher | ${inningHalf}${inning}`,
-        icon: '⚾'
-      };
+      const state = this.compose(`${icon} ${shortType}`, inning);
+      return this.output(state, this.actionLine(alert, 'Watch new arm', sev), icon, conf);
     }
-    
-    if (type.includes('ON_DECK')) {
-      const batter = gameState.onDeckBatter || 'Next';
-      return {
-        primary: `⚾ On deck: ${this.truncateName(batter)}`,
-        icon: '⚾'
-      };
-    }
-    
-    // Default MLB format
-    return {
-      primary: `⚾ ${this.cleanAlertType(type)} | ${inningHalf}${inning}`,
-      icon: '⚾',
-      confidence
-    };
-  }
-
-  /**
-   * NFL Alert Formatter
-   */
-  private formatNFL(alert: CleanAlertInput): CleanAlertOutput {
-    const type = alert.type || '';
-    const gameState = alert.gameState || alert.context || {};
-    const confidence = alert.action?.confidence || alert.riskReward?.probability || 0;
-    
-    // Extract key NFL data
-    const quarter = gameState.quarter || 'Q?';
-    const timeRemaining = gameState.timeRemaining || '';
-    const down = gameState.down || 0;
-    const yardsToGo = gameState.yardsToGo || 0;
-    const fieldPosition = gameState.fieldPosition || 50;
-    
-    // Format based on alert type
-    if (type.includes('RED_ZONE')) {
-      const yardsToGoal = 20 - Math.abs(100 - fieldPosition);
-      return {
-        primary: `🏈 Red Zone | ${yardsToGoal} yds | ${confidence}% TD`,
-        secondary: yardsToGoal <= 5 ? '💡 TD scorer props' : undefined,
-        icon: '🏈',
-        confidence
-      };
-    }
-    
-    if (type.includes('TWO_MINUTE_WARNING')) {
-      return {
-        primary: `🏈 2-min warning | Q${quarter}`,
-        secondary: '📈 Pace increases',
-        icon: '🏈'
-      };
-    }
-    
-    if (type.includes('FOURTH_DOWN')) {
-      return {
-        primary: `🏈 4th & ${yardsToGo} | ${fieldPosition} yd line`,
-        secondary: fieldPosition <= 40 ? '🎯 Go for it zone' : undefined,
-        icon: '🏈'
-      };
-    }
-    
-    if (type.includes('TURNOVER_LIKELIHOOD')) {
-      return {
-        primary: `🏈 Turnover risk | ${confidence}%`,
-        icon: '🏈',
-        confidence
-      };
-    }
-    
     if (type.includes('GAME_START')) {
-      return {
-        primary: `🏈 Kickoff | Game starting`,
-        icon: '🏈'
-      };
+      const state = this.compose(`${icon} ${shortType}`, 'Top 1 • First pitch');
+      return this.output(state, this.actionLine(alert, 'Opening lines live', sev), icon, conf);
     }
-    
-    if (type.includes('SECOND_HALF')) {
-      return {
-        primary: `🏈 2nd half kickoff`,
-        icon: '🏈'
-      };
-    }
-    
-    if (type.includes('MASSIVE_WEATHER')) {
-      const windSpeed = gameState.weatherContext?.windSpeed || gameState.windSpeed || 0;
-      return {
-        primary: `🏈 Weather alert | ${windSpeed}+ mph`,
-        secondary: '📉 Consider UNDER',
-        icon: '🌪️'
-      };
-    }
-    
-    // Default NFL format
-    return {
-      primary: `🏈 ${this.cleanAlertType(type)} | Q${quarter} ${timeRemaining}`,
-      icon: '🏈',
-      confidence
-    };
+
+    // Default MLB
+    const state = this.compose(`${icon} ${shortType}`, [inning, outs, runners].filter(Boolean).join(' • '));
+    return this.output(state, this.actionLine(alert, undefined, sev), icon, conf);
   }
 
-  /**
-   * NBA Alert Formatter
-   */
-  private formatNBA(alert: CleanAlertInput): CleanAlertOutput {
-    const type = alert.type || '';
-    const gameState = alert.gameState || alert.context || {};
-    const confidence = alert.action?.confidence || alert.riskReward?.probability || 0;
-    
-    // Extract key NBA data
-    const quarter = gameState.quarter || 0;
-    const timeRemaining = gameState.timeRemaining || '';
-    const scoreDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
-    const fouls = gameState.fouls || { home: 0, away: 0 };
-    
-    // Format based on alert type
-    if (type.includes('FINAL_MINUTES')) {
-      return {
-        primary: `🏀 Final mins | ${scoreDiff} pt game`,
-        secondary: scoreDiff <= 5 ? '🔥 Clutch time' : undefined,
-        icon: '🏀'
-      };
-    }
-    
-    if (type.includes('TWO_MINUTE_WARNING')) {
-      return {
-        primary: `🏀 2 mins Q${quarter} | ${scoreDiff} pts`,
-        icon: '🏀'
-      };
-    }
-    
-    if (type.includes('CLUTCH_PERFORMANCE')) {
-      return {
-        primary: `🏀 Clutch time | ${scoreDiff} pt margin`,
-        secondary: '💡 Star player props',
-        icon: '🏀',
-        confidence
-      };
-    }
-    
-    if (type.includes('FOURTH_QUARTER')) {
-      return {
-        primary: `🏀 Q4 start | ${scoreDiff} pt lead`,
-        icon: '🏀'
-      };
-    }
-    
-    if (type.includes('OVERTIME')) {
-      return {
-        primary: `🏀 OVERTIME | Tied game`,
-        secondary: '📈 OVER likely',
-        icon: '🏀'
-      };
-    }
-    
-    if (type.includes('SUPERSTAR_ANALYTICS')) {
-      const player = gameState.starPlayers?.[0]?.name || 'Star';
-      return {
-        primary: `🏀 ${this.truncateName(player)} hot`,
-        secondary: '💡 Player props',
-        icon: '⭐'
-      };
-    }
-    
-    // Default NBA format
-    return {
-      primary: `🏀 ${this.cleanAlertType(type)} | Q${quarter}`,
-      icon: '🏀',
-      confidence
-    };
+  // ===== NFL / Football family =====
+  private formatNFL(alert: CleanAlertInput): CleanAlertOutput {
+    const icon = this.iconFor('NFL');
+    return this.footballLike(alert, icon);
   }
-
-  /**
-   * WNBA Alert Formatter
-   */
-  private formatWNBA(alert: CleanAlertInput): CleanAlertOutput {
-    const type = alert.type || '';
-    const gameState = alert.gameState || alert.context || {};
-    const confidence = alert.action?.confidence || alert.riskReward?.probability || 0;
-    
-    // Extract key WNBA data (similar to NBA)
-    const quarter = gameState.quarter || 0;
-    const timeRemaining = gameState.timeRemaining || '';
-    const scoreDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
-    
-    // Format based on alert type
-    if (type.includes('FINAL_MINUTES')) {
-      return {
-        primary: `🏀 Final mins | ${scoreDiff} pt game`,
-        icon: '🏀'
-      };
-    }
-    
-    if (type.includes('CLUTCH_TIME')) {
-      return {
-        primary: `🏀 Clutch | ${scoreDiff} pts | Q${quarter}`,
-        icon: '🏀',
-        confidence
-      };
-    }
-    
-    if (type.includes('HIGH_SCORING_QUARTER')) {
-      const pts = gameState.quarterPoints || 0;
-      return {
-        primary: `🏀 High scoring Q${quarter} | ${pts} pts`,
-        secondary: '📈 OVER trending',
-        icon: '🏀'
-      };
-    }
-    
-    if (type.includes('LOW_SCORING_QUARTER')) {
-      const pts = gameState.quarterPoints || 0;
-      return {
-        primary: `🏀 Low scoring Q${quarter} | ${pts} pts`,
-        secondary: '📉 UNDER trending',
-        icon: '🏀'
-      };
-    }
-    
-    if (type.includes('CHAMPIONSHIP')) {
-      return {
-        primary: `🏀 Playoff implications`,
-        icon: '🏆'
-      };
-    }
-    
-    // Default WNBA format
-    return {
-      primary: `🏀 ${this.cleanAlertType(type)} | Q${quarter}`,
-      icon: '🏀',
-      confidence
-    };
-  }
-
-  /**
-   * NCAAF Alert Formatter
-   */
   private formatNCAAF(alert: CleanAlertInput): CleanAlertOutput {
-    const type = alert.type || '';
-    const gameState = alert.gameState || alert.context || {};
-    const confidence = alert.action?.confidence || alert.riskReward?.probability || 0;
-    
-    // Similar to NFL but with college-specific alerts
-    const quarter = gameState.quarter || 'Q?';
-    const timeRemaining = gameState.timeRemaining || '';
-    const down = gameState.down || 0;
-    const yardsToGo = gameState.yardsToGo || 0;
-    
-    if (type.includes('UPSET_OPPORTUNITY')) {
-      const underdog = gameState.underdog || 'Underdog';
-      return {
-        primary: `🏈 Upset alert | ${this.truncateTeam(underdog)}`,
-        secondary: '💡 ML value',
-        icon: '🏈'
-      };
-    }
-    
-    if (type.includes('FOURTH_DOWN_DECISION')) {
-      return {
-        primary: `🏈 4th & ${yardsToGo} | Decision`,
-        icon: '🏈'
-      };
-    }
-    
-    if (type.includes('COMEBACK_POTENTIAL')) {
-      const deficit = gameState.deficit || 0;
-      return {
-        primary: `🏈 Comeback | Down ${deficit}`,
-        icon: '🏈',
-        confidence
-      };
-    }
-    
-    // Use NFL formatter for common alerts
-    return this.formatNFL(alert);
+    const icon = this.iconFor('NCAAF');
+    return this.footballLike(alert, icon);
   }
-
-  /**
-   * CFL Alert Formatter
-   */
   private formatCFL(alert: CleanAlertInput): CleanAlertOutput {
+    const icon = this.iconFor('CFL');
+    const out = this.footballLike(alert, icon);
+    out.icon = icon;
+    out.primary = out.primary.replace(/^🏈/, '🍁'); // visual tweak if reused
+    return out;
+  }
+  private footballLike(alert: CleanAlertInput, icon: string): CleanAlertOutput {
     const type = alert.type || '';
-    const gameState = alert.gameState || alert.context || {};
-    const confidence = alert.action?.confidence || alert.riskReward?.probability || 0;
-    
-    // CFL-specific formatting
-    if (type.includes('ROUGE_OPPORTUNITY')) {
-      return {
-        primary: `🍁 Rouge chance | 1 pt`,
-        icon: '🍁'
-      };
+    const gs = alert.gameState || alert.context || {};
+    const conf = this.getProbability(alert);
+    const sev = this.severityBadge(conf);
+
+    const q = this.quarterToken(gs);
+    const t = gs.timeRemaining || '';
+    const downDist = this.downDistance(gs);
+    const field = this.fieldPos(gs);
+
+    const shortType = this.shortType(type);
+    const stateTokens = [q, t, downDist, field].filter(Boolean).join(' • ');
+    const baseState = this.compose(`${icon} ${shortType}`, stateTokens);
+
+    if (type.includes('RED_ZONE')) {
+      return this.output(baseState, this.actionLine(alert, 'TD chance', sev), icon, conf);
     }
-    
-    if (type.includes('THIRD_DOWN')) {
-      const yardsToGo = gameState.yardsToGo || 0;
-      return {
-        primary: `🍁 3rd & ${yardsToGo} | CFL rules`,
-        icon: '🍁'
-      };
+    if (type.includes('TWO_MINUTE_WARNING')) {
+      return this.output(baseState, this.actionLine(alert, 'Pace spike', sev), icon, conf);
     }
-    
-    if (type.includes('GREY_CUP')) {
-      return {
-        primary: `🍁 Grey Cup implications`,
-        icon: '🏆'
-      };
+    if (type.includes('FOURTH_DOWN')) {
+      return this.output(baseState, this.actionLine(alert, 'Decision point', sev), icon, conf);
     }
-    
-    // Use NFL formatter for common alerts but with CFL icon
-    const nflFormat = this.formatNFL(alert);
-    nflFormat.icon = '🍁';
-    nflFormat.primary = nflFormat.primary.replace('🏈', '🍁');
-    return nflFormat;
+    if (type.includes('GAME_START')) {
+      const p = this.compose(`${icon} ${shortType}`, [q || 'Q1', 'Kickoff'].join(' • '));
+      return this.output(p, this.actionLine(alert, 'Opening drive', sev), icon, conf);
+    }
+    if (type.includes('SECOND_HALF')) {
+      const p = this.compose(`${icon} ${shortType}`, ['Q3', 'Kickoff'].join(' • '));
+      return this.output(p, this.actionLine(alert, 'Halftime adj live', sev), icon, conf);
+    }
+    return this.output(baseState, this.actionLine(alert, undefined, sev), icon, conf);
   }
 
-  /**
-   * Generic formatter for unknown sports
-   */
+  // ===== NBA / WNBA =====
+  private formatNBA(alert: CleanAlertInput): CleanAlertOutput {
+    return this.basketballLike(alert, this.iconFor('NBA'));
+  }
+  private formatWNBA(alert: CleanAlertInput): CleanAlertOutput {
+    return this.basketballLike(alert, this.iconFor('WNBA'));
+  }
+  private basketballLike(alert: CleanAlertInput, icon: string): CleanAlertOutput {
+    const type = alert.type || '';
+    const gs = alert.gameState || alert.context || {};
+    const conf = this.getProbability(alert);
+    const sev = this.severityBadge(conf);
+
+    const q = this.hoopQuarterToken(gs);
+    const t = gs.timeRemaining || '';
+    const diff = Math.abs((gs.homeScore ?? 0) - (gs.awayScore ?? 0));
+    const shortType = this.shortType(type);
+
+    const baseState = this.compose(`${icon} ${shortType}`, [q, t, diff ? `${diff} pt` : ''].filter(Boolean).join(' • '));
+
+    if (type.includes('FINAL_MINUTES') || (q === 'Q4' && t && this.parseClockSec(t) <= 120)) {
+      return this.output(baseState, this.actionLine(alert, diff <= 5 ? 'Clutch time' : 'Late game', sev), icon, conf);
+    }
+    if (type.includes('OVERTIME')) {
+      const p = this.compose(`${icon} ${shortType}`, ['OT', t || ''].filter(Boolean).join(' • '));
+      return this.output(p, this.actionLine(alert, 'High variance', sev), icon, conf);
+    }
+    if (type.includes('FOURTH_QUARTER')) {
+      const p = this.compose(`${icon} ${shortType}`, ['Q4', t || ''].filter(Boolean).join(' • '));
+      return this.output(p, this.actionLine(alert, 'Run potential', sev), icon, conf);
+    }
+    return this.output(baseState, this.actionLine(alert, undefined, sev), icon, conf);
+  }
+
+  // ===== Generic =====
   private formatGeneric(alert: CleanAlertInput): CleanAlertOutput {
-    const type = this.cleanAlertType(alert.type || 'ALERT');
-    const confidence = alert.action?.confidence || alert.riskReward?.probability || 0;
-    
-    return {
-      primary: `🔔 ${type}`,
-      icon: '🔔',
-      confidence: confidence > 0 ? confidence : undefined
-    };
+    const icon = '🔔';
+    const shortType = this.shortType(alert.type || 'Alert');
+    const primary = this.compose(`${icon} ${shortType}`, alert.headline || alert.message || '');
+    const conf = this.getProbability(alert);
+    const secondary = this.actionLine(alert, undefined, this.severityBadge(conf));
+    return this.output(primary, secondary, icon, conf);
   }
 
-  // Helper methods
-  
-  private getMLBRunners(gameState: any): string {
-    const hasFirst = gameState.hasFirst || false;
-    const hasSecond = gameState.hasSecond || false;
-    const hasThird = gameState.hasThird || false;
-    
-    if (hasFirst && hasSecond && hasThird) return 'Bases loaded';
-    if (hasSecond && hasThird) return '2nd/3rd';
-    if (hasFirst && hasThird) return '1st/3rd';
-    if (hasFirst && hasSecond) return '1st/2nd';
-    if (hasThird) return '3rd';
-    if (hasSecond) return '2nd';
-    if (hasFirst) return '1st';
-    return 'Empty';
+  // ===== Helpers: tokens / composition =====
+  private compose(head: string, state: string): string {
+    // Compose with " | " and enforce word limit.
+    const text = [head, state].filter(Boolean).join(' | ').trim();
+    return this.limitWords(text, this.WORD_LIMIT_PRIMARY);
   }
-  
-  private extractPercentage(alert: CleanAlertInput): number {
-    // Try multiple sources for percentage/probability
-    if (alert.riskReward?.probability) return Math.round(alert.riskReward.probability);
-    if (alert.action?.confidence) return Math.round(alert.action.confidence);
-    if (alert.context?.scoringProbability) return Math.round(alert.context.scoringProbability);
-    if (alert.context?.probability) return Math.round(alert.context.probability);
-    
-    // Try to extract from text
-    const text = alert.message || alert.headline || alert.timing?.whyNow || '';
-    const match = text.match(/(\d+)%/);
-    if (match) return parseInt(match[1]);
-    
-    return 0;
+
+  private actionLine(alert: CleanAlertInput, defaultAction?: string, sev?: string): string | undefined {
+    const conf = this.getProbability(alert);
+    const chosen = alert.action?.primaryAction || defaultAction || alert.insight?.keyFactor || alert.timing?.whyNow;
+    if (!chosen && !conf && !sev) return undefined;
+
+    const hintParts = [
+      sev,                                    // e.g., 🔥 high / 👀 watch
+      chosen ? this.capitalize(chosen) : '',  // e.g., "High leverage"
+      conf ? `${Math.round(conf)}%` : ''      // e.g., "82%"
+    ].filter(Boolean);
+
+    const line = hintParts.join(' • ');
+    return line ? this.limitWords(line, this.WORD_LIMIT_SECONDARY) : undefined;
   }
-  
-  private cleanAlertType(type: string): string {
-    return type
-      .replace(/^(MLB|NFL|NBA|WNBA|NCAAF|CFL)_/, '')
+
+  private limitWords(s: string, maxWords: number): string {
+    if (!s) return '';
+    const words = s.split(/\s+/);
+    if (words.length <= maxWords) return s;
+    return words.slice(0, maxWords).join(' ') + ' …';
+  }
+
+  private shortType(type: string): string {
+    return (type || 'Alert')
+      .replace(/^(MLB|NFL|NBA|WNBA|NCAAF|CFL|NHL)_/, '')
       .replace(/_/g, ' ')
       .toLowerCase()
-      .replace(/\b\w/g, l => l.toUpperCase())
-      .slice(0, 20); // Limit length
+      .replace(/\b\w/g, c => c.toUpperCase())
+      .slice(0, 24);
   }
-  
-  private truncateName(name: string): string {
-    if (!name) return '';
-    const parts = name.split(' ');
-    if (parts.length > 1) {
-      return `${parts[0][0]}. ${parts[parts.length - 1]}`.slice(0, 15);
-    }
-    return name.slice(0, 15);
+
+  private iconFor(sport: string): string {
+    return this.sportIcons[sport] || '🔔';
   }
-  
-  private truncateTeam(team: string): string {
-    if (!team) return '';
-    return team.slice(0, 12);
+
+  private getProbability(alert: CleanAlertInput): number {
+    const from = alert.riskReward?.probability ?? alert.action?.confidence ?? alert.context?.probability ?? 0;
+    return Math.max(0, Math.min(100, Math.round(from)));
+  }
+
+  private severityBadge(prob: number): string | undefined {
+    if (!prob) return undefined;
+    if (prob >= 85) return '🔥 high';
+    if (prob >= 60) return '👀 watch';
+    return 'ℹ️ info';
+  }
+
+  private inningHalf(gs: any): string {
+    const inn = gs.inning ?? 0;
+    if (!inn) return '';
+    const half = gs.inningState ? (gs.inningState === 'top' ? 'T' : 'B')
+               : gs.isTopInning !== undefined ? (gs.isTopInning ? 'T' : 'B')
+               : '';
+    return `${half}${inn}`.trim();
+  }
+
+  private outsToken(outs: any): string {
+    if (outs === undefined || outs === null) return '';
+    const n = Number(outs) || 0;
+    return `${n} ${n === 1 ? 'out' : 'out' + 's'}`; // simple plural
+  }
+
+  private runnersToken(gs: any): string {
+    const r = gs.runners ?? {
+      first: !!gs.hasFirst, second: !!gs.hasSecond, third: !!gs.hasThird
+    };
+    const pos: string[] = [];
+    if (r?.first) pos.push('1B');
+    if (r?.second) pos.push('2B');
+    if (r?.third) pos.push('3B');
+    if (!pos.length) return '';
+    return pos.join(',');
+  }
+
+  private quarterToken(gs: any): string {
+    const q = gs.quarter ?? 0;
+    return q ? `Q${q}` : '';
+  }
+
+  private hoopQuarterToken(gs: any): string {
+    const q = gs.quarter ?? 0;
+    if (!q) return '';
+    return q <= 4 ? `Q${q}` : `OT${q - 4}`;
+  }
+
+  private parseClockSec(clock?: string): number {
+    if (!clock) return NaN;
+    const token = clock.trim().split(' ')[0];
+    const [m, s] = token.split(':').map(v => parseInt(v, 10));
+    if (Number.isNaN(m) || Number.isNaN(s)) return NaN;
+    return m * 60 + s;
+  }
+
+  private downDistance(gs: any): string {
+    if (!gs.down || !gs.yardsToGo) return '';
+    return `${gs.down}${this.ordinal(gs.down)} & ${gs.yardsToGo}`;
+  }
+
+  private fieldPos(gs: any): string {
+    if (gs.fieldPosition === undefined || gs.fieldPosition === null) return '';
+    return `${gs.fieldPosition} yd line`;
+  }
+
+  private ordinal(n: number): string {
+    const r = n % 100;
+    if (r >= 11 && r <= 13) return 'th';
+    switch (n % 10) { case 1: return 'st'; case 2: return 'nd'; case 3: return 'rd'; default: return 'th'; }
+  }
+
+  private capitalize(s?: string): string {
+    if (!s) return '';
+    return s.charAt(0).toUpperCase() + s.slice(1);
   }
 }
 
-// Export a singleton instance for easy use
 export const cleanAlertFormatter = new CleanAlertFormatter();
