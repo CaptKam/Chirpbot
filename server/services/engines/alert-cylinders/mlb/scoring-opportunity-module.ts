@@ -147,7 +147,6 @@ export default class ScoringOpportunityModule extends BaseAlertModule {
     };
 
     return alertResult;
-    };
   }
 
   calculateProbability(gameState: GameState): number {

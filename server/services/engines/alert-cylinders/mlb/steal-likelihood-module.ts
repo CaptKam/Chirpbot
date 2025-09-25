@@ -164,7 +164,6 @@ export default class StealLikelihoodModule extends BaseAlertModule {
     };
 
     return alertResult;
-    };
   }
 
   calculateProbability(gameState: GameState): number {

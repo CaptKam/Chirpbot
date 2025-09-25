@@ -112,7 +112,6 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
     };
 
     return alertResult;
-    };
   }
 
   calculateProbability(): number {

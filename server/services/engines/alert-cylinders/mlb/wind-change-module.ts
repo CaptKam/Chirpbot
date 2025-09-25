@@ -133,7 +133,6 @@ export default class WindChangeModule extends BaseAlertModule {
     };
 
     return alertResult;
-    };
   }
 
   calculateProbability(): number {

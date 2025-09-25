@@ -162,7 +162,6 @@ export default class BatterDueModule extends BaseAlertModule {
     };
 
     return alertResult;
-    };
   }
 
   calculateProbability(gameState: GameState): number {

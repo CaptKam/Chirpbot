@@ -41,7 +41,6 @@ export default class RunnerOnSecondNoOutsModule extends BaseAlertModule {
     };
 
     return alertResult;
-    };
   }
 
   calculateProbability(): number {
