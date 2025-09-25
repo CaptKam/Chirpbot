@@ -749,9 +749,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             const existingAlert = existingAlerts[0];
             let existingPayload: any = {};
             try {
-              existingPayload = JSON.parse(existingAlert.payload || '{}');
-            } catch (parseError) {
-              console.log(`⚠️ Failed to parse existing alert payload, using empty object:`, parseError);
+              // The payload field is jsonb, so it's already parsed JSON - no need to JSON.parse()
+              existingPayload = existingAlert.payload || {};
+            } catch (error) {
+              console.log(`⚠️ Failed to access existing alert payload, using empty object:`, error);
               existingPayload = {};
             }
             const hasExistingGamblingInsights = existingPayload.gamblingInsights && 
