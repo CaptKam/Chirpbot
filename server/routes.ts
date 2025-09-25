@@ -2332,6 +2332,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       .offset(offset);
 
       const alertsData = [];
+      
+      // Environment detection for debugging
+      const environment = process.env.NODE_ENV || 'development';
+      const isReplit = !!process.env.REPL_ID;
+      const hasDatabase = !!process.env.DATABASE_URL;
+      
+      console.log(`🔍 ALERTS API: Environment=${environment}, Replit=${isReplit}, DB=${hasDatabase}, User=${currentUserId}`);
 
       for (const row of result) {
         // Process alerts with minimal transformation to preserve backend formatting
@@ -2344,7 +2351,45 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             payload = {};
           }
           
-          // Use backend-processed data directly to avoid conflicts
+          // Extract team data from multiple sources with robust fallback
+          const extractTeamData = (gameId: string, payload: any) => {
+            // Priority 1: Enhanced context data (from GameStateManager)
+            let homeTeam = payload.context?.homeTeam;
+            let awayTeam = payload.context?.awayTeam;
+            let homeScore = payload.context?.homeScore;
+            let awayScore = payload.context?.awayScore;
+            
+            // Priority 2: Direct payload data (from alert generation)
+            if (!homeTeam && payload.homeTeam) homeTeam = payload.homeTeam;
+            if (!awayTeam && payload.awayTeam) awayTeam = payload.awayTeam;
+            if (homeScore === undefined && payload.homeScore !== undefined) homeScore = payload.homeScore;
+            if (awayScore === undefined && payload.awayScore !== undefined) awayScore = payload.awayScore;
+            
+            // Priority 3: Extract from message content (as backup)
+            if (!homeTeam || !awayTeam) {
+              const messageText = payload.message || payload.displayMessage || '';
+              const teamMatch = messageText.match(/(\w+(?:\s+\w+)*)\s+@\s+(\w+(?:\s+\w+)*)/);
+              if (teamMatch) {
+                if (!awayTeam) awayTeam = teamMatch[1];
+                if (!homeTeam) homeTeam = teamMatch[2];
+              }
+            }
+            
+            // Priority 4: Descriptive fallbacks (avoid generic defaults)
+            if (!homeTeam) homeTeam = `Home Team (${gameId})`;
+            if (!awayTeam) awayTeam = `Away Team (${gameId})`;
+            
+            return { homeTeam, awayTeam, homeScore, awayScore };
+          };
+          
+          const teamData = extractTeamData(row.game_id, payload);
+          
+          // Log team data extraction for debugging environment differences
+          if (teamData.homeTeam.includes('(') || teamData.awayTeam.includes('(')) {
+            console.log(`⚠️ FALLBACK USED: Alert ${row.id} - ${teamData.awayTeam} @ ${teamData.homeTeam} (${environment})`);
+          }
+          
+          // Use backend-processed data with enhanced fallback system
           alertsData.push({
             id: row.id,
             alertKey: `${row.game_id}_${row.type}`,
@@ -2354,11 +2399,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             displayMessage: payload.displayMessage, // Preserve formatted messages from CleanAlertFormatter
             gameId: row.game_id,
             sport: row.sport || 'MLB',
-            // Use context data directly from backend
-            homeTeam: payload.context?.homeTeam || payload.homeTeam || 'Home Team',
-            awayTeam: payload.context?.awayTeam || payload.awayTeam || 'Away Team',
-            homeScore: payload.context?.homeScore || payload.homeScore,
-            awayScore: payload.context?.awayScore || payload.awayScore,
+            // Use extracted team data with robust fallbacks
+            homeTeam: teamData.homeTeam,
+            awayTeam: teamData.awayTeam,
+            homeScore: teamData.homeScore,
+            awayScore: teamData.awayScore,
             confidence: row.score || 80,
             priority: row.score || 80,
             createdAt: row.created_at,
@@ -2454,10 +2499,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           message: payload.message || payload.situation || `${row.type} alert for game ${row.game_id}`,
           gameId: row.game_id,
           sport: row.sport || 'MLB',
-          homeTeam: payload.context?.homeTeam || 'Home Team',
-          awayTeam: payload.context?.awayTeam || 'Away Team',
-          homeScore: payload.context?.homeScore,
-          awayScore: payload.context?.awayScore,
+          homeTeam: payload.context?.homeTeam || payload.homeTeam || `Home Team (${row.game_id})`,
+          awayTeam: payload.context?.awayTeam || payload.awayTeam || `Away Team (${row.game_id})`,
+          homeScore: payload.context?.homeScore ?? payload.homeScore,
+          awayScore: payload.context?.awayScore ?? payload.awayScore,
           confidence: row.score || 85,
           priority: row.score || 80,
           createdAt: row.created_at,
