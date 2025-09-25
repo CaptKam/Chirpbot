@@ -2334,10 +2334,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const alertsData = [];
 
       for (const row of result) {
-        const sport = String(row.sport || 'MLB');
-        const alertType = String(row.type || '');
-
-        // Process alerts normally when master alerts are enabled
+        // Process alerts with minimal transformation to preserve backend formatting
         try {
           let payload: any = {};
           try {
@@ -2346,41 +2343,38 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             console.error('Error parsing payload:', e);
             payload = {};
           }
+          
+          // Use backend-processed data directly to avoid conflicts
           alertsData.push({
             id: row.id,
             alertKey: `${row.game_id}_${row.type}`,
             type: row.type,
-            message: payload.message || payload.situation || `${row.type} alert for game ${row.game_id}`,
+            // Preserve original backend message formatting
+            message: payload.message || payload.displayMessage || `${row.type} alert`,
+            displayMessage: payload.displayMessage, // Preserve formatted messages from CleanAlertFormatter
             gameId: row.game_id,
             sport: row.sport || 'MLB',
-            homeTeam: payload.context?.homeTeam || 'Home Team',
-            awayTeam: payload.context?.awayTeam || 'Away Team',
-            homeScore: payload.context?.homeScore,
-            awayScore: payload.context?.awayScore,
-            confidence: row.score || 85,
+            // Use context data directly from backend
+            homeTeam: payload.context?.homeTeam || payload.homeTeam || 'Home Team',
+            awayTeam: payload.context?.awayTeam || payload.awayTeam || 'Away Team',
+            homeScore: payload.context?.homeScore || payload.homeScore,
+            awayScore: payload.context?.awayScore || payload.awayScore,
+            confidence: row.score || 80,
             priority: row.score || 80,
             createdAt: row.created_at,
             timestamp: row.created_at,
-            seen: false,
-            sentToTelegram: false,
-            // Add context data for footer
+            // Preserve all backend-processed data
             context: payload.context || {},
-            inning: payload.context?.inning,
-            isTopInning: payload.context?.isTopInning,
-            outs: payload.context?.outs,
-            balls: payload.context?.balls,
-            strikes: payload.context?.strikes,
-            hasFirst: payload.context?.first || payload.context?.hasFirst,
-            hasSecond: payload.context?.second || payload.context?.hasSecond,
-            hasThird: payload.context?.third || payload.context?.hasThird,
-            // Include AI data
-            betbookData: payload.betbookData || null,
-            gameInfo: payload.gameInfo || null,
-            // Include gambling insights and composer enhancement status
             gamblingInsights: payload.gamblingInsights || null,
             hasComposerEnhancement: payload.hasComposerEnhancement || false,
-            // Include full payload for V3 message access
-            payload: payload
+            // Preserve enhanced data
+            betbookData: payload.betbookData || null,
+            gameInfo: payload.gameInfo || null,
+            // Include full payload for frontend access
+            payload: payload,
+            // Simplified state flags
+            seen: false,
+            sentToTelegram: payload.sentToTelegram || false
           });
         } catch (error) {
           console.error(`Error processing alert for ${row.id}:`, error);

@@ -360,23 +360,26 @@ export default function AlertsPage() {
               <ErrorBoundary>
                 <UniversalAlertCard 
                   alert={{
-                    id: alert.id || 'unknown',
-                    type: alert.type || 'UNKNOWN',
-                    message: alert.message || '',
-                    gameId: alert.gameId || '',
-                    sport: alert.sport || 'UNKNOWN',
-                    homeTeam: typeof alert.homeTeam === 'string' ? alert.homeTeam : alert.homeTeam?.name || 'Unknown',
-                    awayTeam: typeof alert.awayTeam === 'string' ? alert.awayTeam : alert.awayTeam?.name || 'Unknown',
-                    confidence: alert.confidence || 0,
-                    priority: alert.priority || 0,
-                    createdAt: alert.createdAt || alert.timestamp || new Date().toISOString(),
-                    homeScore: alert.context?.homeScore || alert.homeScore,
-                    awayScore: alert.context?.awayScore || alert.awayScore,
+                    // Use backend-processed data directly - no manual type checking needed
+                    id: alert.id,
+                    type: alert.type,
+                    message: alert.message,
+                    gameId: alert.gameId,
+                    sport: alert.sport,
+                    homeTeam: alert.homeTeam,
+                    awayTeam: alert.awayTeam,
+                    confidence: alert.confidence,
+                    priority: alert.priority,
+                    createdAt: alert.createdAt || alert.timestamp,
+                    homeScore: alert.homeScore,
+                    awayScore: alert.awayScore,
                     context: alert.context,
-                    sentToTelegram: alert.sentToTelegram || false,
-                    weather: alert.context?.weather || alert.weather || alert.weatherData,
-                    gameInfo: alert.context?.gameInfo || alert.gameInfo,
-                    gamblingInsights: (alert as any).gamblingInsights || (alert.context as any)?.gamblingInsights
+                    sentToTelegram: alert.sentToTelegram,
+                    weather: alert.context?.weather || alert.weatherData,
+                    gameInfo: alert.gameInfo,
+                    gamblingInsights: alert.gamblingInsights,
+                    displayMessage: alert.displayMessage,
+                    payload: alert.payload
                   }}
                 />
               </ErrorBoundary>

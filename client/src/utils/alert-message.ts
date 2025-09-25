@@ -59,22 +59,28 @@ export interface AlertData {
 
 /**
  * Get the primary message to display in alert cards
- * Simple approach:
- * 1. Check for pre-formatted displayMessage
- * 2. If not, format using clean formatter
- * 3. Return the clean, formatted result
+ * Avoid double formatting - use backend-processed content
  */
 export function getPrimaryMessage(alert: AlertData): string {
   const alertAny = alert as any;
   
-  // First check if alert has a pre-formatted displayMessage
+  // Priority 1: Pre-formatted displayMessage (from cylinders)
   if (alertAny.displayMessage) {
     return alertAny.displayMessage;
   }
   
-  // If not, format it using the clean formatter
-  const formatted = cleanAlertFormatter.format(alertAny);
-  return formatted.primary;
+  // Priority 2: Use backend-processed message
+  if (alertAny.message?.trim()) {
+    return alertAny.message.trim();
+  }
+  
+  // Priority 3: AI enhanced message
+  if (alertAny.ai?.enhancedMessage) {
+    return alertAny.ai.enhancedMessage;
+  }
+  
+  // Fallback: Basic type description
+  return alertAny.type?.replace(/_/g, ' ') || 'Alert';
 }
 
 /**
@@ -108,10 +114,10 @@ export function cleanMessage(message: string): string {
 }
 
 /**
- * Get display content using simplified approach
+ * Get display content using simplified approach - avoid double formatting
  */
 export function getDisplayContent(alert: any): { content: string; isStructured: boolean } {
-  // First check for pre-formatted displayMessage
+  // Priority 1: Pre-formatted displayMessage (from cylinders using CleanAlertFormatter)
   if (alert.displayMessage) {
     return {
       content: alert.displayMessage,
@@ -119,7 +125,7 @@ export function getDisplayContent(alert: any): { content: string; isStructured: 
     };
   }
   
-  // Priority 1: Gambling insights structured template (preserves emojis)
+  // Priority 2: Gambling insights structured template (preserves emojis)
   if (alert.gamblingInsights?.structuredTemplate?.trim()) {
     return {
       content: alert.gamblingInsights.structuredTemplate.trim(),
@@ -127,7 +133,7 @@ export function getDisplayContent(alert: any): { content: string; isStructured: 
     };
   }
   
-  // Priority 2: Gambling insights bullets
+  // Priority 3: Gambling insights bullets
   if (alert.gamblingInsights?.bullets?.length > 0) {
     return {
       content: alert.gamblingInsights.bullets.join('\n'),
@@ -135,10 +141,17 @@ export function getDisplayContent(alert: any): { content: string; isStructured: 
     };
   }
   
-  // Use clean formatter for consistent, concise display
-  const formatted = cleanAlertFormatter.format(alert);
+  // Priority 4: Use existing alert message (already processed by backend)
+  if (alert.message?.trim()) {
+    return {
+      content: alert.message.trim(),
+      isStructured: false
+    };
+  }
+  
+  // Fallback: Basic alert information
   return {
-    content: formatted.primary,
+    content: `${alert.type?.replace(/_/g, ' ') || 'Alert'} - ${alert.sport} game`,
     isStructured: false
   };
 }
