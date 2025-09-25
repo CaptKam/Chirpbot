@@ -262,9 +262,8 @@ const checkPortAvailability = async () => {
   console.log(`✅ Port ${PORT} confirmed available`);
 };
 
-// CORS configuration for consistent origin handling
-const corsOrigin = process.env.CANONICAL_ORIGIN ||
-  (process.env.NODE_ENV === 'production' ? false : [`http://localhost:${PORT}`, `http://127.0.0.1:${PORT}`]);
+// CORS configuration for consistent origin handling across all environments
+const corsOrigin = process.env.CANONICAL_ORIGIN || true; // Allow all origins for consistent behavior
 
 app.use(cors({
   origin: corsOrigin,
