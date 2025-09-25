@@ -876,10 +876,7 @@ export class MLBEngine extends BaseSportEngine {
       for (const alert of alerts) {
         // Double-check alert hasn't been sent (extra safety)
         const telegramKey = `telegram_${alert.alertKey}`;
-        if (this.hasAlertBeenSent(gameState.gameId, telegramKey)) {
-          console.log(`📱 🚫 Telegram alert already sent: ${telegramKey}`);
-          continue;
-        }
+        // Deduplication now handled by unified deduplicator
 
         for (const user of telegramUsers) {
           try {
@@ -921,7 +918,7 @@ export class MLBEngine extends BaseSportEngine {
             if (sent) {
               console.log(`📱 ✅ Sent ${alert.type} alert to ${user.username || user.id}`);
               // Mark this specific telegram alert as sent after successful delivery
-              this.markAlertSent(gameState.gameId, telegramKey);
+              // Alert tracking now handled by unified deduplicator
             } else {
               console.log(`📱 ❌ Failed to send ${alert.type} alert to ${user.username || user.id}`);
             }
@@ -982,9 +979,7 @@ export class MLBEngine extends BaseSportEngine {
       ? (this.performanceMetrics.cacheHits / (this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses)) * 100
       : 0;
 
-    const deduplicationRate = this.performanceMetrics.alertsSent + this.performanceMetrics.duplicatesBlocked > 0
-      ? (this.performanceMetrics.duplicatesBlocked / (this.performanceMetrics.alertsSent + this.performanceMetrics.duplicatesBlocked)) * 100
-      : 0;
+    const deduplicationRate = 0; // Now handled by unified deduplicator
 
     return {
       sport: 'MLB',
@@ -997,8 +992,6 @@ export class MLBEngine extends BaseSportEngine {
         deduplicationRate,
         totalRequests: this.performanceMetrics.totalRequests,
         totalAlerts: this.performanceMetrics.totalAlerts,
-        alertsSent: this.performanceMetrics.alertsSent,
-        duplicatesBlocked: this.performanceMetrics.duplicatesBlocked,
         cacheHits: this.performanceMetrics.cacheHits,
         cacheMisses: this.performanceMetrics.cacheMisses
       },
@@ -1006,8 +999,8 @@ export class MLBEngine extends BaseSportEngine {
         basesLoadedSituations: this.performanceMetrics.basesLoadedSituations,
         seventhInningDetections: this.performanceMetrics.seventhInningDetections,
         runnerScoringOpportunities: this.performanceMetrics.runnerScoringOpportunities,
-        activeGameTracking: this.sentAlerts.size,
-        totalTrackedAlerts: this.alertTimestamps.size
+        activeGameTracking: 0, // Now handled by unified deduplicator
+        totalTrackedAlerts: 0  // Now handled by unified deduplicator
       },
       recentPerformance: {
         calculationTimes: this.performanceMetrics.probabilityCalculationTime.slice(-20),

@@ -543,9 +543,7 @@ export class NBAEngine extends BaseSportEngine {
       ? (this.performanceMetrics.cacheHits / (this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses)) * 100
       : 0;
       
-    const deduplicationRate = this.performanceMetrics.alertsSent + this.performanceMetrics.duplicatesBlocked > 0
-      ? (this.performanceMetrics.duplicatesBlocked / (this.performanceMetrics.alertsSent + this.performanceMetrics.duplicatesBlocked)) * 100
-      : 0;
+    const deduplicationRate = 0; // Now handled by unified deduplicator
 
     return {
       sport: 'NBA',
@@ -558,8 +556,6 @@ export class NBAEngine extends BaseSportEngine {
         deduplicationRate,
         totalRequests: this.performanceMetrics.totalRequests,
         totalAlerts: this.performanceMetrics.totalAlerts,
-        alertsSent: this.performanceMetrics.alertsSent,
-        duplicatesBlocked: this.performanceMetrics.duplicatesBlocked,
         cacheHits: this.performanceMetrics.cacheHits,
         cacheMisses: this.performanceMetrics.cacheMisses
       },
@@ -567,8 +563,8 @@ export class NBAEngine extends BaseSportEngine {
         clutchTimeDetections: this.performanceMetrics.clutchTimeDetections,
         overtimeAlerts: this.performanceMetrics.overtimeAlerts,
         professionalBasketballAlerts: this.performanceMetrics.totalAlerts,
-        activeGameTracking: this.sentAlerts.size,
-        totalTrackedAlerts: this.alertTimestamps.size
+        activeGameTracking: 0, // Now handled by unified deduplicator
+        totalTrackedAlerts: 0  // Now handled by unified deduplicator
       },
       recentPerformance: {
         calculationTimes: this.performanceMetrics.probabilityCalculationTime.slice(-20),
