@@ -3,6 +3,43 @@ import type { Config } from "tailwindcss";
 export default {
   darkMode: ["class"],
   content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
+  safelist: [
+    // Sport-specific color patterns
+    'bg-green-500/5', 'border-green-500/20', 'ring-green-500/40', 'ring-green-500/60',
+    'bg-orange-500/5', 'border-orange-500/20', 'ring-orange-500/40', 'ring-orange-500/60',
+    'bg-purple-500/5', 'border-purple-500/20', 'ring-purple-500/40', 'ring-purple-500/60',
+    'bg-cyan-500/5', 'border-cyan-500/20', 'ring-cyan-500/40', 'ring-cyan-500/60',
+    'bg-blue-500/5', 'border-blue-500/20', 'ring-blue-500/40', 'ring-blue-500/60',
+    'bg-red-500/5', 'border-red-500/20', 'ring-red-500/40', 'ring-red-500/60',
+    'bg-pink-500/5', 'border-pink-500/20', 'ring-pink-500/40', 'ring-pink-500/60',
+    'bg-slate-500/5', 'border-slate-500/20', 'ring-slate-500/40', 'ring-slate-500/60',
+    'bg-emerald-500/5', 'border-emerald-500/20', 'ring-emerald-500/40', 'ring-emerald-500/60',
+
+    // Icon colors
+    'text-green-500', 'border-green-500/30', 'bg-green-500/10',
+    'text-orange-500', 'border-orange-500/30', 'bg-orange-500/10',
+    'text-purple-500', 'border-purple-500/30', 'bg-purple-500/10',
+    'text-cyan-500', 'border-cyan-500/30', 'bg-cyan-500/10',
+    'text-blue-500', 'border-blue-500/30', 'bg-blue-500/10',
+    'text-red-500', 'border-red-500/30', 'bg-red-500/10',
+    'text-pink-500', 'border-pink-500/30', 'bg-pink-500/10',
+    'text-slate-400', 'border-slate-500/30', 'bg-slate-500/10',
+
+    // Shadow classes
+    'shadow-green-500/5', 'shadow-orange-500/5', 'shadow-purple-500/5',
+    'shadow-cyan-500/5', 'shadow-blue-500/5', 'shadow-red-500/5',
+    'shadow-pink-500/5', 'shadow-emerald-500/5',
+
+    // Loading skeleton classes
+    'bg-green-500/20', 'bg-green-500/15',
+    'bg-orange-500/20', 'bg-orange-500/15',
+    'bg-purple-500/20', 'bg-purple-500/15',
+    'bg-cyan-500/20', 'bg-cyan-500/15',
+    'bg-blue-500/20', 'bg-blue-500/15',
+    'bg-red-500/20', 'bg-red-500/15',
+    'bg-pink-500/20', 'bg-pink-500/15',
+    'bg-emerald-500/20', 'bg-emerald-500/15',
+  ],
   theme: {
     extend: {
       borderRadius: {
@@ -69,7 +106,7 @@ export default {
         "chirp-border-gray": "#DCE1E7",
         "chirp-text-dark": "#111827",
         "chirp-text-muted": "#6B7280",
-        
+
         // Legacy colors for compatibility
         "chirp-blue": "#1C2B5E",
         "chirp-red": "#F02D3A",
