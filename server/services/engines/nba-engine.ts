@@ -5,13 +5,6 @@ import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
 import { sendTelegramAlert, type TelegramConfig } from '../telegram';
 
 export class NBAEngine extends BaseSportEngine {
-  // Deduplication tracking - tracks sent alerts to prevent duplicates (standardized from MLB)
-  private sentAlerts: Map<string, Set<string>> = new Map(); // gameId -> Set of alertKeys
-  private alertTimestamps: Map<string, number> = new Map(); // alertKey -> timestamp
-  private lastCleanup: number = Date.now();
-  private readonly ALERT_COOLDOWN_MS = 300000; // 5 minutes cooldown per alert
-  private readonly CLEANUP_INTERVAL_MS = 600000; // Clean up old entries every 10 minutes
-  private readonly MAX_ALERTS_PER_GAME = 50; // Prevent memory overload per game
   
   private performanceMetrics = {
     alertGenerationTime: [] as number[],
@@ -25,99 +18,15 @@ export class NBAEngine extends BaseSportEngine {
     gameStateEnhancementTime: [] as number[],
     clutchTimeDetections: 0,
     overtimeAlerts: 0,
-    duplicatesBlocked: 0,
-    alertsSent: 0
   };
 
   constructor() {
     super('NBA');
   }
   
-  /**
-   * Check if an alert has already been sent recently
-   */
-  private hasAlertBeenSent(gameId: string, alertKey: string): boolean {
-    // Check if this exact alert was sent recently
-    const lastSent = this.alertTimestamps.get(alertKey);
-    if (lastSent && (Date.now() - lastSent) < this.ALERT_COOLDOWN_MS) {
-      this.performanceMetrics.duplicatesBlocked++;
-      console.log(`🚫 NBA Duplicate blocked: ${alertKey} (sent ${Math.round((Date.now() - lastSent) / 1000)}s ago)`);
-      return true;
-    }
-    
-    // Check if we've sent too many alerts for this game
-    const gameAlerts = this.sentAlerts.get(gameId);
-    if (gameAlerts && gameAlerts.size >= this.MAX_ALERTS_PER_GAME) {
-      console.log(`⚠️ NBA Alert limit reached for game ${gameId} (${gameAlerts.size} alerts)`);
-      return true;
-    }
-    
-    return false;
+  
   }
   
-  /**
-   * Mark an alert as sent
-   */
-  private markAlertSent(gameId: string, alertKey: string): void {
-    // Track by game
-    if (!this.sentAlerts.has(gameId)) {
-      this.sentAlerts.set(gameId, new Set());
-    }
-    this.sentAlerts.get(gameId)!.add(alertKey);
-    
-    // Track timestamp
-    this.alertTimestamps.set(alertKey, Date.now());
-    this.performanceMetrics.alertsSent++;
-    
-    console.log(`✅ NBA Alert tracked: ${alertKey} for game ${gameId}`);
-    
-    // Periodic cleanup to prevent memory leaks
-    this.cleanupOldAlerts();
-  }
-  
-  /**
-   * Clean up old alert tracking data to prevent memory leaks
-   */
-  private cleanupOldAlerts(): void {
-    const now = Date.now();
-    
-    // Only run cleanup periodically
-    if (now - this.lastCleanup < this.CLEANUP_INTERVAL_MS) {
-      return;
-    }
-    
-    console.log(`🧹 NBA Alert cleanup: Removing alerts older than ${this.ALERT_COOLDOWN_MS}ms`);
-    
-    // Clean up old timestamps
-    let removedCount = 0;
-    for (const [alertKey, timestamp] of this.alertTimestamps.entries()) {
-      if (now - timestamp > this.ALERT_COOLDOWN_MS) {
-        this.alertTimestamps.delete(alertKey);
-        removedCount++;
-      }
-    }
-    
-    // Clean up game tracking for finished games (no alerts in last hour)
-    const oneHourAgo = now - 3600000;
-    for (const [gameId, alerts] of this.sentAlerts.entries()) {
-      let hasRecentAlert = false;
-      for (const alertKey of alerts) {
-        const timestamp = this.alertTimestamps.get(alertKey);
-        if (timestamp && timestamp > oneHourAgo) {
-          hasRecentAlert = true;
-          break;
-        }
-      }
-      
-      if (!hasRecentAlert) {
-        this.sentAlerts.delete(gameId);
-        console.log(`🧹 NBA Removed tracking for game ${gameId}`);
-      }
-    }
-    
-    this.lastCleanup = now;
-    console.log(`🧹 NBA Alert cleanup complete: removed ${removedCount} old alerts`);
-  }
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
