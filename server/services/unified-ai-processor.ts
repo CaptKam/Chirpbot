@@ -244,9 +244,12 @@ export class UnifiedAIProcessor {
     // Clear ALL cache entries on startup to ensure clean state
     this.clearAllCache();
     
+    // Force clear cache to eliminate pre-unified enhancement responses
+    this.clearUnifiedEnhancementCache();
+    
     // Start background cleanup
     setInterval(() => this.cleanup(), this.CLEANUP_INTERVAL);
-    console.log(`🤖 Unified AI Processor: Initialized with clean cache and consistent "AI OR ORIGINAL" policy`);
+    console.log(`🤖 Unified AI Processor: Initialized with clean cache and unified enhancement pipeline v3.0`);
   }
 
   private clearAllCache(): void {
@@ -254,6 +257,19 @@ export class UnifiedAIProcessor {
     this.cache.clear();
     this.results.clear();
     console.log(`🧹 Unified AI: Cleared ALL ${cacheSize} cache entries on startup to ensure clean state`);
+  }
+
+  private clearUnifiedEnhancementCache(): void {
+    const keysToDelete: string[] = [];
+    for (const key of this.cache.keys()) {
+      // Remove any cache entries that don't have the v3.0 version marker
+      if (!key.includes('v3.0')) {
+        keysToDelete.push(key);
+      }
+    }
+    
+    keysToDelete.forEach(key => this.cache.delete(key));
+    console.log(`🧹 Unified AI: Cleared ${keysToDelete.length} pre-v3.0 cache entries for consistency`);
   }
 
   get configured(): boolean {
@@ -314,14 +330,39 @@ export class UnifiedAIProcessor {
           this.performanceMetrics.cacheHits++;
           
           const startTime = Date.now();
-          const enhancedAlert = this.buildEnhancedAlert(alert, cached, startTime);
           
-          // Send enhanced version via WebSocket (non-blocking)
-          if (this.onEnhancedAlert) {
-            this.onEnhancedAlert(enhancedAlert, userId, context.sport, true).catch(error => {
-              console.error(`❌ Failed to send cached enhanced alert via WebSocket:`, error);
+          // Apply gambling insights and weather enhancement even for cache hits
+          let enhancedAlert = { ...alert };
+          this.applyGamblingInsightsEnhancement(enhancedAlert, context)
+            .then(gamblingEnhanced => this.applyWeatherEnhancement(gamblingEnhanced, context))
+            .then(fullyEnhanced => {
+              // Build enhanced alert with cached AI response and unified flags
+              const finalAlert = this.buildEnhancedAlert(fullyEnhanced, {
+                ...cached,
+                enhancedContext: {
+                  ...fullyEnhanced.context,
+                  ...cached.enhancedContext,
+                  unifiedEnhancement: true,
+                  enhancementTypes: ['gambling', 'weather', 'ai']
+                }
+              }, startTime);
+              
+              // Send enhanced version via WebSocket (non-blocking)
+              if (this.onEnhancedAlert) {
+                this.onEnhancedAlert(finalAlert, userId, context.sport, true).catch(error => {
+                  console.error(`❌ Failed to send cached enhanced alert via WebSocket:`, error);
+                });
+              }
+            })
+            .catch(error => {
+              console.warn(`⚠️ Cache hit enhancement failed, using cached response only:`, error);
+              const fallbackAlert = this.buildEnhancedAlert(alert, cached, startTime);
+              if (this.onEnhancedAlert) {
+                this.onEnhancedAlert(fallbackAlert, userId, context.sport, true).catch(error => {
+                  console.error(`❌ Failed to send fallback cached alert via WebSocket:`, error);
+                });
+              }
             });
-          }
           
           return Promise.resolve(jobId);
         } else {
@@ -619,7 +660,8 @@ export class UnifiedAIProcessor {
       context.inning || context.quarter || context.period || 0,
       context.outs || 0,
       context.awayScore,
-      context.homeScore
+      context.homeScore,
+      'v3.0' // Version marker to prevent cache contamination
     ];
     return keyParts.join(':');
   }
@@ -673,7 +715,7 @@ export class UnifiedAIProcessor {
   }
 
   private buildEnhancedAlert(originalAlert: AlertResult, aiResponse: UnifiedAIResponse, startTime: number): AlertResult {
-    return {
+    const enhancedAlert = {
       ...originalAlert,
       message: aiResponse.enhancedMessage,
       // Explicitly preserve gambling insights from pipeline
@@ -685,6 +727,8 @@ export class UnifiedAIProcessor {
         weatherContext: originalAlert.context?.weatherContext,
         isWeatherTriggered: originalAlert.context?.isWeatherTriggered,
         weatherSeverity: originalAlert.context?.weatherSeverity,
+        // CRITICAL FIX: Include unified enhancement flags from enhancedContext
+        ...aiResponse.enhancedContext,
         // AI enhancement data
         aiEnhanced: true,
         aiInsights: aiResponse.contextualInsights,
@@ -697,6 +741,11 @@ export class UnifiedAIProcessor {
       },
       priority: originalAlert.priority // Keep original priority - AI enhancement shouldn't artificially inflate urgency
     };
+    
+    // Add logging to track enhancement flags being set
+    console.log(`🏷️ Enhanced Alert Context: ${enhancedAlert.context?.unifiedEnhancement ? '✅ UNIFIED' : '❌ MISSING UNIFIED'}, ${enhancedAlert.context?.hasGamblingInsights ? '✅ GAMBLING' : '❌ NO GAMBLING'}, ${enhancedAlert.context?.hasWeatherEnhancement ? '✅ WEATHER' : '❌ NO WEATHER'}, ${enhancedAlert.context?.aiEnhanced ? '✅ AI' : '❌ NO AI'}`);
+    
+    return enhancedAlert;
   }
 
   // UNIFIED ENHANCEMENT METHOD: Applies all enhancement types in single pipeline
@@ -794,7 +843,7 @@ export class UnifiedAIProcessor {
       };
       
       // Apply gambling insights enhancement
-      const enhancedAlerts = await gamblingInsightsComposer.enhanceAlerts([alert], gameStateData);
+      const enhancedAlerts = await gamblingInsightsComposer.enhanceAlertsWithGamblingInsights([alert], context.sport);
       
       if (enhancedAlerts && enhancedAlerts.length > 0) {
         const enhanced = enhancedAlerts[0];

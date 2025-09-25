@@ -985,65 +985,16 @@ export class GameStateManager {
   }
 
   /**
-   * Gambling Insights Enhancement - Enhance alerts with gambling insights
-   * Delegates to gamblingInsightsComposer for consistency with unified-alert-generator
+   * DISABLED: Gambling Insights Enhancement - Now handled by unified enhancement pipeline
+   * This method is disabled to prevent competing enhancement paths
    */
   private async enhanceAlertsWithGamblingInsights(
     alerts: EngineAlertResult[], 
     gameState: GameState, 
     sport: string
   ): Promise<EngineAlertResult[]> {
-    if (!alerts || alerts.length === 0) return alerts;
-    
-    if (!this.gamblingInsightsComposer) {
-      console.log(`⚠️ GamblingInsightsComposer not available in GameStateManager`);
-      return alerts;
-    }
-
-    try {
-      console.log(`🎰 GameStateManager: Enhancing ${alerts.length} ${sport} alerts with gambling insights`);
-      
-      // Convert alerts to AlertResult format expected by GamblingInsightsComposer
-      // The AlertResult interface only has: alertKey, type, message, context, priority
-      // EngineAlertResult is the same as AlertResult, so no conversion needed for basic properties
-      // Just ensure all alerts have the required properties with defaults
-      const alertResults: AlertResult[] = alerts.map((alert, index) => ({
-        alertKey: alert.alertKey || `${gameState.gameId}_${alert.type.toLowerCase().replace(/_/g, '')}_${Date.now()}_${index}`,
-        type: alert.type,
-        message: alert.message,
-        context: {
-          // Merge existing context with game state info, preserving existing values
-          sport: sport,
-          gameId: gameState.gameId,
-          createdAt: new Date(),
-          expiresAt: new Date(Date.now() + 1000 * 60 * 30), // 30 min default
-          weatherContext: undefined, // No weather context in GameStateManager path for now
-          ...alert.context, // Keep alert context AFTER defaults to preserve existing team/score data
-          // Only override if values are actually available in gameState
-          homeTeam: alert.context?.homeTeam || gameState.homeTeam,
-          awayTeam: alert.context?.awayTeam || gameState.awayTeam,
-          homeScore: alert.context?.homeScore ?? gameState.homeScore,
-          awayScore: alert.context?.awayScore ?? gameState.awayScore,
-        },
-        priority: alert.priority || 1
-      }));
-
-      // Use the batch enhancement method from GamblingInsightsComposer
-      const enhancedAlerts = await this.gamblingInsightsComposer.enhanceAlertsWithGamblingInsights(alertResults, sport);
-
-      console.log(`✅ GameStateManager: Enhanced ${enhancedAlerts.length} alerts with gambling insights`);
-      
-      // Convert back to EngineAlertResult format
-      return enhancedAlerts.map((enhanced, index) => ({
-        ...alerts[index], // Keep original alert properties
-        gamblingInsights: enhanced.gamblingInsights,
-        hasComposerEnhancement: !!enhanced.gamblingInsights
-      }));
-
-    } catch (error) {
-      console.error(`❌ Gambling insights enhancement failed in GameStateManager:`, error);
-      return alerts; // Return original alerts on failure
-    }
+    console.log(`🚫 DISABLED: GameStateManager gambling insights enhancement bypassed - using unified pipeline only`);
+    return alerts; // Return alerts unchanged to prevent competing enhancements
   }
 
   // === WEBSOCKET BROADCASTING ===
