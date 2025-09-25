@@ -1,5 +1,6 @@
+
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, boolean, timestamp, jsonb, integer, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, boolean, timestamp, jsonb, integer, unique, decimal } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -94,6 +95,64 @@ export const alerts = pgTable("alerts", {
   expiresAt: timestamp("expires_at").notNull().default(sql`NOW() + INTERVAL '5 minutes'`),
 });
 
+// AI Learning Data Storage Tables
+export const aiLearningPatterns = pgTable("ai_learning_patterns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sport: text("sport").notNull(),
+  alertType: text("alert_type").notNull(),
+  gameContext: jsonb("game_context").notNull(), // Score, inning, situation, etc.
+  pattern: jsonb("pattern").notNull(), // What pattern was identified
+  outcome: jsonb("outcome").notNull(), // What actually happened
+  confidence: decimal("confidence", { precision: 5, scale: 2 }), // AI confidence score
+  userFeedback: integer("user_feedback"), // 1-5 rating from users
+  successRate: decimal("success_rate", { precision: 5, scale: 2 }), // Historical accuracy
+  timesUsed: integer("times_used").default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const aiCrossSportInsights = pgTable("ai_cross_sport_insights", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  primarySport: text("primary_sport").notNull(),
+  secondarySport: text("secondary_sport").notNull(),
+  sharedConcept: text("shared_concept").notNull(), // "clutch_time", "weather_impact", etc.
+  insight: jsonb("insight").notNull(),
+  applicabilityScore: decimal("applicability_score", { precision: 5, scale: 2 }),
+  validationCount: integer("validation_count").default(0),
+  successCount: integer("success_count").default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const aiModelPerformance = pgTable("ai_model_performance", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sport: text("sport").notNull(),
+  alertType: text("alert_type").notNull(),
+  modelVersion: text("model_version").notNull(),
+  avgProcessingTime: integer("avg_processing_time"), // milliseconds
+  accuracyScore: decimal("accuracy_score", { precision: 5, scale: 2 }),
+  userSatisfactionScore: decimal("user_satisfaction_score", { precision: 5, scale: 2 }),
+  totalEnhancements: integer("total_enhancements").default(0),
+  successfulEnhancements: integer("successful_enhancements").default(0),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const aiUserInteractions = pgTable("ai_user_interactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  alertId: varchar("alert_id").references(() => alerts.id, { onDelete: "cascade" }),
+  sport: text("sport").notNull(),
+  alertType: text("alert_type").notNull(),
+  aiEnhanced: boolean("ai_enhanced").notNull(),
+  userRating: integer("user_rating"), // 1-5 stars
+  userAction: text("user_action"), // "dismissed", "acted", "shared", etc.
+  timeOnAlert: integer("time_on_alert"), // seconds spent viewing
+  followedRecommendation: boolean("followed_recommendation"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -135,6 +194,29 @@ export const insertUserMonitoredTeamSchema = createInsertSchema(userMonitoredTea
 export const insertGlobalAlertSettingsSchema = createInsertSchema(globalAlertSettings).omit({
   id: true,
   updatedAt: true,
+});
+
+// AI Learning schemas
+export const insertAILearningPatternSchema = createInsertSchema(aiLearningPatterns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAICrossSportInsightSchema = createInsertSchema(aiCrossSportInsights).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAIModelPerformanceSchema = createInsertSchema(aiModelPerformance).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAIUserInteractionSchema = createInsertSchema(aiUserInteractions).omit({
+  id: true,
+  createdAt: true,
 });
 
 // Types
@@ -179,6 +261,12 @@ export const insertAlertSchema = createInsertSchema(alerts).omit({
 
 export type InsertAlert = z.infer<typeof insertAlertSchema>;
 export type Alert = typeof alerts.$inferSelect;
+
+// AI Learning types
+export type AILearningPattern = typeof aiLearningPatterns.$inferSelect;
+export type AICrossSportInsight = typeof aiCrossSportInsights.$inferSelect;
+export type AIModelPerformance = typeof aiModelPerformance.$inferSelect;
+export type AIUserInteraction = typeof aiUserInteractions.$inferSelect;
 
 // Enhanced game states table for storing live game data with player and weather context
 export const gameStates = pgTable("game_states", {
@@ -376,5 +464,3 @@ export const alertResultSchema = z.object({
 // Export types derived from Zod schemas  
 export type GamblingInsightsType = z.infer<typeof gamblingInsightsSchema>;
 export type AlertResultType = z.infer<typeof alertResultSchema>;
-
-
