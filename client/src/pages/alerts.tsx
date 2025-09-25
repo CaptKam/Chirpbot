@@ -376,7 +376,7 @@ export default function AlertsPage() {
                     sentToTelegram: alert.sentToTelegram || false,
                     weather: alert.context?.weather || alert.weather || alert.weatherData,
                     gameInfo: alert.context?.gameInfo || alert.gameInfo,
-                    gamblingInsights: (alert as any).gamblingInsights || alert.context?.gamblingInsights
+                    gamblingInsights: (alert as any).gamblingInsights || (alert.context as any)?.gamblingInsights
                   }}
                 />
               </ErrorBoundary>
