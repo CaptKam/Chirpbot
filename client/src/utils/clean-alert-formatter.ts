@@ -305,6 +305,15 @@ export class CleanAlertFormatter {
     if (!s) return '';
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
+
+  private output(primary: string, secondary?: string, icon?: string, confidence?: number): CleanAlertOutput {
+    return {
+      primary,
+      secondary,
+      icon: icon || '🔔',
+      confidence
+    };
+  }
 }
 
 export const cleanAlertFormatter = new CleanAlertFormatter();
