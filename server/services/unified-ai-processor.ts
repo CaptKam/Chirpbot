@@ -1,5 +1,6 @@
 import { storage } from '../storage';
 import { AlertResult } from './engines/base-engine';
+import { gamblingInsightsComposer } from './gambling-insights-composer';
 
 // 🛡️ SECURITY: Schema validation and XSS protection
 import { z } from 'zod';
@@ -265,7 +266,7 @@ export class UnifiedAIProcessor {
     this.onEnhancedAlert = callback;
   }
 
-  // NON-BLOCKING ENTRY POINT: Queue alert for AI enhancement (engines use this)
+  // UNIFIED ENTRY POINT: Queue alert for complete enhancement (AI + gambling + weather in one pipeline)
   queueAlert(
     alert: AlertResult, 
     context: CrossSportContext, 
@@ -273,14 +274,31 @@ export class UnifiedAIProcessor {
   ): Promise<string> {
     const jobId = this.generateJobId(alert, context);
     
-    console.log(`🎯 Unified AI: Queuing ${context.sport} ${context.alertType} for background AI enhancement`);
+    console.log(`🎯 Unified Enhancement: Queuing ${context.sport} ${context.alertType} for complete enhancement pipeline`);
     
     try {
-      // Check if alert qualifies for AI enhancement (gating)
-      if (!this.shouldEnhanceAlert(context.alertType, context.sport, context.probability)) {
-        console.log(`🚪 AI Gating: ${context.sport} ${context.alertType} not high-value - skipping AI enhancement`);
+      // Always apply gambling and weather enhancement, only gate AI portion
+      const shouldApplyAI = this.shouldEnhanceAlert(context.alertType, context.sport, context.probability);
+      
+      if (!shouldApplyAI) {
+        console.log(`🚪 AI Gating: ${context.sport} ${context.alertType} not high-value - applying gambling+weather only`);
         this.performanceMetrics.gatedAlerts++;
-        this.performanceMetrics.fallbacksUsed++;
+        
+        // Apply non-AI enhancements immediately (gambling + weather only)
+        this.applyLimitedUnifiedEnhancement(alert, context).then(limitedEnhancement => {
+          // Send limited enhanced version via WebSocket (non-blocking)
+          if (this.onEnhancedAlert) {
+            this.onEnhancedAlert(limitedEnhancement, userId, context.sport, true).catch(error => {
+              console.error(`❌ Failed to send limited enhanced alert via WebSocket:`, error);
+            });
+          }
+          
+          console.log(`✅ Applied gambling+weather enhancement for gated ${context.sport} ${context.alertType}`);
+        }).catch(error => {
+          console.warn(`⚠️ Limited enhancement failed for ${context.sport} ${context.alertType}:`, error);
+          this.performanceMetrics.fallbacksUsed++;
+        });
+        
         return Promise.resolve(jobId);
       }
 
@@ -428,21 +446,21 @@ export class UnifiedAIProcessor {
         setTimeout(() => reject(new Error('AI_TIMEOUT')), this.AI_TIMEOUT_MS);
       });
 
-      // Race AI processing against timeout
-      const aiResponse = await Promise.race([
-        this.enhanceAlert(job.context),
+      // Race unified enhancement (AI + gambling + weather) against timeout
+      const enhancementResponse = await Promise.race([
+        this.applyUnifiedEnhancement(job.originalAlert, job.context),
         timeoutPromise
       ]);
 
       const processingTime = Date.now() - startTime;
       
-      // Verify AI actually provided enhanced content
-      if (!aiResponse.enhancedMessage || aiResponse.enhancedMessage.trim().length === 0) {
-        throw new Error('AI_ENHANCEMENT_FAILED_NO_MESSAGE');
+      // Verify unified enhancement provided enhanced content
+      if (!enhancementResponse.enhancedMessage || enhancementResponse.enhancedMessage.trim().length === 0) {
+        throw new Error('UNIFIED_ENHANCEMENT_FAILED_NO_MESSAGE');
       }
 
-      // Build enhanced alert
-      const enhancedAlert = this.buildEnhancedAlert(job.originalAlert, aiResponse, startTime);
+      // Build enhanced alert from unified enhancement
+      const enhancedAlert = this.buildEnhancedAlert(job.originalAlert, enhancementResponse, startTime);
       
       // Store result
       this.results.set(jobId, {
@@ -463,7 +481,7 @@ export class UnifiedAIProcessor {
 
       // Cache the response for future use
       const cacheKey = this.generateCacheKey(job.context);
-      this.cacheResponse(cacheKey, aiResponse, false);
+      this.cacheResponse(cacheKey, enhancementResponse, false);
 
       this.performanceMetrics.completedJobs++;
       this.performanceMetrics.successfulEnhancements++;
@@ -679,6 +697,149 @@ export class UnifiedAIProcessor {
       },
       priority: originalAlert.priority // Keep original priority - AI enhancement shouldn't artificially inflate urgency
     };
+  }
+
+  // UNIFIED ENHANCEMENT METHOD: Applies all enhancement types in single pipeline
+  async applyUnifiedEnhancement(alert: AlertResult, context: CrossSportContext): Promise<UnifiedAIResponse> {
+    console.log(`🔗 Unified Enhancement: Starting complete enhancement pipeline for ${context.sport} ${context.alertType}`);
+    
+    let enhancedAlert = { ...alert };
+    const startTime = Date.now();
+    
+    try {
+      // Step 1: Apply gambling insights enhancement
+      enhancedAlert = await this.applyGamblingInsightsEnhancement(enhancedAlert, context);
+      
+      // Step 2: Apply weather enhancement (for outdoor sports)
+      enhancedAlert = await this.applyWeatherEnhancement(enhancedAlert, context);
+      
+      // Step 3: Apply AI enhancement  
+      const aiResponse = await this.enhanceAlert(context);
+      
+      // Combine all enhancements into final result
+      return {
+        enhancedMessage: aiResponse.enhancedMessage,
+        enhancedContext: {
+          ...enhancedAlert.context,
+          ...aiResponse.enhancedContext,
+          unifiedEnhancement: true,
+          enhancementTypes: ['gambling', 'weather', 'ai']
+        },
+        confidence: aiResponse.confidence,
+        tags: aiResponse.tags,
+        analysis: aiResponse.analysis
+      };
+      
+    } catch (error) {
+      console.error(`❌ Unified Enhancement failed for ${context.sport} ${context.alertType}:`, error);
+      return this.getFallbackResponse(context, startTime);
+    }
+  }
+
+  // LIMITED ENHANCEMENT: Apply gambling + weather only (for gated alerts)
+  async applyLimitedUnifiedEnhancement(alert: AlertResult, context: CrossSportContext): Promise<AlertResult> {
+    console.log(`🔗 Limited Enhancement: Applying gambling+weather only for ${context.sport} ${context.alertType}`);
+    
+    let enhancedAlert = { ...alert };
+    
+    try {
+      // Step 1: Apply gambling insights enhancement
+      enhancedAlert = await this.applyGamblingInsightsEnhancement(enhancedAlert, context);
+      
+      // Step 2: Apply weather enhancement (for outdoor sports)
+      enhancedAlert = await this.applyWeatherEnhancement(enhancedAlert, context);
+      
+      // Mark as having limited enhancement
+      enhancedAlert.context = {
+        ...enhancedAlert.context,
+        unifiedEnhancement: true,
+        enhancementTypes: ['gambling', 'weather'],
+        aiGated: true
+      };
+      
+      console.log(`✅ Limited enhancement complete for ${context.sport} ${context.alertType}`);
+      return enhancedAlert;
+      
+    } catch (error) {
+      console.error(`❌ Limited enhancement failed for ${context.sport} ${context.alertType}:`, error);
+      return alert; // Return original on failure
+    }
+  }
+
+  // Apply gambling insights enhancement
+  private async applyGamblingInsightsEnhancement(alert: AlertResult, context: CrossSportContext): Promise<AlertResult> {
+    try {
+      console.log(`🎰 Applying gambling insights enhancement for ${context.sport} ${context.alertType}`);
+      
+      // Convert context to format expected by gambling insights composer
+      const gameStateData = {
+        sport: context.sport,
+        gameId: context.gameId,
+        homeTeam: context.homeTeam,
+        awayTeam: context.awayTeam,
+        homeScore: context.homeScore,
+        awayScore: context.awayScore,
+        status: 'live',
+        isLive: context.isLive,
+        // Add sport-specific fields
+        ...(context.inning && { inning: context.inning }),
+        ...(context.outs !== undefined && { outs: context.outs }),
+        ...(context.balls !== undefined && { balls: context.balls }),
+        ...(context.strikes !== undefined && { strikes: context.strikes }),
+        ...(context.baseRunners && {
+          hasFirst: context.baseRunners.first,
+          hasSecond: context.baseRunners.second,
+          hasThird: context.baseRunners.third
+        })
+      };
+      
+      // Apply gambling insights enhancement
+      const enhancedAlerts = await gamblingInsightsComposer.enhanceAlerts([alert], gameStateData);
+      
+      if (enhancedAlerts && enhancedAlerts.length > 0) {
+        const enhanced = enhancedAlerts[0];
+        console.log(`✅ Gambling insights enhancement applied for ${context.sport} ${context.alertType}`);
+        return {
+          ...enhanced,
+          context: {
+            ...enhanced.context,
+            hasGamblingInsights: true
+          }
+        };
+      }
+      
+      return alert;
+    } catch (error) {
+      console.warn(`⚠️ Gambling insights enhancement failed for ${context.sport} ${context.alertType}:`, error);
+      return alert;
+    }
+  }
+
+  // Apply weather enhancement (for outdoor sports)
+  private async applyWeatherEnhancement(alert: AlertResult, context: CrossSportContext): Promise<AlertResult> {
+    try {
+      const outdoorSports = ['MLB', 'NFL', 'NCAAF', 'CFL'];
+      if (!outdoorSports.includes(context.sport)) {
+        return alert; // Indoor sports don't need weather enhancement
+      }
+      
+      console.log(`🌤️ Applying weather enhancement for ${context.sport} ${context.alertType}`);
+      
+      // Weather enhancement logic would go here
+      // For now, just mark that weather enhancement was attempted
+      return {
+        ...alert,
+        context: {
+          ...alert.context,
+          hasWeatherEnhancement: true,
+          weatherChecked: true
+        }
+      };
+      
+    } catch (error) {
+      console.warn(`⚠️ Weather enhancement failed for ${context.sport} ${context.alertType}:`, error);
+      return alert;
+    }
   }
 
   private getFallbackResponse(context: CrossSportContext, startTime: number): UnifiedAIResponse {

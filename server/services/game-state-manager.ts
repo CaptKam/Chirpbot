@@ -705,42 +705,37 @@ export class GameStateManager {
             console.log(`🚨 Generating alerts for ${sport} game ${gameId}`);
             let alerts = await engine.generateLiveAlerts(gameState);
             
-            // CRITICAL FIX: Apply same enhancement pipeline as unified-alert-generator
+            // UNIFIED ENHANCEMENT: Send all alerts through single enhancement pipeline
             if (alerts && alerts.length > 0) {
-              console.log(`🔗 GameStateManager: Applying enhancement pipeline to ${alerts.length} alerts`);
+              console.log(`🔗 GameStateManager: Sending ${alerts.length} alerts through unified enhancement pipeline`);
               
-              // Apply weather enhancement
-              alerts = await this.enhanceAlertsWithWeather(alerts, gameState, sport);
-              
-              // Apply gambling insights enhancement  
-              alerts = await this.enhanceAlertsWithGamblingInsights(alerts, gameState, sport);
-              
-              // CRITICAL FIX: Save enhanced alerts with gambling insights to database
-              if (alerts && alerts.length > 0) {
-                try {
-                  const { unifiedAIProcessor } = await import('./unified-ai-processor');
-                  
-                  // Send each enhanced alert to UnifiedAIProcessor for database storage
-                  for (const enhancedAlert of alerts) {
-                    // Create context for the alert
+              // UNIFIED FIX: Use UnifiedAIProcessor as the single enhancement pipeline
+              // This eliminates competing enhancement systems (weather, gambling, AI) and ensures consistent contexts
+              try {
+                const { unifiedAIProcessor } = await import('./unified-ai-processor');
+                
+                // Send each raw alert through unified enhancement pipeline
+                for (const rawAlert of alerts) {
+                    // Create context for unified enhancement
                     const context: any = {
                       sport: sport.toUpperCase(),
-                      alertType: enhancedAlert.type,
+                      alertType: rawAlert.type,
                       gameId: gameId,
-                      priority: enhancedAlert.priority || 75,
-                      probability: enhancedAlert.priority || 75,
+                      priority: rawAlert.priority || 75,
+                      probability: rawAlert.priority || 75,
                       homeTeam: gameState.homeTeam || 'Home',
                       awayTeam: gameState.awayTeam || 'Away',
                       homeScore: gameState.homeScore || 0,
                       awayScore: gameState.awayScore || 0,
                       isLive: gameState.isLive || false,
-                      originalMessage: enhancedAlert.message,
-                      originalContext: enhancedAlert.context || {}
+                      originalMessage: rawAlert.message,
+                      originalContext: rawAlert.context || {}
                     };
                     
-                    // Queue enhanced alert for database storage (non-blocking)
-                    unifiedAIProcessor.queueAlert(enhancedAlert, context, gameId).catch(error => {
-                      console.warn(`⚠️ Failed to queue enhanced alert ${enhancedAlert.type} for database storage:`, error);
+                    // Queue raw alert for unified enhancement (AI + gambling + weather in one pipeline)
+                    // TODO: Get actual userId for per-user delivery - using 'system' for now since these are broadcast alerts
+                    unifiedAIProcessor.queueAlert(rawAlert, context, 'system').catch(error => {
+                      console.warn(`⚠️ Failed to queue alert ${rawAlert.type} for unified enhancement:`, error);
                     });
                   }
                   
@@ -748,7 +743,6 @@ export class GameStateManager {
                 } catch (error) {
                   console.error(`❌ Failed to queue enhanced alerts for database storage:`, error);
                 }
-              }
               
               console.log(`✅ Generated ${alerts.length} alerts for game ${gameId}`);
             } else {
