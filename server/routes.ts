@@ -2312,7 +2312,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return;
       }
 
-      // Get alerts from database - filter by monitored game IDs using Drizzle syntax
+      // Get alerts from database - filter by monitored game IDs AND current user ID
       const result = await db.select({
         id: alerts.id,
         type: alerts.type,
@@ -2323,7 +2323,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         created_at: alerts.createdAt
       })
       .from(alerts)
-      .where(inArray(alerts.gameId, monitoredGameIds))
+      .where(and(
+        inArray(alerts.gameId, monitoredGameIds),
+        eq(alerts.userId, currentUserId)
+      ))
       .orderBy(desc(alerts.createdAt))
       .limit(limit)
       .offset(offset);
