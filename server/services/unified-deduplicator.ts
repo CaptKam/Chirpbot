@@ -709,8 +709,8 @@ export const unifiedDeduplicator = new UnifiedDeduplicator({
   requestCacheTTL: 5000,
   requestDedupeWindow: 100,
   
-  // Fingerprint settings for advanced deduplication
-  namespace: process.env.NODE_ENV || 'development',
+  // Fingerprint settings for advanced deduplication - use consistent namespace
+  namespace: 'chirpbot-alerts', // Fixed namespace to ensure consistency across environments
   lifecycleTtlMs: 10 * 60 * 1000, // 10 minutes
   perTypeCooldownMs: {
     weather: 10000,
