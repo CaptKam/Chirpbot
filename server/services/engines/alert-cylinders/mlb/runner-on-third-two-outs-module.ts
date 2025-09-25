@@ -72,7 +72,6 @@ export default class RunnerOnThirdTwoOutsModule extends BaseAlertModule {
     };
 
     return alertResult;
-    };
   }
 
   calculateProbability(): number {

@@ -54,7 +54,6 @@ export default class FirstAndSecondModule extends BaseAlertModule {
     };
 
     return alertResult;
-    };
   }
 
   calculateProbability(): number {

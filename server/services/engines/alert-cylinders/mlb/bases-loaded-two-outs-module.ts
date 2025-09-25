@@ -123,7 +123,6 @@ export default class BasesLoadedTwoOutsModule extends BaseAlertModule {
     };
 
     return alertResult;
-    };
   }
   
   private analyzeClutchSituation(gameState: GameState): any {

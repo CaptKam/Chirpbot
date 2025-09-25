@@ -41,7 +41,6 @@ export default class SecondAndThirdNoOutsModule extends BaseAlertModule {
     };
 
     return alertResult;
-    };
   }
 
   calculateProbability(): number {

@@ -82,3 +82,10 @@ export default class LateInningCloseModule extends BaseAlertModule {
       priority: 60,
     };
 
+    return alert;
+  }
+
+  calculateProbability(): number {
+    return 60;
+  }
+}
