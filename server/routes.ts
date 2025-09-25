@@ -21,6 +21,8 @@ import { alerts as alertsTable, alerts, settings } from "../shared/schema";
 import { eq, desc, and, gte, inArray } from "drizzle-orm";
 // Migration Adapter replaces direct CalendarSyncService usage
 // import { getCalendarSyncService } from "./services/calendar-sync-service";
+import { unifiedAIProcessor } from './services/unified-ai-processor';
+import { generativeSportsAI } from './services/generative-sports-ai';
 
 // Extend session data interface
 declare module 'express-session' {
@@ -122,7 +124,7 @@ function validateCSRF(req: express.Request, res: express.Response, next: express
 // SECURITY: Never expose sensitive fields like telegramBotToken, oddsApiKey, or password
 const sanitizeUserForClient = (user: any) => {
   const { telegramBotToken, oddsApiKey, password, ...safe } = user;
-  
+
   // Add boolean flags if frontend needs to know if tokens are set
   return {
     ...safe,
@@ -134,12 +136,12 @@ const sanitizeUserForClient = (user: any) => {
 // Helper function to redact sensitive fields from logs
 const redactSensitiveFields = (data: any) => {
   if (!data || typeof data !== 'object') return data;
-  
+
   const redacted = { ...data };
   if (redacted.telegramBotToken) redacted.telegramBotToken = '[REDACTED]';
   if (redacted.oddsApiKey) redacted.oddsApiKey = '[REDACTED]';
   if (redacted.password) redacted.password = '[REDACTED]';
-  
+
   return redacted;
 };
 
@@ -610,7 +612,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   (global as any).broadcastMessage = broadcast;
 
   // Initialize Async AI Processor for background AI enhancement
-  const { unifiedAIProcessor } = await import('./services/unified-ai-processor');
+  // const { unifiedAIProcessor } = await import('./services/unified-ai-processor'); // Already imported above
 
   // Set up callback to save enhanced alerts to database
   unifiedAIProcessor.setOnEnhancedAlert(async (alert, userId, sport, wasActuallyEnhanced) => {
@@ -755,15 +757,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
               console.log(`⚠️ Failed to access existing alert payload, using empty object:`, error);
               existingPayload = {};
             }
-            const hasExistingGamblingInsights = existingPayload.gamblingInsights && 
+            const hasExistingGamblingInsights = existingPayload.gamblingInsights &&
               (existingPayload.gamblingInsights.structuredTemplate || (existingPayload.gamblingInsights.bullets && existingPayload.gamblingInsights.bullets.length > 0));
-            const hasNewGamblingInsights = alert.gamblingInsights && 
+            const hasNewGamblingInsights = alert.gamblingInsights &&
               (alert.gamblingInsights.structuredTemplate || (alert.gamblingInsights.bullets && alert.gamblingInsights.bullets.length > 0));
 
             // If new alert has gambling insights and existing doesn't, UPDATE the existing alert
             if (hasNewGamblingInsights && !hasExistingGamblingInsights) {
               console.log(`🔄 Updating existing alert with AI-enhanced gambling insights for user ${userGame.userId}`);
-              
+
               const updatedPayload = {
                 ...existingPayload,
                 gamblingInsights: alert.gamblingInsights,
@@ -856,9 +858,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // Store broadcast function globally for unified-alert-generator to use AFTER database save
-  (global as any).broadcastAlertAfterSave = broadcast;
-  console.log('🚀 SSE broadcast function stored for post-database-save broadcasting');
+  // Export broadcast function with multiple names for compatibility
+  (global as any).sseBroadcast = broadcast;
+  (global as any).broadcastMessage = broadcast;
 
   // Basic health check
   app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
@@ -1509,7 +1511,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/users/me', requireUserAuth, async (req, res) => {
     try {
       console.log('GET /api/users/me: Fetching profile for user', req.user.id);
-      
+
       const user = await storage.getUserById(req.user.id);
       if (!user) {
         console.error('GET /api/users/me: User not found', req.user.id);
@@ -1529,19 +1531,19 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       // SECURITY: Log with sensitive fields redacted to prevent secret exposure
       console.log('PATCH /api/users/me: Updating profile for user', req.user.id, 'with data:', redactSensitiveFields(req.body));
-      
+
       // Validate request body with whitelist schema
       const validationResult = updateUserProfileSchema.safeParse(req.body);
       if (!validationResult.success) {
         console.error('PATCH /api/users/me: Validation failed:', validationResult.error.flatten());
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: 'Invalid request data',
           errors: validationResult.error.flatten()
         });
       }
 
       const updateData = validationResult.data;
-      
+
       // Add timestamp for update tracking
       const updatePayload = {
         ...updateData,
@@ -1557,9 +1559,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // SECURITY: Return updated user profile with all sensitive fields removed
       const safeUserProfile = sanitizeUserForClient(updatedUser);
       console.log('PATCH /api/users/me: Successfully updated user profile for', req.user.id);
-      res.json({ 
+      res.json({
         message: 'Profile updated successfully',
-        user: safeUserProfile 
+        user: safeUserProfile
       });
     } catch (error) {
       console.error('Error updating user profile:', error);
@@ -2128,7 +2130,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { userId } = req.params;
       const currentUser = req.user;
 
-      console.log(`💀 Admin ${currentUser.username} attempting FORCE DELETE of user ${userId}`);
+      console.log(`💀 Admin ${currentUser.username} attempting to FORCE DELETE of user ${userId}`);
 
       // Prevent self-deletion
       if (userId === currentUser.id) {
@@ -2332,12 +2334,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       .offset(offset);
 
       const alertsData = [];
-      
+
       // Environment detection for debugging
       const environment = process.env.NODE_ENV || 'development';
       const isReplit = !!process.env.REPL_ID;
       const hasDatabase = !!process.env.DATABASE_URL;
-      
+
       console.log(`🔍 ALERTS API: Environment=${environment}, Replit=${isReplit}, DB=${hasDatabase}, User=${currentUserId}`);
 
       for (const row of result) {
@@ -2350,7 +2352,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             console.error('Error parsing payload:', e);
             payload = {};
           }
-          
+
           // Extract team data from multiple sources with robust fallback
           const extractTeamData = (gameId: string, payload: any) => {
             // Priority 1: Enhanced context data (from GameStateManager)
@@ -2358,13 +2360,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             let awayTeam = payload.context?.awayTeam;
             let homeScore = payload.context?.homeScore;
             let awayScore = payload.context?.awayScore;
-            
+
             // Priority 2: Direct payload data (from alert generation)
             if (!homeTeam && payload.homeTeam) homeTeam = payload.homeTeam;
             if (!awayTeam && payload.awayTeam) awayTeam = payload.awayTeam;
             if (homeScore === undefined && payload.homeScore !== undefined) homeScore = payload.homeScore;
             if (awayScore === undefined && payload.awayScore !== undefined) awayScore = payload.awayScore;
-            
+
             // Priority 3: Extract from message content (as backup)
             if (!homeTeam || !awayTeam) {
               const messageText = payload.message || payload.displayMessage || '';
@@ -2374,21 +2376,21 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
                 if (!homeTeam) homeTeam = teamMatch[2];
               }
             }
-            
+
             // Priority 4: Descriptive fallbacks (avoid generic defaults)
             if (!homeTeam) homeTeam = `Home Team (${gameId})`;
             if (!awayTeam) awayTeam = `Away Team (${gameId})`;
-            
+
             return { homeTeam, awayTeam, homeScore, awayScore };
           };
-          
+
           const teamData = extractTeamData(row.game_id, payload);
-          
+
           // Log team data extraction for debugging environment differences
           if (teamData.homeTeam.includes('(') || teamData.awayTeam.includes('(')) {
             console.log(`⚠️ FALLBACK USED: Alert ${row.id} - ${teamData.awayTeam} @ ${teamData.homeTeam} (${environment})`);
           }
-          
+
           // Use backend-processed data with enhanced fallback system
           alertsData.push({
             id: row.id,
@@ -3782,7 +3784,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           'TWO_MINUTE_WARNING', 'CLUTCH_TIME', 'OVERTIME'
         ],
         'NCAAF': [
-          'NCAAF_GAME_START', 'NCAAF_SECOND_HALF_KICKOFF', 'NCAAF_CLOSE_GAME', 'NCAAF_FOURTH_QUARTER', 
+          'NCAAF_GAME_START', 'NCAAF_SECOND_HALF_KICKOFF', 'NCAAF_CLOSE_GAME', 'NCAAF_FOURTH_QUARTER',
           'NCAAF_HALFTIME', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_COMEBACK_POTENTIAL', 'NCAAF_FOURTH_DOWN_DECISION',
           'NCAAF_MASSIVE_WEATHER', 'NCAAF_RED_ZONE_EFFICIENCY', 'NCAAF_RED_ZONE', 'NCAAF_SCORING_PLAY',
           'NCAAF_UPSET_OPPORTUNITY'
@@ -4207,6 +4209,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(503).json({
           error: 'Migration adapter not available',
           message: 'Migration adapter is initializing',
+          healthy: false,
           timestamp: new Date().toISOString()
         });
       }
@@ -4885,6 +4888,39 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error('Error updating gambling insights settings:', error);
       res.status(500).json({ message: 'Failed to update gambling insights settings' });
+    }
+  });
+
+  // Generative AI metrics endpoint
+  app.get('/api/ai/generative/metrics', async (req, res) => {
+    try {
+      const metrics = generativeSportsAI.getPerformanceMetrics();
+      res.json({
+        success: true,
+        data: metrics,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error fetching generative AI metrics:', error);
+      res.status(500).json({ error: 'Failed to fetch generative AI metrics' });
+    }
+  });
+
+  // AI Health and metrics
+  app.get('/api/ai/health/metrics', async (req, res) => {
+    try {
+      const health = unifiedAIProcessor.getHealthStatus();
+      const metrics = unifiedAIProcessor.getPerformanceMetrics();
+
+      res.json({
+        status: health.status,
+        health,
+        metrics,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error fetching AI health and metrics:', error);
+      res.status(500).json({ error: 'Failed to fetch AI health and metrics' });
     }
   });
 

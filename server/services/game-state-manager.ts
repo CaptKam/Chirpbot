@@ -13,6 +13,8 @@ import { GamblingInsightsComposer } from './gambling-insights-composer';
 import type { AlertResult as EngineAlertResult, GameState } from './engines/base-engine';
 import type { AlertResult } from '../../shared/schema';
 import type { WeatherChangeEvent } from './weather-on-live-service';
+import { unifiedAIProcessor, CrossSportContext } from './unified-ai-processor';
+import { generativeSportsAI } from './generative-sports-ai';
 
 // === CORE INTERFACES ===
 
@@ -26,36 +28,36 @@ export interface GameStateInfo {
   startTime: string;
   venue?: string;
   timezone?: string;
-  
+
   // Current state machine data
   currentState: RuntimeGameState;
   previousState: RuntimeGameState;
   stateChangedAt: Date;
   stateConfirmationCount: number;
-  
+
   // Polling control
   lastPolled: Date;
   nextPollTime: Date;
   currentPollInterval: number;
-  
+
   // Live confirmation logic
   pendingLiveConfirmation: boolean;
   liveConfirmationAttempts: number;
   liveConfirmationStartedAt?: Date;
-  
+
   // User monitoring
   isUserMonitored: boolean;
   userIds: Set<string>;
-  
+
   // Weather arming
   weatherArmed: boolean;
   weatherArmReason?: WeatherArmReason;
   weatherArmedAt?: Date;
-  
+
   // Metadata
   createdAt: Date;
   lastUpdated: Date;
-  
+
   // Raw game data from APIs
   rawGameData?: any;
   enhancedData?: any;
@@ -115,13 +117,13 @@ class TimezoneManager {
     'Dodger Stadium': 'America/Los_Angeles',
     'AT&T Park': 'America/Los_Angeles',
     'Oracle Park': 'America/Los_Angeles',
-    
+
     // NFL Stadiums  
     'MetLife Stadium': 'America/New_York',
     'Lambeau Field': 'America/Chicago',
     'Arrowhead Stadium': 'America/Chicago',
     'SoFi Stadium': 'America/Los_Angeles',
-    
+
     // Common city mappings
     'New York': 'America/New_York',
     'Los Angeles': 'America/Los_Angeles',
@@ -255,7 +257,7 @@ class TimezoneManager {
 
       const now = new Date();
       const msToStart = startTime.getTime() - now.getTime();
-      
+
       return msToStart;
     } catch (error) {
       console.error(`Timezone calculation error:`, error);
@@ -287,15 +289,15 @@ export class GameStateManager {
   private gameStates: Map<string, GameStateInfo> = new Map();
   private pollingTimers: Map<string, NodeJS.Timeout> = new Map();
   private isRunning: boolean = false;
-  
+
   // Integration service references
   private calendarSync?: CalendarSyncService;
   private engineManager?: EngineLifecycleManager;
   private weatherService?: WeatherService;
   private weatherOnLiveService?: any; // WeatherOnLiveService - avoiding circular import
   private gamblingInsightsComposer?: GamblingInsightsComposer;
-  // WebSocket server removed - using HTTP polling architecture
-  
+  // WebSocket server setup removed - using HTTP polling architecture
+
   // Performance tracking
   private stats = {
     totalTransitions: 0,
@@ -351,39 +353,39 @@ export class GameStateManager {
       startTime: gameData.startTime,
       venue: gameData.venue,
       timezone: TimezoneManager.getVenueTimezone(gameData.venue || ''),
-      
+
       currentState: RuntimeGameState.SCHEDULED,
       previousState: RuntimeGameState.SCHEDULED,
       stateChangedAt: new Date(),
       stateConfirmationCount: 0,
-      
+
       lastPolled: new Date(0), // Force immediate poll
       nextPollTime: new Date(),
       currentPollInterval: RUNTIME.calendarPoll.defaultMs,
-      
+
       pendingLiveConfirmation: false,
       liveConfirmationAttempts: 0,
-      
+
       isUserMonitored: userIds.length > 0,
       userIds: new Set(userIds),
-      
+
       weatherArmed: false,
-      
+
       createdAt: new Date(),
       lastUpdated: new Date(),
-      
+
       rawGameData: gameData
     };
 
     this.gameStates.set(gameData.id, gameInfo);
     console.log(`🎮 Added game ${gameData.id} (${gameInfo.homeTeam} vs ${gameInfo.awayTeam}) in timezone ${gameInfo.timezone}`);
-    
+
     // Start polling immediately
     await this.scheduleNextPoll(gameInfo);
-    
+
     // Broadcast state change
     this.broadcastGameStateChange(gameInfo, 'game_added');
-    
+
     return gameInfo;
   }
 
@@ -393,25 +395,25 @@ export class GameStateManager {
 
     // Clean up polling
     this.clearPollingTimer(gameId);
-    
+
     // Stop engines if running
     if (this.engineManager && (gameInfo.currentState === RuntimeGameState.LIVE || gameInfo.currentState === RuntimeGameState.PAUSED)) {
       await this.engineManager.terminateEngines(gameInfo);
     }
-    
+
     // Stop weather monitoring
     if (this.weatherOnLiveService && gameInfo.weatherArmed) {
       await this.weatherOnLiveService.stopWeatherMonitoring(gameId);
     } else if (this.weatherService && gameInfo.weatherArmed) {
       await this.weatherService.disarmWeatherMonitoring(gameId);
     }
-    
+
     this.gameStates.delete(gameId);
     console.log(`🗑️ Removed game ${gameId}`);
-    
+
     // Broadcast removal
     this.broadcastGameStateChange(gameInfo, 'game_removed');
-    
+
     return true;
   }
 
@@ -434,10 +436,10 @@ export class GameStateManager {
     gameInfo.userIds.add(userId);
     gameInfo.isUserMonitored = true;
     gameInfo.lastUpdated = new Date();
-    
+
     console.log(`👤 Added user ${userId} to game ${gameId} monitoring`);
     this.broadcastGameStateChange(gameInfo, 'user_added');
-    
+
     return true;
   }
 
@@ -448,10 +450,10 @@ export class GameStateManager {
     gameInfo.userIds.delete(userId);
     gameInfo.isUserMonitored = gameInfo.userIds.size > 0;
     gameInfo.lastUpdated = new Date();
-    
+
     console.log(`👤 Removed user ${userId} from game ${gameId} monitoring`);
     this.broadcastGameStateChange(gameInfo, 'user_removed');
-    
+
     return true;
   }
 
@@ -461,14 +463,14 @@ export class GameStateManager {
     const currentState = gameInfo.currentState;
     const apiStatus = newGameData.status;
     const isLive = newGameData.isLive || false;
-    
+
     // Calculate time to start for pre-game logic
     const msToStart = TimezoneManager.calculateTimeToStart(gameInfo.startTime, gameInfo.timezone || RUNTIME.gameStates.fallbackTimezone);
     const minutesToStart = msToStart / (1000 * 60);
-    
+
     // Determine target state based on API data and timing
     let targetState = currentState;
-    
+
     // State transition logic
     if (currentState === RuntimeGameState.SCHEDULED) {
       // Check for PREWARM transition (T-5min)
@@ -525,12 +527,12 @@ export class GameStateManager {
         targetState = RuntimeGameState.TERMINATED;
       }
     }
-    
+
     // Handle confirmation logic for LIVE state
     let confirmationRequired = false;
     let shouldStartEngines = false;
     let shouldStopEngines = false;
-    
+
     if (targetState === RuntimeGameState.LIVE && currentState !== RuntimeGameState.LIVE) {
       // LIVE transition requires confirmation
       if (!gameInfo.pendingLiveConfirmation) {
@@ -543,7 +545,7 @@ export class GameStateManager {
       } else {
         // Continue confirmation process
         gameInfo.liveConfirmationAttempts++;
-        
+
         if (gameInfo.liveConfirmationAttempts >= RUNTIME.calendarPoll.requireConsecutive) {
           // Confirmation complete - proceed to LIVE
           gameInfo.pendingLiveConfirmation = false;
@@ -561,7 +563,7 @@ export class GameStateManager {
       gameInfo.liveConfirmationAttempts = 0;
       this.stats.confirmationFailures++;
     }
-    
+
     // Determine engine actions
     if (targetState === RuntimeGameState.FINAL && currentState === RuntimeGameState.LIVE) {
       shouldStopEngines = true;
@@ -570,10 +572,10 @@ export class GameStateManager {
     } else if (targetState === RuntimeGameState.LIVE && currentState === RuntimeGameState.PAUSED) {
       shouldStartEngines = true;
     }
-    
+
     // Calculate next poll interval
     const nextPollInterval = this.calculatePollInterval(gameInfo, targetState, confirmationRequired);
-    
+
     // Update state if changed
     if (targetState !== currentState && !confirmationRequired) {
       gameInfo.previousState = currentState;
@@ -581,10 +583,10 @@ export class GameStateManager {
       gameInfo.stateChangedAt = new Date();
       gameInfo.stateConfirmationCount = 0;
       this.stats.totalTransitions++;
-      
+
       console.log(`🔄 Game ${gameInfo.gameId} transitioned: ${currentState} → ${targetState}`);
     }
-    
+
     return {
       success: true,
       previousState: currentState,
@@ -604,36 +606,36 @@ export class GameStateManager {
     if (confirmationRequired) {
       return RUNTIME.calendarPoll.liveConfirmMs;
     }
-    
+
     // State-specific intervals
     switch (targetState) {
       case RuntimeGameState.LIVE:
         return RUNTIME.calendarPoll.defaultMs; // Standard live polling
-        
+
       case RuntimeGameState.PAUSED:
         return RUNTIME.calendarPoll.pausedPollMs;
-        
+
       case RuntimeGameState.FINAL:
         return RUNTIME.calendarPoll.finalConfirmMs;
-        
+
       case RuntimeGameState.TERMINATED:
         return 300000; // 5 minutes for terminated games
-        
+
       case RuntimeGameState.PREWARM:
         return RUNTIME.calendarPoll.preStartPollMs;
-        
+
       case RuntimeGameState.SCHEDULED:
       default:
         // Calculate time-based interval for scheduled games
         const msToStart = TimezoneManager.calculateTimeToStart(gameInfo.startTime, gameInfo.timezone || RUNTIME.gameStates.fallbackTimezone);
         const minutesToStart = msToStart / (1000 * 60);
-        
+
         // Pre-start window (T-10m to T+5m): use fast polling
         if (minutesToStart <= RUNTIME.calendarPoll.preStartWindowMin && 
             minutesToStart >= -RUNTIME.calendarPoll.preStartWindowMin/2) {
           return RUNTIME.calendarPoll.preStartPollMs;
         }
-        
+
         // Default polling for far-future games
         return RUNTIME.calendarPoll.defaultMs;
     }
@@ -650,17 +652,17 @@ export class GameStateManager {
 
     try {
       console.log(`🔄 GameStateManager: Force evaluating game ${gameId}`);
-      
+
       // Fetch fresh game data
       if (!this.calendarSync) {
         throw new Error('Calendar sync service not configured');
       }
-      
+
       const newGameData = await this.calendarSync.fetchGameData(gameId, gameInfo.sport || sport || 'UNKNOWN');
-      
+
       // Process state transition
       const transition = await this.processStateTransition(gameInfo, newGameData);
-      
+
       // Handle engine lifecycle immediately
       if (transition.shouldStartEngines && this.engineManager) {
         console.log(`🚀 Starting engines for game ${gameId} (force evaluation)`);
@@ -673,12 +675,12 @@ export class GameStateManager {
       // CRITICAL FIX: Trigger alert generation for live games
       if (gameInfo.currentState === RuntimeGameState.LIVE && this.engineManager) {
         console.log(`🎯 Force evaluating alerts for live game ${gameId}`);
-        
+
         try {
           // Get the engine instance and trigger alert generation
           const sport = gameInfo.sport.toUpperCase();
           const engine = this.engineManager.getEngine(sport);
-          
+
           if (engine && engine.generateLiveAlerts) {
             // Convert game data to GameState format for engine
             const gameState = {
@@ -704,16 +706,14 @@ export class GameStateManager {
 
             console.log(`🚨 Generating alerts for ${sport} game ${gameId}`);
             let alerts = await engine.generateLiveAlerts(gameState);
-            
+
             // UNIFIED ENHANCEMENT: Send all alerts through single enhancement pipeline
             if (alerts && alerts.length > 0) {
               console.log(`🔗 GameStateManager: Sending ${alerts.length} alerts through unified enhancement pipeline`);
-              
+
               // UNIFIED FIX: Use UnifiedAIProcessor as the single enhancement pipeline
               // This eliminates competing enhancement systems (weather, gambling, AI) and ensures consistent contexts
               try {
-                const { unifiedAIProcessor } = await import('./unified-ai-processor');
-                
                 // Send each raw alert through unified enhancement pipeline
                 for (const rawAlert of alerts) {
                     // Create context for unified enhancement
@@ -731,19 +731,57 @@ export class GameStateManager {
                       originalMessage: rawAlert.message,
                       originalContext: rawAlert.context || {}
                     };
-                    
-                    // Queue raw alert for unified enhancement (AI + gambling + weather in one pipeline)
-                    // TODO: Get actual userId for per-user delivery - using 'system' for now since these are broadcast alerts
-                    unifiedAIProcessor.queueAlert(rawAlert, context, 'system').catch(error => {
-                      console.warn(`⚠️ Failed to queue alert ${rawAlert.type} for unified enhancement:`, error);
-                    });
+
+                    // Apply Generative AI enhancement (new advanced layer)
+                    if (gameState.isLive && rawAlert.priority >= 7) {
+                      console.log(`🤖 Applying Generative AI enhancement for ${sport} ${rawAlert.type}`);
+                      const genAIResult = await generativeSportsAI.enhanceWithGenerativeAI(
+                        rawAlert, 
+                        gameState, 
+                        sport, 
+                        'system'
+                      );
+
+                      // Use the enhanced alert from GenerativeAI
+                      const enhancedAlert = genAIResult.enhancedAlert;
+
+                      // Store additional AI insights in context
+                      enhancedAlert.context = {
+                        ...enhancedAlert.context,
+                        generativeAI: {
+                          predictiveInsights: genAIResult.predictiveInsights,
+                          narrativeContext: genAIResult.narrativeContext,
+                          bettingIntelligence: genAIResult.bettingIntelligence,
+                          fanEngagement: genAIResult.fanEngagement,
+                          aiGeneratedContent: genAIResult.aiGeneratedContent
+                        }
+                      };
+
+                       // 1. Apply gambling insights enhancement
+                      const gamblingEnhancedAlert = await this.gamblingInsightsComposer.enhanceAlert(enhancedAlert, gameState);
+
+                      // Queue raw alert for unified enhancement (AI + gambling + weather in one pipeline)
+                      // TODO: Get actual userId for per-user delivery - using 'system' for now since these are broadcast alerts
+                      unifiedAIProcessor.queueAlert(gamblingEnhancedAlert, context, 'system').catch(error => {
+                        console.warn(`⚠️ Failed to queue alert ${rawAlert.type} for unified enhancement:`, error);
+                      });
+
+                    } else {
+                       // 1. Apply gambling insights enhancement
+                      const gamblingEnhancedAlert = await this.gamblingInsightsComposer.enhanceAlert(rawAlert, gameState);
+                      // Queue raw alert for unified enhancement (AI + gambling + weather in one pipeline)
+                      // TODO: Get actual userId for per-user delivery - using 'system' for now since these are broadcast alerts
+                      unifiedAIProcessor.queueAlert(gamblingEnhancedAlert, context, 'system').catch(error => {
+                        console.warn(`⚠️ Failed to queue alert ${rawAlert.type} for unified enhancement:`, error);
+                      });
+                    }
                   }
-                  
+
                   console.log(`💾 Queued ${alerts.length} enhanced alerts with gambling insights for database storage`);
                 } catch (error) {
                   console.error(`❌ Failed to queue enhanced alerts for database storage:`, error);
                 }
-              
+
               console.log(`✅ Generated ${alerts.length} alerts for game ${gameId}`);
             } else {
               console.log(`📝 No alerts generated for game ${gameId} (normal for stable game states)`);
@@ -767,7 +805,7 @@ export class GameStateManager {
   private async pollGameState(gameId: string): Promise<PollingResult> {
     const startTime = Date.now();
     const gameInfo = this.gameStates.get(gameId);
-    
+
     if (!gameInfo) {
       return {
         gameId,
@@ -783,23 +821,23 @@ export class GameStateManager {
       if (!this.calendarSync) {
         throw new Error('Calendar sync service not configured');
       }
-      
+
       const newGameData = await this.calendarSync.fetchGameData(gameId, gameInfo.sport || 'UNKNOWN');
-      
+
       // Update game info
       gameInfo.homeScore = newGameData.homeTeam.score || 0;
       gameInfo.awayScore = newGameData.awayTeam.score || 0;
       gameInfo.rawGameData = newGameData;
       gameInfo.lastPolled = new Date();
       gameInfo.lastUpdated = new Date();
-      
+
       // Process state transition
       const transition = await this.processStateTransition(gameInfo, newGameData);
-      
+
       // Update polling interval
       gameInfo.currentPollInterval = transition.nextPollInterval;
       gameInfo.nextPollTime = new Date(Date.now() + transition.nextPollInterval);
-      
+
       // Handle engine lifecycle
       if (transition.shouldStartEngines && this.engineManager) {
         console.log(`🚀 Starting engines for game ${gameId}`);
@@ -808,25 +846,25 @@ export class GameStateManager {
         console.log(`🛑 Stopping engines for game ${gameId}`);
         await this.engineManager.stopEngines(gameInfo);
       }
-      
+
       // Handle weather-on-live monitoring for outdoor sports
       if (gameInfo.currentState === RuntimeGameState.LIVE && !gameInfo.weatherArmed) {
         await this.startWeatherOnLiveMonitoring(gameInfo);
       } else if (gameInfo.currentState === RuntimeGameState.FINAL && gameInfo.weatherArmed) {
         await this.stopWeatherOnLiveMonitoring(gameInfo);
       }
-      
+
       // Schedule next poll
       await this.scheduleNextPoll(gameInfo);
-      
+
       // Broadcast changes
       if (transition.previousState !== transition.newState) {
         this.broadcastGameStateChange(gameInfo, 'state_changed', transition);
       }
-      
+
       const pollDuration = Date.now() - startTime;
       console.log(`📊 Polled game ${gameId}: ${transition.message} (${pollDuration}ms)`);
-      
+
       return {
         gameId,
         polledAt: gameInfo.lastPolled,
@@ -834,18 +872,18 @@ export class GameStateManager {
         transition,
         nextPollTime: gameInfo.nextPollTime
       };
-      
+
     } catch (error) {
       this.stats.pollingErrors++;
       const errorMsg = error instanceof Error ? error.message : 'Unknown polling error';
-      
+
       console.error(`❌ Polling error for game ${gameId}:`, errorMsg);
-      
+
       // Schedule retry with exponential backoff
       const retryInterval = Math.min(RUNTIME.calendarPoll.defaultMs * 2, 120000);
       gameInfo.nextPollTime = new Date(Date.now() + retryInterval);
       await this.scheduleNextPoll(gameInfo);
-      
+
       return {
         gameId,
         polledAt: new Date(),
@@ -859,20 +897,20 @@ export class GameStateManager {
   private async scheduleNextPoll(gameInfo: GameStateInfo): Promise<void> {
     // Clear existing timer
     this.clearPollingTimer(gameInfo.gameId);
-    
+
     // Don't poll terminated games
     if (gameInfo.currentState === RuntimeGameState.TERMINATED) {
       return;
     }
-    
+
     const delay = Math.max(0, gameInfo.nextPollTime.getTime() - Date.now());
-    
+
     const timer = setTimeout(async () => {
       if (this.isRunning) {
         await this.pollGameState(gameInfo.gameId);
       }
     }, delay);
-    
+
     this.pollingTimers.set(gameInfo.gameId, timer);
   }
 
@@ -888,11 +926,11 @@ export class GameStateManager {
 
   private async startWeatherOnLiveMonitoring(gameInfo: GameStateInfo): Promise<void> {
     if (!this.weatherOnLiveService || gameInfo.weatherArmed) return;
-    
+
     // Only monitor weather for outdoor sports
     const outdoorSports = ['MLB', 'NFL', 'NCAAF', 'CFL'];
     if (!outdoorSports.includes(gameInfo.sport)) return;
-    
+
     try {
       const success = await this.weatherOnLiveService.startWeatherMonitoring(gameInfo);
       if (success) {
@@ -908,7 +946,7 @@ export class GameStateManager {
 
   private async stopWeatherOnLiveMonitoring(gameInfo: GameStateInfo): Promise<void> {
     if (!this.weatherOnLiveService || !gameInfo.weatherArmed) return;
-    
+
     try {
       const success = await this.weatherOnLiveService.stopWeatherMonitoring(gameInfo.gameId);
       if (success) {
@@ -925,11 +963,11 @@ export class GameStateManager {
   // Legacy weather integration methods (keep for compatibility)
   private async armWeatherMonitoring(gameInfo: GameStateInfo): Promise<void> {
     if (!this.weatherService || gameInfo.weatherArmed) return;
-    
+
     // Only arm weather for outdoor sports
     const outdoorSports = ['MLB', 'NFL', 'NCAAF', 'CFL'];
     if (!outdoorSports.includes(gameInfo.sport)) return;
-    
+
     try {
       const success = await this.weatherService.armWeatherMonitoring(gameInfo, WeatherArmReason.CUSTOM);
       if (success) {
@@ -945,7 +983,7 @@ export class GameStateManager {
 
   private async disarmWeatherMonitoring(gameInfo: GameStateInfo): Promise<void> {
     if (!this.weatherService || !gameInfo.weatherArmed) return;
-    
+
     try {
       const success = await this.weatherService.disarmWeatherMonitoring(gameInfo.gameId);
       if (success) {
@@ -971,7 +1009,7 @@ export class GameStateManager {
     sport: string
   ): Promise<EngineAlertResult[]> {
     if (!alerts || alerts.length === 0) return alerts;
-    
+
     try {
       // For now, return alerts as-is since weather enhancement in forceEvaluate
       // is primarily for the gambling insights pipeline dependency
@@ -1012,15 +1050,15 @@ export class GameStateManager {
       console.log('⚠️ GameStateManager already running');
       return;
     }
-    
+
     this.isRunning = true;
     console.log('🚀 GameStateManager started');
-    
+
     // Start polling for all existing games
     for (const gameInfo of this.gameStates.values()) {
       await this.scheduleNextPoll(gameInfo);
     }
-    
+
     // Start periodic cleanup
     this.startPeriodicCleanup();
   }
@@ -1030,16 +1068,16 @@ export class GameStateManager {
       console.log('⚠️ GameStateManager already stopped');
       return;
     }
-    
+
     this.isRunning = false;
     console.log('🛑 GameStateManager stopping...');
-    
+
     // Clear all polling timers
     for (const [gameId, timer] of this.pollingTimers) {
       clearTimeout(timer);
     }
     this.pollingTimers.clear();
-    
+
     // Stop engines for all live games
     if (this.engineManager) {
       for (const gameInfo of this.gameStates.values()) {
@@ -1048,7 +1086,7 @@ export class GameStateManager {
         }
       }
     }
-    
+
     // Disarm all weather monitoring
     if (this.weatherService) {
       for (const gameInfo of this.gameStates.values()) {
@@ -1057,18 +1095,18 @@ export class GameStateManager {
         }
       }
     }
-    
+
     console.log('✅ GameStateManager stopped');
   }
 
   private startPeriodicCleanup(): void {
     const cleanup = async () => {
       if (!this.isRunning) return;
-      
+
       const now = new Date();
       const cutoffTime = new Date(now.getTime() - (24 * 60 * 60 * 1000)); // 24 hours ago
       let removedCount = 0;
-      
+
       for (const [gameId, gameInfo] of this.gameStates) {
         // Remove old terminated games
         if (gameInfo.currentState === RuntimeGameState.TERMINATED && gameInfo.stateChangedAt < cutoffTime) {
@@ -1076,17 +1114,17 @@ export class GameStateManager {
           removedCount++;
         }
       }
-      
+
       if (removedCount > 0) {
         console.log(`🧹 Cleaned up ${removedCount} terminated games`);
       }
-      
+
       this.stats.lastCleanup = now;
-      
+
       // Schedule next cleanup
       setTimeout(cleanup, 60 * 60 * 1000); // Every hour
     };
-    
+
     // Start cleanup in 5 minutes
     setTimeout(cleanup, 5 * 60 * 1000);
   }

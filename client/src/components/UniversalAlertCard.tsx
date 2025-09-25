@@ -50,7 +50,7 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
       return 'Unknown';
     }
   })();
-  
+
   const isPriorityHigh = (alert.priority || 0) >= 80;
   const isConfidenceHigh = (alert.confidence || 0) >= 75;
   const { user, isAuthenticated } = useAuth();
@@ -71,7 +71,7 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
     enabled: !!user?.id && isAuthenticated,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
-  
+
   // Determine alert urgency level
   const getUrgencyLevel = () => {
     if (alert.priority >= 90) return 'CRITICAL';
@@ -121,7 +121,7 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
         label: 'Canadian Football'
       }
     };
-    
+
     return sportConfigs[sport as keyof typeof sportConfigs] || {
       iconColor: 'text-slate-400 border-slate-500/30 bg-slate-500/10',
       icon: '🎯',
@@ -171,13 +171,13 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
         normal: 'ring-1 ring-pink-500/40'
       }
     };
-    
+
     const sportStyle = styleMap[alert.sport] || {
       base: 'bg-slate-500/5 border-slate-500/20',
       critical: 'ring-2 ring-slate-500/60',
       normal: 'ring-1 ring-slate-500/40'
     };
-    
+
     const urgencyRing = urgencyLevel === 'CRITICAL' ? sportStyle.critical : sportStyle.normal;
     return `${sportStyle.base} ${urgencyRing}`;
   };
@@ -258,6 +258,52 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
               </p>
             </div>
           )}
+
+          {/* Generative AI Enhanced Content */}
+        {alert.context?.generativeAI && (
+          <div className="mt-3 p-3 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-purple-600 dark:text-purple-400">🤖</span>
+              <span className="font-medium text-purple-700 dark:text-purple-300">AI Generated Insights</span>
+            </div>
+
+            {/* AI Generated Headline */}
+            {alert.context.generativeAI.aiGeneratedContent?.headline && (
+              <div className="mb-2">
+                <div className="text-sm font-semibold text-purple-800 dark:text-purple-200">
+                  {alert.context.generativeAI.aiGeneratedContent.headline}
+                </div>
+              </div>
+            )}
+
+            {/* Predictive Insights */}
+            {alert.context.generativeAI.predictiveInsights && (
+              <div className="mb-2">
+                <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">Next Play Prediction:</div>
+                <div className="text-sm text-purple-800 dark:text-purple-200">
+                  {alert.context.generativeAI.predictiveInsights.nextPlay} 
+                  <span className="text-xs text-purple-500 ml-2">
+                    ({alert.context.generativeAI.predictiveInsights.probability}% confidence)
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Fan Engagement Score */}
+            {alert.context.generativeAI.fanEngagement && (
+              <div className="flex items-center gap-4 text-xs">
+                <div className="flex items-center gap-1">
+                  <span>🔥</span>
+                  <span>Excitement: {alert.context.generativeAI.fanEngagement.excitementLevel}/10</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span>📺</span>
+                  <span>Watchability: {alert.context.generativeAI.fanEngagement.watchabilityScore}%</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
           {/* Game Context - Streamlined and Focused */}
           {alert.context && (
@@ -370,7 +416,7 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
                 </span>
               )}
             </div>
-            
+
             <div className="flex items-center gap-3 text-xs">
               {alert.priority != null && (
                 <span className={`font-bold ${

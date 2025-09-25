@@ -117,5 +117,18 @@ mode = "sequential"
 task = "shell.exec"
 args = "npm run validate-cylinders"
 
+[[workflows.workflow]]
+name = "Test Generative AI"
+author = 44048571
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "curl -X GET http://0.0.0.0:5000/api/ai/generative/metrics"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"Generative AI metrics retrieved successfully!\""
+
 [agent]
 integrations = ["javascript_database:1.0.0"]
