@@ -3,7 +3,6 @@ import { unifiedSettings } from '../../storage';
 import { storage } from '../../storage';
 import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
 import { alertComposer, EnhancedAlertPayload } from '../alert-composer';
-import { sendTelegramAlert, type TelegramConfig } from '../telegram';
 import { mlbPerformanceTracker } from './mlb-performance-tracker';
 
 export class MLBEngine extends BaseSportEngine {
@@ -825,112 +824,8 @@ export class MLBEngine extends BaseSportEngine {
     return null;
   }
 
-  // Get performance metrics for V3 dashboard
-  // Send alerts to Telegram for users with notifications enabled
-  // Note: WebSocket broadcasting removed - alerts now only go through AsyncAI processor for enhancement
-  private async deliverAlertsToAllChannels(alerts: AlertResult[], gameState: GameState): Promise<void> {
-    if (!alerts || alerts.length === 0) return;
 
-    try {
-      console.log(`🚀 Delivering ${alerts.length} MLB alerts to Telegram (WebSocket handled by AsyncAI processor)`);
 
-      // Only Telegram delivery - WebSocket broadcasting removed to prevent duplicates
-      await this.deliverAlertsToTelegram(alerts, gameState);
-
-      console.log(`✅ Telegram delivery complete for ${alerts.length} alerts`);
-
-    } catch (error) {
-      console.error('❌ Alert delivery system error:', error);
-    }
-  }
-
-  // REMOVED: WebSocket delivery method - prevents duplicate alerts
-  // WebSocket broadcasting now handled exclusively by AsyncAI processor in routes.ts
-  // This ensures all alerts go through AI enhancement before being broadcast
-  // 
-  // private async deliverAlertsToWebSocket(alerts: AlertResult[], gameState: GameState): Promise<void> {
-  //   // Method removed to prevent duplicate WebSocket broadcasts
-  //   // All WebSocket delivery now handled by AsyncAI processor for proper enhancement
-  // }
-
-  private async deliverAlertsToTelegram(alerts: AlertResult[], gameState: GameState): Promise<void> {
-    try {
-      // Get all users with Telegram enabled
-      const allUsers = await storage.getAllUsers();
-      const telegramUsers = allUsers.filter(user => 
-        user.telegramEnabled && 
-        user.telegramBotToken && 
-        user.telegramChatId &&
-        user.telegramBotToken !== 'default_key' &&
-        user.telegramChatId !== 'test-chat-id'
-      );
-
-      if (telegramUsers.length === 0) {
-        console.log('📱 ℹ️ No users with valid Telegram configurations found');
-        return;
-      }
-
-      console.log(`📱 🚀 Delivering ${alerts.length} MLB alerts to ${telegramUsers.length} Telegram users`);
-
-      // Send alerts to each user
-      for (const alert of alerts) {
-        // Double-check alert hasn't been sent (extra safety)
-        const telegramKey = `telegram_${alert.alertKey}`;
-        // Deduplication now handled by unified deduplicator
-
-        for (const user of telegramUsers) {
-          try {
-            const telegramConfig: TelegramConfig = {
-              botToken: user.telegramBotToken!,
-              chatId: user.telegramChatId!
-            };
-
-            const telegramAlert = {
-              id: alert.alertKey,
-              type: alert.type,
-              title: alert.message.split('|')[0].trim(),
-              description: alert.message,
-              gameInfo: {
-                sport: 'MLB',
-                awayTeam: gameState.awayTeam,
-                homeTeam: gameState.homeTeam,
-                awayScore: gameState.awayScore,
-                homeScore: gameState.homeScore,
-                score: {
-                  away: gameState.awayScore,
-                  home: gameState.homeScore
-                },
-                inning: gameState.inning,
-                inningState: gameState.isTopInning ? 'top' : 'bottom',
-                outs: gameState.outs,
-                balls: gameState.balls,
-                strikes: gameState.strikes,
-                runners: {
-                  first: gameState.hasFirst,
-                  second: gameState.hasSecond,
-                  third: gameState.hasThird
-                }
-              }
-            };
-
-            const sent = await sendTelegramAlert(telegramConfig, telegramAlert);
-
-            if (sent) {
-              console.log(`📱 ✅ Sent ${alert.type} alert to ${user.username || user.id}`);
-              // Mark this specific telegram alert as sent after successful delivery
-              // Alert tracking now handled by unified deduplicator
-            } else {
-              console.log(`📱 ❌ Failed to send ${alert.type} alert to ${user.username || user.id}`);
-            }
-          } catch (error) {
-            console.error(`📱 ❌ Telegram delivery error for user ${user.username || user.id}:`, error);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('📱 ❌ Telegram delivery system error:', error);
-    }
-  }
 
   // Override to return all available MLB alert types
   async getAvailableAlertTypes(): Promise<string[]> {

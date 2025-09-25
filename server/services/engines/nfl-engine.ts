@@ -4,7 +4,6 @@ import { storage } from '../../storage';
 import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
 import { weatherService } from '../weather-service';
 import { alertComposer, EnhancedAlertPayload } from '../alert-composer';
-import { sendTelegramAlert, type TelegramConfig } from '../telegram';
 
 export class NFLEngine extends BaseSportEngine {
   private lineMovementCache: Map<string, any> = new Map(); // Track line movements
@@ -560,102 +559,8 @@ export class NFLEngine extends BaseSportEngine {
     return null;
   }
 
-  // Send alerts to Telegram for users with notifications enabled
-  // Note: WebSocket broadcasting removed - alerts now only go through AsyncAI processor for enhancement
-  private async deliverAlertsToAllChannels(alerts: AlertResult[], gameState: GameState): Promise<void> {
-    if (!alerts || alerts.length === 0) return;
 
-    try {
-      console.log(`🚀 Delivering ${alerts.length} NFL alerts to Telegram (WebSocket handled by AsyncAI processor)`);
 
-      // Only Telegram delivery - WebSocket broadcasting removed to prevent duplicates
-      await this.deliverAlertsToTelegram(alerts, gameState);
-
-      console.log(`✅ Telegram delivery complete for ${alerts.length} alerts`);
-
-    } catch (error) {
-      console.error('❌ Alert delivery system error:', error);
-    }
-  }
-
-  // REMOVED: WebSocket delivery method - prevents duplicate alerts
-  // WebSocket broadcasting now handled exclusively by AsyncAI processor in routes.ts
-  // This ensures all alerts go through AI enhancement before being broadcast
-
-  private async deliverAlertsToTelegram(alerts: AlertResult[], gameState: GameState): Promise<void> {
-    try {
-      // Get all users with Telegram enabled
-      const allUsers = await storage.getAllUsers();
-      const telegramUsers = allUsers.filter(user => 
-        user.telegramEnabled && 
-        user.telegramBotToken && 
-        user.telegramChatId &&
-        user.telegramBotToken !== 'default_key' &&
-        user.telegramChatId !== 'test-chat-id'
-      );
-
-      if (telegramUsers.length === 0) {
-        console.log('📱 ℹ️ No users with valid Telegram configurations found');
-        return;
-      }
-
-      console.log(`📱 🚀 Delivering ${alerts.length} NFL alerts to ${telegramUsers.length} Telegram users`);
-
-      // Send alerts to each user
-      for (const alert of alerts) {
-        // Double-check alert hasn't been sent (extra safety)
-        const telegramKey = `telegram_${alert.alertKey}`;
-        // Deduplication now handled by unified deduplicator
-
-        for (const user of telegramUsers) {
-          try {
-            const telegramConfig: TelegramConfig = {
-              botToken: user.telegramBotToken!,
-              chatId: user.telegramChatId!
-            };
-
-            const telegramAlert = {
-              id: alert.alertKey,
-              type: alert.type,
-              title: alert.message.split('|')[0].trim(),
-              description: alert.message,
-              gameInfo: {
-                sport: 'NFL',
-                awayTeam: gameState.awayTeam,
-                homeTeam: gameState.homeTeam,
-                awayScore: gameState.awayScore,
-                homeScore: gameState.homeScore,
-                score: {
-                  away: gameState.awayScore,
-                  home: gameState.homeScore
-                },
-                quarter: gameState.quarter,
-                timeRemaining: gameState.timeRemaining,
-                down: gameState.down,
-                yardsToGo: gameState.yardsToGo,
-                fieldPosition: gameState.fieldPosition,
-                possession: gameState.possession
-              }
-            };
-
-            const sent = await sendTelegramAlert(telegramConfig, telegramAlert);
-
-            if (sent) {
-              console.log(`📱 ✅ Sent ${alert.type} alert to ${user.username || user.id}`);
-              // Mark this specific telegram alert as sent after successful delivery
-              // Alert tracking now handled by unified deduplicator
-            } else {
-              console.log(`📱 ❌ Failed to send ${alert.type} alert to ${user.username || user.id}`);
-            }
-          } catch (error) {
-            console.error(`📱 ❌ Telegram delivery error for user ${user.username || user.id}:`, error);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('📱 ❌ Telegram delivery system error:', error);
-    }
-  }
 
   getPerformanceMetrics() {
     const avgCalculationTime = this.performanceMetrics.probabilityCalculationTime.length > 0

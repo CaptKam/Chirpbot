@@ -2,7 +2,6 @@ import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { unifiedSettings } from '../../storage';
 import { storage } from '../../storage';
 import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
-import { sendTelegramAlert, type TelegramConfig } from '../telegram';
 
 export class WNBAEngine extends BaseSportEngine {
 
@@ -224,81 +223,7 @@ export class WNBAEngine extends BaseSportEngine {
 
 
 
-  // REMOVED: WebSocket delivery method - prevents duplicate alerts
-  // WebSocket broadcasting now handled exclusively by AsyncAI processor in routes.ts
-  // This ensures all alerts go through AI enhancement before being broadcast
-  // 
-  // private async deliverAlertsToWebSocket(alerts: AlertResult[], gameState: GameState): Promise<void> {
-  //   // Method removed to prevent duplicate WebSocket broadcasts
-  //   // All WebSocket delivery now handled by AsyncAI processor for proper enhancement
-  // }
 
-  private async deliverAlertsToTelegram(alerts: AlertResult[], gameState: GameState): Promise<void> {
-    try {
-      // Get all users with Telegram enabled
-      const allUsers = await storage.getAllUsers();
-      const telegramUsers = allUsers.filter(user => 
-        user.telegramEnabled && 
-        user.telegramBotToken && 
-        user.telegramChatId &&
-        user.telegramBotToken !== 'default_key' &&
-        user.telegramChatId !== 'test-chat-id'
-      );
-      
-      if (telegramUsers.length === 0) {
-        console.log('📱 ℹ️ No users with valid Telegram configurations found');
-        return;
-      }
-      
-      console.log(`📱 🚀 Delivering ${alerts.length} WNBA alerts to ${telegramUsers.length} Telegram users`);
-      
-      // Send alerts to each user
-      for (const alert of alerts) {
-        for (const user of telegramUsers) {
-          try {
-            const telegramConfig: TelegramConfig = {
-              botToken: user.telegramBotToken!,
-              chatId: user.telegramChatId!
-            };
-            
-            const telegramAlert = {
-              id: alert.alertKey,
-              type: alert.type,
-              title: alert.message.split('|')[0].trim(),
-              description: alert.message,
-              gameInfo: {
-                sport: 'WNBA',
-                awayTeam: gameState.awayTeam,
-                homeTeam: gameState.homeTeam,
-                awayScore: gameState.awayScore,
-                homeScore: gameState.homeScore,
-                score: {
-                  away: gameState.awayScore,
-                  home: gameState.homeScore
-                },
-                quarter: gameState.quarter,
-                quarterState: gameState.quarter <= 4 ? `Q${gameState.quarter}` : `OT${gameState.quarter - 4}`,
-                timeRemaining: gameState.timeRemaining,
-                possession: gameState.possession
-              }
-            };
-            
-            const sent = await sendTelegramAlert(telegramConfig, telegramAlert);
-            
-            if (sent) {
-              console.log(`📱 ✅ Sent ${alert.type} alert to ${user.username || user.id}`);
-            } else {
-              console.log(`📱 ❌ Failed to send ${alert.type} alert to ${user.username || user.id}`);
-            }
-          } catch (error) {
-            console.error(`📱 ❌ Telegram delivery error for user ${user.username || user.id}:`, error);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('📱 ❌ Telegram delivery system error:', error);
-    }
-  }
 
   // These legacy methods are now replaced by the modular alert cylinder system
   // Keeping them for backward compatibility but they should not be called in V3

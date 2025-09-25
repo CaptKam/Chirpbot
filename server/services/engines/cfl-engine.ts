@@ -2,7 +2,6 @@ import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { unifiedSettings } from '../../storage';
 import { storage } from '../../storage';
 import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
-import { sendTelegramAlert, TelegramConfig } from '../telegram';
 
 export class CFLEngine extends BaseSportEngine {
 

@@ -2,7 +2,6 @@ import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { unifiedSettings } from '../../storage';
 import { storage } from '../../storage';
 import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
-import { sendTelegramAlert, type TelegramConfig } from '../telegram';
 
 export class NBAEngine extends BaseSportEngine {
   
