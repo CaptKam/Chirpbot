@@ -1018,17 +1018,18 @@ export class GameStateManager {
         type: alert.type,
         message: alert.message,
         context: {
-          // Merge existing context with game state info
-          ...alert.context,
+          // Merge existing context with game state info, preserving existing values
           sport: sport,
           gameId: gameState.gameId,
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
           createdAt: new Date(),
           expiresAt: new Date(Date.now() + 1000 * 60 * 30), // 30 min default
-          weatherContext: undefined // No weather context in GameStateManager path for now
+          weatherContext: undefined, // No weather context in GameStateManager path for now
+          ...alert.context, // Keep alert context AFTER defaults to preserve existing team/score data
+          // Only override if values are actually available in gameState
+          homeTeam: alert.context?.homeTeam || gameState.homeTeam,
+          awayTeam: alert.context?.awayTeam || gameState.awayTeam,
+          homeScore: alert.context?.homeScore ?? gameState.homeScore,
+          awayScore: alert.context?.awayScore ?? gameState.awayScore,
         },
         priority: alert.priority || 1
       }));
