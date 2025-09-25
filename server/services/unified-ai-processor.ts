@@ -801,7 +801,13 @@ export class UnifiedAIProcessor {
   }
 
   private buildSportSpecificPrompt(context: CrossSportContext): string {
-    const basePrompt = `You are a ${context.sport} expert AI providing contextual insights for sports alerts.
+    const basePrompt = `You are a premium sports betting intelligence AI providing actionable insights for quick betting decisions.
+
+FORMAT REQUIREMENT: Respond with exactly this structure for quick scanning:
+
+Line 1: 🔥 [SITUATION] • [KEY PLAYER]
+Line 2: ⚡ [CONTEXT/FATIGUE] • [ENVIRONMENTAL FACTOR]
+Line 3: 💰 [SPECIFIC BET] • [PROP VALUE] • [TIME WINDOW]
 
 GAME CONTEXT:
 - ${context.awayTeam} @ ${context.homeTeam} (${context.awayScore}-${context.homeScore})
@@ -819,7 +825,25 @@ ${context.weather ? `- WEATHER: ${context.weather.temperature}°F, ${context.wea
 - ${context.inning}${this.getOrdinal(context.inning || 1)} inning, ${context.outs || 0} outs
 - Count: ${context.balls || 0}-${context.strikes || 0}
 - Runners: ${this.describeBaseRunners(context.baseRunners)}
-Focus on: Run expectancy, leverage situations, clutch hitting.`;
+
+DATA AVAILABLE (use in your response):
+- Current Batter: ${context.originalContext?.currentBatter || 'Available'}
+- Pitcher: ${context.originalContext?.currentPitcher || 'Available'}
+- Pitch Count: ${context.originalContext?.pitchCount || 'Available'}
+- Wind: ${context.weather?.windSpeed || context.originalContext?.weatherContext?.windSpeed || 'Available'}mph ${context.originalContext?.weatherContext?.windDirection || ''}
+- On Deck: ${context.originalContext?.onDeckBatter || 'Available'}
+
+BETTING FOCUS:
+1. Name specific players in the situation
+2. Include environmental factors (wind speed/direction, pitcher fatigue)
+3. Suggest specific props (RBI, strikeout, team totals) with approximate odds
+4. Provide timing window (30sec, this at-bat, next 5min)
+5. Use quick-scan format with key info in top line
+
+EXAMPLE:
+🔥 BASES LOADED • José Altuve UP (.340 w/ RISP)
+⚡ Morton (97 pitches, tired) • Wind OUT 12mph
+💰 RBI +125 • Team O7.5 • 30sec window`;
 
       case 'NFL':
       case 'NCAAF':
@@ -828,7 +852,22 @@ Focus on: Run expectancy, leverage situations, clutch hitting.`;
 - Q${context.quarter || 1}, ${context.timeRemaining || 'Unknown'} remaining
 ${context.down && context.yardsToGo ? `- ${this.getOrdinal(context.down)} & ${context.yardsToGo}` : ''}
 ${context.redZone ? '- RED ZONE: High scoring probability' : ''}
-Focus on: Down & distance, field position, clock management.`;
+
+DATA AVAILABLE:
+- Weather: ${context.weather?.windSpeed || 'Available'}mph winds, ${context.weather?.temperature || 'Available'}°F
+- Field Position: ${context.originalContext?.fieldPosition || 'Available'} yard line
+- Time Pressure: ${context.timeRemaining || 'Available'}
+
+BETTING FOCUS:
+1. Name key players (QB, RB, kicker) for situation
+2. Include weather impact on passing/kicking
+3. Suggest specific props (TD, FG, rushing yards)
+4. Provide urgency window
+
+EXAMPLE:
+🔥 4TH & 3 • Josh Allen (.75 4th down)
+⚡ 20mph winds • FG range (42yd)
+💰 TD +180 • Under 42.5 • 40sec window`;
 
       case 'NBA':
       case 'WNBA':
