@@ -39,6 +39,16 @@ export default {
     'bg-red-500/20', 'bg-red-500/15',
     'bg-pink-500/20', 'bg-pink-500/15',
     'bg-emerald-500/20', 'bg-emerald-500/15',
+
+    // Button hover classes for alerts page
+    'hover:bg-green-500/10', 'hover:border-green-500',
+    'hover:bg-orange-500/10', 'hover:border-orange-500',
+    'hover:bg-purple-500/10', 'hover:border-purple-500',
+    'hover:bg-cyan-500/10', 'hover:border-cyan-500',
+    'hover:bg-blue-500/10', 'hover:border-blue-500',
+    'hover:bg-red-500/10', 'hover:border-red-500',
+    'hover:bg-pink-500/10', 'hover:border-pink-500',
+    'hover:bg-emerald-500/10', 'hover:border-emerald-500',
   ],
   theme: {
     extend: {
