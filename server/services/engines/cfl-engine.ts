@@ -28,9 +28,6 @@ export class CFLEngine extends BaseSportEngine {
   }
 
 
-  }
-
-
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
       // V3-15: Complete CFL alert types with Canadian football specifics

@@ -23,9 +23,6 @@ export class NBAEngine extends BaseSportEngine {
     super('NBA');
   }
   
-  
-  }
-  
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {

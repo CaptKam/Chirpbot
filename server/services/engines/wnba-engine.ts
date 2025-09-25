@@ -27,9 +27,6 @@ export class WNBAEngine extends BaseSportEngine {
   }
 
 
-  }
-
-
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
       // Only check settings for actual WNBA alert types
