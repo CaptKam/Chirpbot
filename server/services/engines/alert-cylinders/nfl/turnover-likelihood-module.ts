@@ -63,7 +63,7 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
       alertKey,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | TURNOVER LIKELIHOOD`,
-      displayMessage: `🏈 ${file##*/} | Q${gameState.quarter}`,
+      displayMessage: `🏈 TURNOVER LIKELIHOOD | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,

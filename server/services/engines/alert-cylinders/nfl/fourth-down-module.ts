@@ -23,7 +23,7 @@ export default class FourthDownModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_fourth_down_${yardsToGo}_${fieldPosition}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | FOURTH DOWN`,
-      displayMessage: `🏈 ${file##*/} | Q${gameState.quarter}`,
+      displayMessage: `🏈 FOURTH DOWN | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,

@@ -102,7 +102,7 @@ export default class MassiveWeatherModule extends BaseAlertModule {
       alertKey,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | MASSIVE WEATHER`,
-      displayMessage: `🏈 ${file##*/} | Q${gameState.quarter}`,
+      displayMessage: `🏈 MASSIVE WEATHER | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,

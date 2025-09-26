@@ -72,7 +72,7 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_red_zone_opportunity_${gameState.down}_${gameState.yardsToGo}_${gameState.fieldPosition}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | RED ZONE OPPORTUNITY`,
-      displayMessage: `🏈 ${file##*/} | Q${gameState.quarter}`,
+      displayMessage: `🏈 RED ZONE OPPORTUNITY | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,
