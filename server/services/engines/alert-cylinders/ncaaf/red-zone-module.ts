@@ -50,19 +50,6 @@ export default class RedZoneModule extends BaseAlertModule {
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | RED ZONE`,
       displayMessage: `🏈 RED ZONE | Q${gameState.quarter} • ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo}`,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          down: gameState.down,
-          yardsToGo: gameState.yardsToGo,
-          fieldPosition: gameState.fieldPosition,
-          quarter: gameState.quarter,
-          timeRemaining: gameState.timeRemaining,
-          probability
-        },
-        riskReward: {
-          probability: probability
-        }
-      }).primary,
       context: {
         gameId: gameState.gameId,
         sport: gameState.sport,
