@@ -81,10 +81,17 @@ if (!(globalThis as any).__v3_alert_system_bootstrapped__) {
       await calendarSyncService.start();
       console.log("🔍 DEBUG: CalendarSyncService started");
 
+      // Initialize MigrationAdapter to connect user-selected games to polling
+      console.log("📋 Initializing MigrationAdapter for user game monitoring");
+      const { migrationAdapter } = await import('./services/migration-adapter');
+      migrationAdapter.initialize(calendarSyncService, gameStateManager);
+      console.log("✅ MigrationAdapter connected - user-selected games will now be polled");
+
       // Store global references
       (global as any).calendarSyncService = calendarSyncService;
       (global as any).gameStateManager = gameStateManager;
       (global as any).engineLifecycleManager = engineLifecycleManager;
+      (global as any).migrationAdapter = migrationAdapter;
       
       console.log("✅ V3 ALERT SYSTEM: COMPLETE PIPELINE ACTIVE");
       console.log("📋 V3: CalendarSyncService → GameStateManager → EngineLifecycleManager → Alert Generation ✅");
