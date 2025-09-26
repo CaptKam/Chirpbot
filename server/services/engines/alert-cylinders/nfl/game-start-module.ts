@@ -1,5 +1,4 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class GameStartModule extends BaseAlertModule {
   alertType = 'NFL_GAME_START';
