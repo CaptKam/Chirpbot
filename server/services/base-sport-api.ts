@@ -347,7 +347,7 @@ export abstract class BaseSportApi {
       return enhancedData;
     } catch (error) {
       console.error(`❌ Error fetching enhanced ${this.config.sportTag} data for game ${gameId}:`, error);
-      return this.getCached(cacheKey) || { error: true, message: error.message };
+      return this.getCached(cacheKey) || { error: true, message: error instanceof Error ? error.message : String(error) };
     }
   }
 

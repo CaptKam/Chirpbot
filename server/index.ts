@@ -61,7 +61,7 @@ if (!(globalThis as any).__v3_alert_system_bootstrapped__) {
 
       // Initialize GameStateManager with EngineLifecycleManager
       console.log("🎮 Initializing GameStateManager with EngineLifecycleManager");
-      const gameStateManager = new GameStateManager(engineLifecycleManager);
+      const gameStateManager = new GameStateManager();
       await gameStateManager.start();
       console.log("✅ GameStateManager started with alert generation enabled");
 

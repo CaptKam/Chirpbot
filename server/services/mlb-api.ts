@@ -125,7 +125,7 @@ export class MLBApiService extends BaseSportApi {
     // Extract play-by-play data
     const lastPlay = this.extractLastPlay(liveData);
     const lastPitch = this.extractLastPitch(liveData);
-    const pitchCount = (currentPlay?.playEvents || []).filter(e => e?.isPitch || e?.details?.isPitch).length;
+    const pitchCount = (currentPlay?.playEvents || []).filter((e: any) => e?.isPitch || e?.details?.isPitch).length;
 
     console.log(`🔍 Live data for game ${gameId}:`, {
       runners, balls, strikes, outs, inning, isTopInning, homeScore, awayScore, currentBatter, currentPitcher
