@@ -94,6 +94,9 @@ export interface UnifiedAIResponse {
   aiProcessingTime: number;
   confidence: number;
   sportSpecificData: any;
+  enhancedContext?: string[];
+  tags?: string[];
+  analysis?: string;
 }
 
 // 🛡️ SECURITY: Strict schema validation for AI responses
@@ -119,7 +122,10 @@ const AIResponseSchema = z.object({
   }).optional(),
   aiProcessingTime: z.number(),
   confidence: z.number().min(0).max(100),
-  sportSpecificData: z.any()
+  sportSpecificData: z.any(),
+  enhancedContext: z.array(z.string().max(200)).max(5).optional(),
+  tags: z.array(z.string().max(50)).max(10).optional(),
+  analysis: z.string().max(1000).optional()
 });
 
 interface AIJob {
@@ -645,6 +651,33 @@ export class UnifiedAIProcessor {
       
       // Sport-specific metrics
       sportMetrics: this.performanceMetrics.sportMetrics
+    };
+  }
+
+  // Get health status for monitoring (missing method fix)
+  getHealthStatus() {
+    const queueStatus = this.performanceMetrics.queuedJobs + this.performanceMetrics.processingJobs;
+    const successRate = this.performanceMetrics.totalRequests > 0 
+      ? (this.performanceMetrics.successfulEnhancements / this.performanceMetrics.totalRequests) * 100 
+      : 100;
+    
+    const status = this.configured ? 
+      (successRate > 80 ? 'healthy' : successRate > 60 ? 'degraded' : 'unhealthy') :
+      'disabled';
+
+    return {
+      status,
+      configured: this.configured,
+      queuedJobs: this.performanceMetrics.queuedJobs,
+      processingJobs: this.performanceMetrics.processingJobs,
+      totalQueue: queueStatus,
+      successRate: Math.round(successRate),
+      lastActivity: new Date().toISOString(),
+      serviceHealth: {
+        openAI: this.configured,
+        queue: queueStatus < 100, // healthy if queue is manageable
+        performance: successRate > 60
+      }
     };
   }
 
