@@ -72,9 +72,10 @@ if (!(globalThis as any).__v3_alert_system_bootstrapped__) {
         enableMetrics: true
       });
       
-      // Connect CalendarSyncService to GameStateManager
+      // Connect CalendarSyncService to GameStateManager (both directions)
       console.log("🔗 Connecting CalendarSyncService to GameStateManager");
       calendarSyncService.setGameStateManager(gameStateManager);
+      gameStateManager.setCalendarSyncService(calendarSyncService);
       
       console.log("🔍 DEBUG: Starting CalendarSyncService");
       await calendarSyncService.start();
