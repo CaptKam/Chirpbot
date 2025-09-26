@@ -812,7 +812,7 @@ export class UnifiedAIProcessor {
         confidence: aiResponse.confidence,
         sportSpecificData: aiResponse.sportSpecificData,
         enhancedContext: [
-          ...enhancedAlert.context,
+          ...(Array.isArray(enhancedAlert.context) ? enhancedAlert.context : []),
           ...(aiResponse.enhancedContext || []),
         ],
         tags: aiResponse.tags,

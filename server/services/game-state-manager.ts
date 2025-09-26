@@ -643,7 +643,7 @@ export class GameStateManager {
 
   // === PUBLIC FORCE EVALUATION ===
 
-  async forceEvaluate(gameId: string, sport?: string): Promise<void> {
+  async forceEvaluate(gameId: string, sport?: string, providedGameData?: any): Promise<void> {
     const gameInfo = this.gameStates.get(gameId);
     if (!gameInfo) {
       console.log(`⚠️ GameStateManager: Game ${gameId} not found for force evaluation`);
@@ -653,12 +653,14 @@ export class GameStateManager {
     try {
       console.log(`🔄 GameStateManager: Force evaluating game ${gameId}`);
 
-      // Fetch fresh game data
-      if (!this.calendarSync) {
-        throw new Error('Calendar sync service not configured');
+      // Use provided data if available, otherwise fetch fresh data
+      let newGameData = providedGameData;
+      if (!newGameData) {
+        if (!this.calendarSync) {
+          throw new Error('Calendar sync service not configured');
+        }
+        newGameData = await this.calendarSync.fetchGameData(gameId, gameInfo.sport || sport || 'UNKNOWN');
       }
-
-      const newGameData = await this.calendarSync.fetchGameData(gameId, gameInfo.sport || sport || 'UNKNOWN');
 
       // Process state transition
       const transition = await this.processStateTransition(gameInfo, newGameData);

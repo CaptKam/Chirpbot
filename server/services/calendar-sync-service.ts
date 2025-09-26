@@ -514,8 +514,8 @@ export class CalendarSyncService implements ICalendarSyncService {
             const existingGameState = this.gameStateManager.getGameState(gameId);
             if (existingGameState) {
               // Game exists - force evaluate to process the state change
-              console.log(`🔄 Force evaluating GameStateManager for game ${gameId}`);
-              await this.gameStateManager.forceEvaluate(gameId);
+              console.log(`🔄 Force evaluating GameStateManager for game ${gameId} (using cached data)`);
+              await this.gameStateManager.forceEvaluate(gameId, gameData.sport, gameData);
             } else {
               // Add new game to GameStateManager for monitoring
               console.log(`➕ Adding game ${gameId} to GameStateManager`);
@@ -548,10 +548,10 @@ export class CalendarSyncService implements ICalendarSyncService {
             // Add live game that wasn't tracked before
             console.log(`📅 Calendar Sync: Adopting existing live game ${gameId}`);
             await this.gameStateManager.addGame(gameData, []);
-            await this.gameStateManager.forceEvaluate(gameId);
+            await this.gameStateManager.forceEvaluate(gameId, gameData.sport, gameData);
           } else {
             // Force evaluate existing live game to ensure engines are running
-            await this.gameStateManager.forceEvaluate(gameId);
+            await this.gameStateManager.forceEvaluate(gameId, gameData.sport, gameData);
           }
         } catch (error) {
           console.error(`📅 Calendar Sync: Error handling live game ${gameId}:`, error);
@@ -750,18 +750,18 @@ export class CalendarSyncService implements ICalendarSyncService {
 
 // === SINGLETON INSTANCE ===
 
-let calendarSyncInstance: CalendarSyncService | null = null;
+// Singleton instance managed by static getInstance() method
 
 export function getCalendarSyncService(config?: Partial<CalendarSyncConfig>): CalendarSyncService {
-  if (!calendarSyncInstance) {
-    calendarSyncInstance = new CalendarSyncService(config);
-  }
-  return calendarSyncInstance;
+  return CalendarSyncService.getInstance(config);
 }
 
 export function resetCalendarSyncService(): void {
-  if (calendarSyncInstance) {
-    calendarSyncInstance.stop();
-    calendarSyncInstance = null;
+  const instance = CalendarSyncService.getInstance();
+  if (instance) {
+    instance.stop();
+    // Reset the global singleton
+    const globalSymbols = globalThis as any;
+    delete globalSymbols[Symbol.for('calendarSyncService')];
   }
 }

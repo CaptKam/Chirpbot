@@ -672,7 +672,7 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
         console.log(`🔧 ${sport} engine instance missing - creating engine instance...`);
         
         // Create engine instance using the same logic as activateEngine
-        const EngineClass = this.sportEngineClasses[sport];
+        const EngineClass = this.sportEngineClasses[sport as keyof typeof this.sportEngineClasses];
         if (!EngineClass) {
           console.error(`❌ No engine class found for ${sport}`);
           return false;
@@ -683,7 +683,7 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
       }
 
       // Trigger engine re-initialization
-      await engine.instance.initializeUserAlertModules(enabledAlerts);
+      await engine.instance?.initializeUserAlertModules(enabledAlerts);
       console.log(`🎯 Successfully re-initialized ${sport} engine with ${enabledAlerts.length} modules`);
       
       return true;

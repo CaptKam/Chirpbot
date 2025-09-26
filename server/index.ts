@@ -432,21 +432,9 @@ async function startServer() {
       console.log(`📋 DATAINGESTIONSERVICE: BOOTSTRAP HIT - Version 3.1.2`);
       console.log(`📋 DATAINGESTIONSERVICE: Starting immediate initialization in guaranteed execution path`);
 
-      // Start alert monitoring after server is ready
-      setTimeout(async () => {
-        try {
-          console.log('🔄 Starting alert monitoring system...');
-          const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
-          const generator = new UnifiedAlertGenerator({ mode: 'production' });
-          await generator.startMonitoring();
-
-          // Run initial check
-          const alertCount = await generator.generateLiveGameAlerts();
-          console.log(`✅ Alert monitoring started. Generated ${alertCount} initial alerts.`);
-        } catch (error) {
-          console.error('❌ Failed to start alert monitoring:', error);
-        }
-      }, 5000); // Wait 5 seconds for server to fully initialize
+      // ✅ V3: UnifiedAlertGenerator disabled - CalendarSyncService is now the sole data ingestion system
+      // Alert generation is handled by CalendarSyncService → GameStateManager → Engines flow
+      console.log('📋 V3: Using CalendarSyncService as single data ingestion system (UnifiedAlertGenerator disabled)');
 
 
       // Start Weather-on-Live service after server is ready
