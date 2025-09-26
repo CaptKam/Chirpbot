@@ -21,6 +21,7 @@ import { NCAAFApiService } from './ncaaf-api';
 import { WNBAApiService } from './wnba-api';
 import { CFLApiService } from './cfl-api';
 import { NBAApiService } from './nba-api';
+import { gameMonitoringCleanup } from './game-monitoring-cleanup';
 // WebSocket import removed - using HTTP polling architecture
 
 // === CORE INTERFACES ===
@@ -202,6 +203,10 @@ export class CalendarSyncService implements ICalendarSyncService {
 
     console.log('📅 Calendar Sync: Starting lightweight calendar synchronization (singleton)...');
     this.isRunning = true;
+
+    // Initialize and connect game monitoring cleanup service
+    gameMonitoringCleanup.setCalendarSyncService(this);
+    await gameMonitoringCleanup.start();
     this.startTime = Date.now();
 
     // Start polling loop
@@ -223,6 +228,9 @@ export class CalendarSyncService implements ICalendarSyncService {
 
     console.log('📅 Calendar Sync: Stopping service...');
     this.isRunning = false;
+
+    // Stop game monitoring cleanup service
+    gameMonitoringCleanup.stop();
 
     // Clear timers
     if (this.pollTimer) {
@@ -676,6 +684,22 @@ export class CalendarSyncService implements ICalendarSyncService {
     if (removedCount > 0) {
       console.log(`📅 Calendar Sync: Cleaned up ${removedCount} old games`);
       this.metrics.gameCount = this.getTotalGameCount();
+      
+      // Trigger game monitoring cleanup when final games are detected
+      this.triggerMonitoringCleanup();
+    }
+  }
+
+  private async triggerMonitoringCleanup(): Promise<void> {
+    try {
+      console.log('🧹 Calendar Sync: Triggering monitoring cleanup for final games...');
+      const result = await gameMonitoringCleanup.performCleanup();
+      
+      if (result.removedGames > 0) {
+        console.log(`✅ Calendar Sync: Monitoring cleanup completed - removed ${result.removedGames} final games from ${result.cleanedUsers} user monitoring entries`);
+      }
+    } catch (error) {
+      console.error('❌ Calendar Sync: Error triggering monitoring cleanup:', error);
     }
   }
 

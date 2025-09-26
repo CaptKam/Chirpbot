@@ -1992,6 +1992,53 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // === GAME MONITORING CLEANUP ROUTES ===
+  
+  // Admin: Check game monitoring cleanup status
+  app.get('/api/admin/game-monitoring-cleanup/status', requireAdminAuth, async (req, res) => {
+    try {
+      const { gameMonitoringCleanup } = await import('./services/game-monitoring-cleanup');
+      const status = gameMonitoringCleanup.getStatus();
+      
+      // Get current monitored games count
+      const monitoredGames = await storage.getMonitoredGamesForCleanup();
+      const totalUsers = [...new Set(monitoredGames.map(g => g.gameId))].length;
+      
+      res.json({
+        ...status,
+        monitoredGames: {
+          totalGames: monitoredGames.length,
+          totalUsers: monitoredGames.reduce((sum, game) => sum + (game.userCount || 0), 0),
+          gamesByUser: monitoredGames.map(g => ({
+            gameId: g.gameId,
+            sport: g.sport,
+            userCount: g.userCount
+          }))
+        }
+      });
+    } catch (error) {
+      console.error('Error getting cleanup status:', error);
+      res.status(500).json({ error: 'Failed to get cleanup status' });
+    }
+  });
+
+  // Admin: Manually trigger game monitoring cleanup
+  app.post('/api/admin/game-monitoring-cleanup/trigger', requireAdminAuth, validateCSRF, async (req, res) => {
+    try {
+      const { gameMonitoringCleanup } = await import('./services/game-monitoring-cleanup');
+      const result = await gameMonitoringCleanup.triggerManualCleanup();
+      
+      res.json({
+        success: true,
+        message: `Cleanup completed - removed ${result.removedGames} final games from ${result.cleanedUsers} user monitoring entries`,
+        ...result
+      });
+    } catch (error) {
+      console.error('Error triggering manual cleanup:', error);
+      res.status(500).json({ error: 'Failed to trigger cleanup' });
+    }
+  });
+
 
   app.get('/api/admin/users', requireAdminAuth, async (req, res) => {
     try {

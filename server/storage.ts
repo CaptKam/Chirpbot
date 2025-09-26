@@ -1002,6 +1002,36 @@ export const storage = {
       console.error(`Error getting users monitoring game ${gameId}:`, error);
       return [];
     }
+  },
+
+  // Remove all monitoring for a specific game (when game becomes final)
+  async removeGameFromAllMonitoring(gameId: string) {
+    try {
+      const result = await db.delete(userMonitoredTeams)
+        .where(eq(userMonitoredTeams.gameId, gameId))
+        .returning();
+      return result.length;
+    } catch (error) {
+      console.error(`Error removing game ${gameId} from all monitoring:`, error);
+      return 0;
+    }
+  },
+
+  // Get all monitored games with their current status for cleanup
+  async getMonitoredGamesForCleanup() {
+    try {
+      const result = await db.select({
+        gameId: userMonitoredTeams.gameId,
+        sport: userMonitoredTeams.sport,
+        userCount: count(userMonitoredTeams.userId)
+      })
+      .from(userMonitoredTeams)
+      .groupBy(userMonitoredTeams.gameId, userMonitoredTeams.sport);
+      return result;
+    } catch (error) {
+      console.error('Error getting monitored games for cleanup:', error);
+      return [];
+    }
   }
 };
 
