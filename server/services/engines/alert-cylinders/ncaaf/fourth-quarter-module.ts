@@ -42,7 +42,7 @@ export default class FourthQuarterModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_fourth_quarter_start`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | FOURTH QUARTER`,
-      displayMessage: `🏈 NCAAF ${file##*/} | Q${gameState.quarter}`,
+      displayMessage: `🏈 NCAAF FOURTH QUARTER | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,

@@ -50,7 +50,7 @@ export default class GameStartModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_game_start`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | GAME START`,
-      displayMessage: `🏈 NCAAF ${file##*/} | Q${gameState.quarter}`,
+      displayMessage: `🏈 NCAAF GAME START | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,

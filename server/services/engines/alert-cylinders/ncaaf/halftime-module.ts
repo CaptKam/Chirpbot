@@ -86,7 +86,7 @@ export default class HalftimeModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_halftime`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | HALFTIME`,
-      displayMessage: `🏈 NCAAF ${file##*/} | Q${gameState.quarter}`,
+      displayMessage: `🏈 NCAAF HALFTIME | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,

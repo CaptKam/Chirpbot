@@ -58,7 +58,7 @@ export default class UpsetOpportunityModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_upset_opportunity_${gameState.quarter}_${this.getTimeKey(gameState.timeRemaining)}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | UPSET OPPORTUNITY`,
-      displayMessage: `🏈 NCAAF ${file##*/} | Q${gameState.quarter}`,
+      displayMessage: `🏈 NCAAF UPSET OPPORTUNITY | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,

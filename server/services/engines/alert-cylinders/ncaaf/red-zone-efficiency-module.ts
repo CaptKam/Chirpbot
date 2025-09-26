@@ -59,7 +59,7 @@ export default class RedZoneEfficiencyModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_red_zone_efficiency_${gameState.down}_${gameState.yardsToGo}_${gameState.fieldPosition}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | RED ZONE EFFICIENCY`,
-      displayMessage: `🏈 NCAAF ${file##*/} | Q${gameState.quarter}`,
+      displayMessage: `🏈 NCAAF RED ZONE EFFICIENCY | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,

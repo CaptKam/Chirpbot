@@ -19,7 +19,7 @@ export default class NCAAFSecondHalfKickoffModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_ncaaf_second_half_kickoff`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | SECOND HALF KICKOFF`,
-      displayMessage: `🏈 NCAAF ${file##*/} | Q${gameState.quarter}`,
+      displayMessage: `🏈 NCAAF SECOND HALF KICKOFF | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,

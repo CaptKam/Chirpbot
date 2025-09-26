@@ -53,7 +53,7 @@ export default class CloseGameModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_close_game_q${gameState.quarter}_${Date.now()}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | CLOSE GAME`,
-      displayMessage: `🏈 NCAAF ${file##*/} | Q${gameState.quarter}`,
+      displayMessage: `🏈 NCAAF CLOSE GAME | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,

@@ -66,7 +66,7 @@ export default class ScoringPlayModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_scoring_${homeScore}_${awayScore}_${Date.now()}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | SCORING PLAY`,
-      displayMessage: `🏈 NCAAF ${file##*/} | Q${gameState.quarter}`,
+      displayMessage: `🏈 NCAAF SCORING PLAY | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,

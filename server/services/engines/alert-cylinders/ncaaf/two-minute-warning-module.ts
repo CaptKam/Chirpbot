@@ -41,7 +41,7 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}_${timeSeconds}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | TWO MINUTE WARNING`,
-      displayMessage: `🏈 NCAAF ${file##*/} | Q${gameState.quarter}`,
+      displayMessage: `🏈 NCAAF TWO MINUTE WARNING | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,
