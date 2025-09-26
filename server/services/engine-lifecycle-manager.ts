@@ -128,6 +128,17 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
     this.startMonitoring();
     
     console.log('🔧 EngineLifecycleManager initialized with weather-on-live architecture');
+    
+    // 🚨 ONE-TIME RECOVERY: Immediate recovery for stuck football engines
+    setTimeout(() => {
+      console.log('🚨 EMERGENCY: Starting one-time recovery for stuck football engines...');
+      this.reinitializeModules('NFL').then(result => {
+        console.log(`🎯 NFL recovery result: ${result}`);
+      });
+      this.reinitializeModules('NCAAF').then(result => {
+        console.log(`🎯 NCAAF recovery result: ${result}`);
+      });
+    }, 5000); // 5 second delay
   }
   
   // === INITIALIZATION ===
@@ -622,6 +633,66 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
     }
   }
   
+  // === RECOVERY METHODS ===
+  
+  /**
+   * 🚨 RECOVERY: Re-initialize alert modules for engines stuck with 0 modules
+   * Used to recover from failed startup initialization
+   */
+  async reinitializeModules(sport: string): Promise<boolean> {
+    try {
+      console.log(`🔄 RECOVERY: Re-initializing modules for ${sport} engine...`);
+      
+      const engine = this.engines.get(sport);
+      if (!engine) {
+        console.error(`❌ No engine found for sport ${sport}`);
+        return false;
+      }
+
+      // Get available alert types from filesystem
+      const availableAlerts = await this.getAllAlertTypes(sport.toUpperCase());
+      console.log(`🔍 Found ${availableAlerts.length} available alert types for ${sport}: [${availableAlerts.slice(0, 3).join(', ')}...]`);
+      
+      if (availableAlerts.length === 0) {
+        console.warn(`⚠️ No alert types found for ${sport} - check cylinder directory`);
+        return false;
+      }
+
+      // Get enabled alert types using corrected settings lookup
+      const enabledAlerts = await this.getEnabledAlerts(sport);
+      console.log(`✅ ${enabledAlerts.length} alerts enabled for ${sport}: [${enabledAlerts.slice(0, 3).join(', ')}...]`);
+      
+      if (enabledAlerts.length === 0) {
+        console.warn(`⚠️ No alerts enabled for ${sport} - check global settings`);
+        return false;
+      }
+
+      // 🔧 CRITICAL FIX: Ensure engine instance exists before initializing modules
+      if (!engine.instance) {
+        console.log(`🔧 ${sport} engine instance missing - creating engine instance...`);
+        
+        // Create engine instance using the same logic as activateEngine
+        const EngineClass = this.sportEngineClasses[sport];
+        if (!EngineClass) {
+          console.error(`❌ No engine class found for ${sport}`);
+          return false;
+        }
+        
+        engine.instance = new EngineClass();
+        console.log(`✅ ${sport} engine instance created`);
+      }
+
+      // Trigger engine re-initialization
+      await engine.instance.initializeUserAlertModules(enabledAlerts);
+      console.log(`🎯 Successfully re-initialized ${sport} engine with ${enabledAlerts.length} modules`);
+      
+      return true;
+    } catch (error) {
+      console.error(`❌ Failed to re-initialize ${sport} engine:`, error);
+      return false;
+    }
+  }
+
   // === UTILITY METHODS ===
   
   private async getEnabledAlerts(sport: string): Promise<string[]> {
@@ -640,7 +711,7 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
       }
       
       for (const alertType of allAlerts) {
-        if (await unifiedSettings.isAlertEnabled(sport.toLowerCase(), alertType)) {
+        if (await unifiedSettings.isAlertEnabled(sportUpper, alertType)) {
           enabledAlerts.push(alertType);
         }
       }
@@ -653,7 +724,7 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
         unifiedSettings.invalidateCache(sport);
         // Single retry attempt
         for (const alertType of allAlerts.slice(0, 1)) {
-          const retryResult = await unifiedSettings.isAlertEnabled(sport.toLowerCase(), alertType);
+          const retryResult = await unifiedSettings.isAlertEnabled(sportUpper, alertType);
           console.log(`🔄 ${sport} Retry: ${alertType} = ${retryResult}`);
           break;
         }
