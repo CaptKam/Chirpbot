@@ -1,5 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
+
 
 export default class ComebackPotentialModule extends BaseAlertModule {
   alertType = 'NCAAF_COMEBACK_POTENTIAL';
@@ -63,28 +63,8 @@ export default class ComebackPotentialModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_comeback_potential_${gameState.quarter}_${this.getTimeKey(gameState.timeRemaining)}_${deficitInfo.deficit}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | COMEBACK POTENTIAL`,
-      displayMessage: cleanAlertFormatter.format({
-        type: this.alertType,
-        sport: this.sport,
-        gameState: gameState,
-        context: {
-          gameId: gameState.gameId,
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          quarter: gameState.quarter,
-          timeRemaining: gameState.timeRemaining,
-          trailingTeam,
-          leadingTeam: this.getLeadingTeam(gameState),
-          deficit: deficitInfo.deficit,
-          comebackProbability: Math.round(comebackProbability),
-          situationDescription
-        },
-        riskReward: {
-          probability: comebackProbability
-        }
-      }).primary,
+      displayMessage: `🏈 NCAAF ${file##*/} | Q${gameState.quarter}`,
+
       context: {
         gameId: gameState.gameId,
         sport: this.sport,

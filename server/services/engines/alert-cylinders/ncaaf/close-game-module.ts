@@ -1,5 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
+
 
 export default class CloseGameModule extends BaseAlertModule {
   alertType = 'NCAAF_CLOSE_GAME';
@@ -53,26 +53,8 @@ export default class CloseGameModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_close_game_q${gameState.quarter}_${Date.now()}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | CLOSE GAME`,
-      displayMessage: cleanAlertFormatter.format({
-        type: this.alertType,
-        sport: this.sport,
-        gameState: gameState,
-        context: {
-          gameId: gameState.gameId,
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          quarter: gameState.quarter,
-          timeRemaining: gameState.timeRemaining,
-          scoreDifference: scoreDiff,
-          leadingTeam,
-          isTied: scoreDiff === 0
-        },
-        riskReward: {
-          probability: scoreDiff === 0 ? 95 : 90 - scoreDiff
-        }
-      }).primary,
+      displayMessage: `🏈 NCAAF ${file##*/} | Q${gameState.quarter}`,
+
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

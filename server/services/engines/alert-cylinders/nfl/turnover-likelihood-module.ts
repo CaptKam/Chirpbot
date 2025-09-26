@@ -1,5 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
+
 
 export default class TurnoverLikelihoodModule extends BaseAlertModule {
   alertType = 'NFL_TURNOVER_LIKELIHOOD';
@@ -63,29 +63,8 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
       alertKey,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | TURNOVER LIKELIHOOD`,
-      displayMessage: cleanAlertFormatter.format({
-        type: this.alertType,
-        sport: this.sport,
-        gameState: gameState,
-        context: {
-          gameId: gameState.gameId,
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          possessionTeam,
-          down: gameState.down,
-          yardsToGo: gameState.yardsToGo,
-          fieldPosition: gameState.fieldPosition,
-          quarter: gameState.quarter,
-          timeRemaining: gameState.timeRemaining,
-          turnoverRisk: Math.round(turnoverRisk),
-          primaryRiskFactor
-        },
-        riskReward: {
-          probability: turnoverRisk
-        }
-      }).primary,
+      displayMessage: `🏈 ${file##*/} | Q${gameState.quarter}`,
+
       context: {
         gameId: gameState.gameId,
         sport: this.sport,

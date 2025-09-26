@@ -1,6 +1,6 @@
 
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
+
 
 export default class GameStartModule extends BaseAlertModule {
   alertType = 'NCAAF_GAME_START';
@@ -50,23 +50,8 @@ export default class GameStartModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_game_start`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | GAME START`,
-      displayMessage: cleanAlertFormatter.format({
-        type: this.alertType,
-        sport: this.sport,
-        gameState: gameState,
-        context: {
-          gameId: gameState.gameId,
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          quarter: gameState.quarter,
-          timeRemaining: gameState.timeRemaining
-        },
-        riskReward: {
-          probability: 100
-        }
-      }).primary,
+      displayMessage: `🏈 NCAAF ${file##*/} | Q${gameState.quarter}`,
+
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

@@ -1,5 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
+
 
 export default class FourthDownModule extends BaseAlertModule {
   alertType = 'NFL_FOURTH_DOWN';
@@ -23,27 +23,8 @@ export default class FourthDownModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_fourth_down_${yardsToGo}_${fieldPosition}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | FOURTH DOWN`,
-      displayMessage: cleanAlertFormatter.format({
-        type: this.alertType,
-        sport: this.sport,
-        gameState: gameState,
-        context: {
-          gameId: gameState.gameId,
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          down: gameState.down,
-          yardsToGo: gameState.yardsToGo,
-          fieldPosition: gameState.fieldPosition,
-          quarter: gameState.quarter,
-          timeRemaining: gameState.timeRemaining,
-          isFourthDown: true
-        },
-        riskReward: {
-          probability: this.getConversionProbability(gameState)
-        }
-      }).primary,
+      displayMessage: `🏈 ${file##*/} | Q${gameState.quarter}`,
+
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

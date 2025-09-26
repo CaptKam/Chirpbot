@@ -1,6 +1,5 @@
 
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class RedZoneModule extends BaseAlertModule {
   alertType = 'NFL_RED_ZONE';
@@ -24,28 +23,7 @@ export default class RedZoneModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_NFL_RED_ZONE_${down}_${yardsToGo}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | RED ZONE`,
-      displayMessage: cleanAlertFormatter.format({
-        type: this.alertType,
-        sport: this.sport,
-        gameState: gameState,
-        context: {
-          gameId: gameState.gameId,
-          sport: gameState.sport,
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          down: gameState.down,
-          yardsToGo: gameState.yardsToGo,
-          fieldPosition: gameState.fieldPosition,
-          quarter: gameState.quarter,
-          timeRemaining: gameState.timeRemaining,
-          probability
-        },
-        riskReward: {
-          probability: probability
-        }
-      }).primary,
+      displayMessage: `🏈 RED ZONE | Q${gameState.quarter} • ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo}`,
       context: {
         gameId: gameState.gameId,
         sport: gameState.sport,
@@ -62,6 +40,17 @@ export default class RedZoneModule extends BaseAlertModule {
       },
       priority: probability > 70 ? 90 : 85
     };
+  }
+
+  private getOrdinalSuffix(num: number): string {
+    const remainder = num % 100;
+    if (remainder >= 11 && remainder <= 13) return 'th';
+    switch (num % 10) {
+      case 1: return 'st';
+      case 2: return 'nd';
+      case 3: return 'rd';
+      default: return 'th';
+    }
   }
 
   calculateProbability(gameState: GameState): number {
@@ -89,9 +78,4 @@ export default class RedZoneModule extends BaseAlertModule {
     return Math.min(Math.max(probability, 20), 95);
   }
 
-  private getOrdinalSuffix(num: number): string {
-    const suffixes = ['th', 'st', 'nd', 'rd'];
-    const remainder = num % 100;
-    return suffixes[(remainder - 20) % 10] || suffixes[remainder] || suffixes[0];
-  }
 }

@@ -1,5 +1,4 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
 
 export default class SecondHalfKickoffModule extends BaseAlertModule {
   alertType = 'NFL_SECOND_HALF_KICKOFF';
@@ -18,24 +17,7 @@ export default class SecondHalfKickoffModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_second_half_kickoff`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | SECOND HALF KICKOFF`,
-      displayMessage: cleanAlertFormatter.format({
-        type: this.alertType,
-        sport: this.sport,
-        gameState: gameState,
-        context: {
-          gameId: gameState.gameId,
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          quarter: gameState.quarter,
-          timeRemaining: gameState.timeRemaining,
-          isSecondHalf: true
-        },
-        riskReward: {
-          probability: 100
-        }
-      }).primary,
+      displayMessage: `🏈 SECOND HALF KICKOFF | Q${gameState.quarter} • ${gameState.timeRemaining}`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

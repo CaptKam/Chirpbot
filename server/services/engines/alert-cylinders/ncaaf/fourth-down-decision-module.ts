@@ -1,5 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
+
 
 export default class FourthDownDecisionModule extends BaseAlertModule {
   alertType = 'NCAAF_FOURTH_DOWN_DECISION';
@@ -62,30 +62,8 @@ export default class FourthDownDecisionModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_fourth_down_decision_${gameState.fieldPosition}_${gameState.yardsToGo}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | FOURTH DOWN DECISION`,
-      displayMessage: cleanAlertFormatter.format({
-        type: this.alertType,
-        sport: this.sport,
-        gameState: gameState,
-        context: {
-          gameId: gameState.gameId,
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          quarter: gameState.quarter,
-          timeRemaining: gameState.timeRemaining,
-          down: gameState.down,
-          yardsToGo: gameState.yardsToGo,
-          fieldPosition: gameState.fieldPosition,
-          possessionTeam,
-          goForItProbability: Math.round(goForItProbability),
-          recommendedAction,
-          situationDescription
-        },
-        riskReward: {
-          probability: goForItProbability
-        }
-      }).primary,
+      displayMessage: `🏈 NCAAF ${file##*/} | Q${gameState.quarter}`,
+
       context: {
         gameId: gameState.gameId,
         sport: this.sport,

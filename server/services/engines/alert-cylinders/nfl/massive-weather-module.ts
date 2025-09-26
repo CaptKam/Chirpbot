@@ -1,5 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
+
 
 export default class MassiveWeatherModule extends BaseAlertModule {
   alertType = 'NFL_MASSIVE_WEATHER';
@@ -102,29 +102,8 @@ export default class MassiveWeatherModule extends BaseAlertModule {
       alertKey,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | MASSIVE WEATHER`,
-      displayMessage: cleanAlertFormatter.format({
-        type: this.alertType,
-        sport: this.sport,
-        gameState: gameState,
-        context: {
-          gameId: gameState.gameId,
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          quarter: gameState.quarter,
-          timeRemaining: gameState.timeRemaining,
-          weatherCondition: current.condition,
-          weatherSeverity: current.severity,
-          gameImpact: impact,
-          temperature: currentWeather.temperature,
-          situationType: 'MASSIVE_WEATHER',
-          windSpeed: currentWeather.windSpeed
-        },
-        riskReward: {
-          probability: 85
-        }
-      }).primary,
+      displayMessage: `🏈 ${file##*/} | Q${gameState.quarter}`,
+
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

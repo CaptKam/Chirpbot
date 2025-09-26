@@ -1,6 +1,6 @@
 
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
+
 
 export default class RedZoneModule extends BaseAlertModule {
   alertType = 'NCAAF_RED_ZONE';
@@ -49,14 +49,7 @@ export default class RedZoneModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_NCAAF_RED_ZONE_${down}_${yardsToGo}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | RED ZONE`,
-      displayMessage: cleanAlertFormatter.format({
-        type: this.alertType,
-        sport: this.sport,
-        gameState: gameState,
-        context: {
-          gameId: gameState.gameId,
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
+      displayMessage: `🏈 RED ZONE | Q${gameState.quarter} • ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo}`,
           homeScore: gameState.homeScore,
           awayScore: gameState.awayScore,
           down: gameState.down,

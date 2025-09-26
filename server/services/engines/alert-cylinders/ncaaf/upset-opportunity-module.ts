@@ -1,5 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
+
 
 export default class UpsetOpportunityModule extends BaseAlertModule {
   alertType = 'NCAAF_UPSET_OPPORTUNITY';
@@ -58,28 +58,8 @@ export default class UpsetOpportunityModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_upset_opportunity_${gameState.quarter}_${this.getTimeKey(gameState.timeRemaining)}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | UPSET OPPORTUNITY`,
-      displayMessage: cleanAlertFormatter.format({
-        type: this.alertType,
-        sport: this.sport,
-        gameState: gameState,
-        context: {
-          gameId: gameState.gameId,
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          quarter: gameState.quarter,
-          timeRemaining: gameState.timeRemaining,
-          underdog,
-          favorite,
-          upsetProbability: Math.round(upsetProbability),
-          upsetMagnitude,
-          situationDescription
-        },
-        riskReward: {
-          probability: upsetProbability
-        }
-      }).primary,
+      displayMessage: `🏈 NCAAF ${file##*/} | Q${gameState.quarter}`,
+
       context: {
         gameId: gameState.gameId,
         sport: this.sport,

@@ -1,5 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
+
 
 type NormStatus = 'scheduled' | 'live' | 'halftime' | 'final' | 'other';
 
@@ -86,24 +86,8 @@ export default class HalftimeModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_halftime`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | HALFTIME`,
-      displayMessage: cleanAlertFormatter.format({
-        type: this.alertType,
-        sport: this.sport,
-        gameState,
-        context: {
-          gameId: gameState.gameId,
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore,
-          awayScore,
-          scoreDifference: scoreDiff,
-          isCloseGame: isClose,
-        },
-        riskReward: {
-          // This is a non-probabilistic "state" alert; keep a constant UI bar unless you wire in live lines
-          probability: 80,
-        },
-      }).primary,
+      displayMessage: `🏈 NCAAF ${file##*/} | Q${gameState.quarter}`,
+
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,

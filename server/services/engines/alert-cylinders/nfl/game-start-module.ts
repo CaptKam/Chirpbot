@@ -113,20 +113,7 @@ export default class GameStartModule extends BaseAlertModule {
       type: this.alertType,
       priority: 75,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | GAME START`,
-      displayMessage: cleanAlertFormatter.format({
-        type: this.alertType,
-        sport: this.sport,
-        gameState: gameState,
-        context: {
-          gameId: gameState.gameId,
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          quarter: gameState.quarter
-        },
-        riskReward: {
-          probability: 100
-        }
-      }).primary,
+      displayMessage: `🏈 GAME START | Q${gameState.quarter} • ${gameState.awayTeam} @ ${gameState.homeTeam}`,
       context
     };
   }

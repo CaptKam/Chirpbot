@@ -1,5 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { cleanAlertFormatter } from '../../../clean-alert-formatter';
+
 
 export default class FourthQuarterModule extends BaseAlertModule {
   alertType = 'NCAAF_FOURTH_QUARTER';
@@ -42,25 +42,8 @@ export default class FourthQuarterModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_fourth_quarter_start`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | FOURTH QUARTER`,
-      displayMessage: cleanAlertFormatter.format({
-        type: this.alertType,
-        sport: this.sport,
-        gameState: gameState,
-        context: {
-          gameId: gameState.gameId,
-          homeTeam: gameState.homeTeam,
-          awayTeam: gameState.awayTeam,
-          homeScore: gameState.homeScore,
-          awayScore: gameState.awayScore,
-          quarter: 4,
-          timeRemaining: gameState.timeRemaining,
-          scoreDifference: scoreDiff,
-          isCloseGame
-        },
-        riskReward: {
-          probability: isCloseGame ? 90 : 85
-        }
-      }).primary,
+      displayMessage: `🏈 NCAAF ${file##*/} | Q${gameState.quarter}`,
+
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
