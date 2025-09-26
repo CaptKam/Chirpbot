@@ -800,14 +800,21 @@ export class UnifiedAIProcessor {
       
       // Combine all enhancements into final result
       return {
+        sport: aiResponse.sport,
+        enhancedTitle: aiResponse.enhancedTitle,
         enhancedMessage: aiResponse.enhancedMessage,
-        enhancedContext: {
-          ...enhancedAlert.context,
-          ...aiResponse.enhancedContext,
-          unifiedEnhancement: true,
-          enhancementTypes: ['gambling', 'weather', 'ai']
-        },
+        contextualInsights: aiResponse.contextualInsights,
+        actionableRecommendation: aiResponse.actionableRecommendation,
+        urgencyLevel: aiResponse.urgencyLevel,
+        bettingContext: aiResponse.bettingContext,
+        gameProjection: aiResponse.gameProjection,
+        aiProcessingTime: aiResponse.aiProcessingTime,
         confidence: aiResponse.confidence,
+        sportSpecificData: aiResponse.sportSpecificData,
+        enhancedContext: [
+          ...enhancedAlert.context,
+          ...(aiResponse.enhancedContext || []),
+        ],
         tags: aiResponse.tags,
         analysis: aiResponse.analysis
       };
