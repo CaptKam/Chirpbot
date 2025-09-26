@@ -791,6 +791,9 @@ export class GameStateManager {
         }
       }
 
+      // DEBUG: Log game state for alert troubleshooting
+      console.log(`🔍 DEBUG: Game ${gameId} - currentState: ${gameInfo.currentState}, engineManager: ${!!this.engineManager}, isLive: ${gameInfo.currentState === RuntimeGameState.LIVE}`);
+      
       console.log(`✅ GameStateManager: Force evaluation complete for game ${gameId}`);
     } catch (error) {
       console.error(`❌ GameStateManager: Force evaluation failed for game ${gameId}:`, error);
