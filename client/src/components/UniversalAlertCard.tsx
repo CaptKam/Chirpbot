@@ -5,8 +5,6 @@ import { Clock, MapPin, TrendingUp, Users, Zap, Target, AlertTriangle, Wind, Clo
 import { format, parseISO } from 'date-fns';
 import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
 import { getSportTabColors } from '@shared/season-manager';
-import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/hooks/useAuth';
 // Removed getDisplayContent import - using simplified consistent rendering
 
 interface UniversalAlertProps {
@@ -37,7 +35,7 @@ interface UniversalAlertProps {
   hasComposerEnhancement?: boolean;
 }
 
-export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
+export function UniversalAlertCard({ alert, showEnhancements = false }: { alert: UniversalAlertProps; showEnhancements?: boolean }) {
   // Safe date parsing with fallback
   const formattedTime = (() => {
     try {
@@ -51,30 +49,12 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
     }
   })();
 
-  const isPriorityHigh = (alert.priority || 0) >= 80;
-  const isConfidenceHigh = (alert.confidence || 0) >= 75;
-  const { user, isAuthenticated } = useAuth();
-
   // Use simple, consistent content - eliminates environment-dependent rendering
   const displayContent = alert.message || 'Alert content unavailable';
   const isStructured = false; // Always use plain formatting for consistency
 
-  // Query user settings for gambling insights preference
-  const { data: userSettings } = useQuery({
-    queryKey: [`/api/user/${user?.id}/settings/gambling-insights`],
-    enabled: !!user?.id && isAuthenticated,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
-
-  // Determine alert urgency level
-  const getUrgencyLevel = () => {
-    if (alert.priority >= 90) return 'CRITICAL';
-    if (alert.priority >= 80) return 'HIGH';
-    if (alert.priority >= 60) return 'MEDIUM';
-    return 'LOW';
-  };
-
-  const urgencyLevel = getUrgencyLevel();
+  // Fixed urgency label to ensure consistent styling across environments
+  const urgencyLabel = 'ALERT';
 
   // Get sport-specific icon and color with static class mappings
   const getSportConfig = (sport: string) => {
@@ -172,8 +152,8 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
       normal: 'ring-1 ring-slate-500/40'
     };
 
-    const urgencyRing = urgencyLevel === 'CRITICAL' ? sportStyle.critical : sportStyle.normal;
-    return `${sportStyle.base} ${urgencyRing}`;
+    // Always use normal ring for consistent styling
+    return `${sportStyle.base} ${sportStyle.normal}`;
   };
 
   return (
@@ -190,7 +170,7 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
         className={`backdrop-blur-sm rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 border-0 ${getSportStyle()}`}
         data-testid={`universal-alert-card-${alert.id}`}
       >
-        <CardContent className="p-6">
+        <CardContent className="p-6 min-h-[220px]">
           {/* Primary Alert Header - Clean and Bold */}
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-3">
@@ -204,15 +184,10 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
                 <div className="flex items-center gap-2">
                   <Badge 
                     variant="outline"
-                    className={`text-xs font-bold ${
-                      urgencyLevel === 'CRITICAL' ? 'bg-red-500/20 text-red-300 border-red-500/40' :
-                      urgencyLevel === 'HIGH' ? 'bg-orange-500/20 text-orange-300 border-orange-500/40' :
-                      urgencyLevel === 'MEDIUM' ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40' :
-                      'bg-slate-500/20 text-slate-300 border-slate-500/40'
-                    }`}
+                    className="text-xs font-bold bg-slate-500/20 text-slate-300 border-slate-500/40"
                     data-testid={`urgency-badge-${alert.id}`}
                   >
-                    {urgencyLevel}
+                    {urgencyLabel}
                   </Badge>
                   <span className="text-xs text-slate-400" data-testid={`alert-timestamp-${alert.id}`}>{formattedTime}</span>
                 </div>
@@ -221,22 +196,20 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
           </div>
 
           {/* Game Matchup - Clean and Prominent */}
-          {alert.homeTeam && alert.awayTeam && (
-            <div className="mb-6">
-              <div className="flex items-center justify-between">
-                <div className="text-base font-bold text-slate-200" data-testid={`teams-${alert.id}`}>
-                  {alert.awayTeam} @ {alert.homeTeam}
-                </div>
-                {(alert.awayScore !== undefined && alert.homeScore !== undefined) && (
-                  <div className="flex items-center gap-2 text-2xl font-black text-slate-100" data-testid={`score-${alert.id}`}>
-                    <span>{alert.awayScore}</span>
-                    <span className="text-slate-500 text-lg">-</span>
-                    <span>{alert.homeScore}</span>
-                  </div>
-                )}
+          <div className="mb-6">
+            <div className="flex items-center justify-between">
+              <div className="text-base font-bold text-slate-200" data-testid={`teams-${alert.id}`}>
+                {(alert.awayTeam || "Unknown") + " @ " + (alert.homeTeam || "Unknown")}
               </div>
+              {showEnhancements && (alert.awayScore !== undefined && alert.homeScore !== undefined) && (
+                <div className="flex items-center gap-2 text-2xl font-black text-slate-100" data-testid={`score-${alert.id}`}>
+                  <span>{alert.awayScore}</span>
+                  <span className="text-slate-500 text-lg">-</span>
+                  <span>{alert.homeScore}</span>
+                </div>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Main Alert Content - Always Structured Format */}
           {displayContent && (
@@ -252,7 +225,7 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
           )}
 
           {/* Generative AI Enhanced Content */}
-        {alert.context?.generativeAI && (
+        {showEnhancements && alert.context?.generativeAI && (
           <div className="mt-3 p-3 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-purple-600 dark:text-purple-400">🤖</span>
@@ -298,7 +271,7 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
         )}
 
           {/* Game Context - Streamlined and Focused */}
-          {alert.context && (
+          {showEnhancements && alert.context && (
             <div className="mb-5">
               {/* MLB Context */}
               {alert.sport === 'MLB' && (
@@ -402,7 +375,7 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
               >
                 {alert.sport}
               </Badge>
-              {alert.gamblingInsights?.confidence && (
+              {showEnhancements && alert.gamblingInsights?.confidence && (
                 <span className="text-slate-300 font-medium">
                   {Math.round(alert.gamblingInsights.confidence * 100)}% Confidence
                 </span>
@@ -410,17 +383,15 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
             </div>
 
             <div className="flex items-center gap-3 text-xs">
-              {alert.priority != null && (
-                <span className={`font-bold ${
-                  alert.priority >= 80 ? 'text-orange-300' : 'text-slate-400'
-                }`} data-testid={`priority-${alert.id}`}>
+              {showEnhancements && alert.priority != null && (
+                <span className="font-bold text-slate-400" data-testid={`priority-${alert.id}`}>
                   P{alert.priority}
                 </span>
               )}
-              {alert.sentToTelegram && (
+              {showEnhancements && alert.sentToTelegram && (
                 <span className="text-blue-300">📱</span>
               )}
-              {alert.weather?.temperature && (
+              {showEnhancements && alert.weather?.temperature && (
                 <span className="text-slate-400">{alert.weather.temperature}°F</span>
               )}
             </div>
