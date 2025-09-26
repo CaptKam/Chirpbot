@@ -62,7 +62,7 @@ export default class ComebackPotentialModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_comeback_potential_${gameState.quarter}_${this.getTimeKey(gameState.timeRemaining)}_${deficitInfo.deficit}`,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | COMEBACK POTENTIAL`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${this.createDynamicMessage(gameState, deficitInfo, comebackProbability)}`,
       displayMessage: `🏈 NCAAF COMEBACK POTENTIAL | Q${gameState.quarter}`,
 
       context: {
@@ -530,6 +530,31 @@ export default class ComebackPotentialModule extends BaseAlertModule {
       return parseInt(cleanTime) || 0;
     } catch {
       return 0;
+    }
+  }
+
+  private createDynamicMessage(gameState: GameState, deficitInfo: any, comebackProbability: number): string {
+    const deficit = deficitInfo.deficit;
+    const timeStr = gameState.timeRemaining;
+    const quarter = gameState.quarter;
+    const trailingTeam = this.getTrailingTeam(gameState);
+    
+    // Format time display
+    const timeDisplay = timeStr === '0:00' ? 'Final seconds' : timeStr;
+    
+    // Create descriptive message based on situation
+    if (quarter === 4) {
+      if (comebackProbability >= 80) {
+        return `${deficit}-pt deficit, ${timeDisplay} left Q${quarter} - High comeback probability`;
+      } else if (comebackProbability >= 65) {
+        return `${deficit}-pt deficit, ${timeDisplay} left Q${quarter} - Strong comeback chance`;
+      } else {
+        return `${deficit}-pt deficit, ${timeDisplay} left Q${quarter} - Comeback opportunity`;
+      }
+    } else if (quarter === 3) {
+      return `${trailingTeam} trails by ${deficit}, Q${quarter} - Comeback building`;
+    } else {
+      return `${trailingTeam} trails by ${deficit} in Q${quarter} - Early comeback potential`;
     }
   }
 }

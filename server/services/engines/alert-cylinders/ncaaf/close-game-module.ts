@@ -52,7 +52,7 @@ export default class CloseGameModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_close_game_q${gameState.quarter}_${Date.now()}`,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | CLOSE GAME`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${this.createDynamicMessage(gameState, scoreDiff, leadingTeam)}`,
       displayMessage: `🏈 NCAAF CLOSE GAME | Q${gameState.quarter}`,
 
       context: {
@@ -77,5 +77,18 @@ export default class CloseGameModule extends BaseAlertModule {
     const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
     // Higher probability for closer games
     return 100 - (scoreDiff * 10);
+  }
+
+  private createDynamicMessage(gameState: GameState, scoreDiff: number, leadingTeam: string | null): string {
+    const quarter = gameState.quarter;
+    const timeRemaining = gameState.timeRemaining;
+    
+    if (scoreDiff === 0) {
+      return `Tied game in Q${quarter} - ${timeRemaining} remaining`;
+    } else if (scoreDiff <= 3) {
+      return `${leadingTeam} leads by ${scoreDiff}, Q${quarter} - ${timeRemaining} left`;
+    } else {
+      return `${scoreDiff}-point game in Q${quarter} - ${timeRemaining} remaining`;
+    }
   }
 }

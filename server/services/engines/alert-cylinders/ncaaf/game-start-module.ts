@@ -49,7 +49,7 @@ export default class GameStartModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_game_start`,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | GAME START`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${this.createDynamicMessage(gameState)}`,
       displayMessage: `🏈 NCAAF GAME START | Q${gameState.quarter}`,
 
       context: {
@@ -81,6 +81,17 @@ export default class GameStartModule extends BaseAlertModule {
       return parseInt(cleanTime) || 0;
     } catch (error) {
       return 0;
+    }
+  }
+
+  private createDynamicMessage(gameState: GameState): string {
+    const quarter = gameState.quarter;
+    const timeRemaining = gameState.timeRemaining;
+    
+    if (quarter === 1) {
+      return `Kickoff - Game begins Q${quarter}`;
+    } else {
+      return `Game underway - Q${quarter}, ${timeRemaining}`;
     }
   }
 }

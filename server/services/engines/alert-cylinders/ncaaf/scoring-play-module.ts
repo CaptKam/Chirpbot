@@ -65,7 +65,7 @@ export default class ScoringPlayModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_scoring_${homeScore}_${awayScore}_${Date.now()}`,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | SCORING PLAY`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${this.createDynamicMessage(gameState, scoringTeam, points)}`,
       displayMessage: `🏈 NCAAF SCORING PLAY | Q${gameState.quarter}`,
 
       context: {
@@ -90,5 +90,30 @@ export default class ScoringPlayModule extends BaseAlertModule {
   calculateProbability(gameState: GameState): number {
     if (!this.isTriggered(gameState)) return 0;
     return 100; // Certain when score changes
+  }
+
+  private createDynamicMessage(gameState: GameState, scoringTeam: string, points: number): string {
+    const quarter = gameState.quarter;
+    const timeRemaining = gameState.timeRemaining;
+    
+    if (scoringTeam && points > 0) {
+      if (points === 1) {
+        return `${scoringTeam} safety - 2 points in Q${quarter}`;
+      } else if (points === 2) {
+        return `${scoringTeam} safety - 2 points in Q${quarter}`;
+      } else if (points === 3) {
+        return `${scoringTeam} field goal - 3 points in Q${quarter}`;
+      } else if (points === 6) {
+        return `${scoringTeam} touchdown - 6 points in Q${quarter}`;
+      } else if (points === 7) {
+        return `${scoringTeam} touchdown + PAT - 7 points in Q${quarter}`;
+      } else if (points === 8) {
+        return `${scoringTeam} touchdown + 2-pt conversion - 8 points in Q${quarter}`;
+      } else {
+        return `${scoringTeam} scores ${points} points in Q${quarter}`;
+      }
+    } else {
+      return `Score change detected in Q${quarter}`;
+    }
   }
 }

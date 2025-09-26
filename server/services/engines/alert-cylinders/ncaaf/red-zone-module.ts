@@ -48,7 +48,7 @@ export default class RedZoneModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_NCAAF_RED_ZONE_${down}_${yardsToGo}`,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | RED ZONE`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${this.createDynamicMessage(gameState, down, yardsToGo)}`,
       displayMessage: `🏈 RED ZONE | Q${gameState.quarter} • ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo}`,
       context: {
         gameId: gameState.gameId,
@@ -102,5 +102,30 @@ export default class RedZoneModule extends BaseAlertModule {
     const suffixes = ['th', 'st', 'nd', 'rd'];
     const remainder = num % 100;
     return suffixes[(remainder - 20) % 10] || suffixes[remainder] || suffixes[0];
+  }
+
+  private createDynamicMessage(gameState: GameState, down: number, yardsToGo: number): string {
+    const fieldPos = gameState.fieldPosition;
+    const quarter = gameState.quarter;
+    const ordinalSuffix = this.getOrdinalSuffix(down);
+    
+    // Create contextual red zone message
+    if (fieldPos && fieldPos <= 20) {
+      if (yardsToGo <= 3 && fieldPos <= 10) {
+        return `${down}${ordinalSuffix} & Goal at ${fieldPos}-yard line`;
+      } else if (yardsToGo <= 3) {
+        return `${down}${ordinalSuffix} & ${yardsToGo} at ${fieldPos}-yard line`;
+      } else {
+        return `${down}${ordinalSuffix} & ${yardsToGo} at ${fieldPos}-yard line`;
+      }
+    } else {
+      // Fallback for Q4 close games when field position is missing
+      const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+      if (quarter === 4 && scoreDiff <= 7) {
+        return `${down}${ordinalSuffix} & ${yardsToGo} - Close Q4 red zone opportunity`;
+      } else {
+        return `${down}${ordinalSuffix} & ${yardsToGo} - Red zone opportunity`;
+      }
+    }
   }
 }

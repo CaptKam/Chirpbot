@@ -40,7 +40,7 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}_${timeSeconds}`,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | TWO MINUTE WARNING`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${this.createDynamicMessage(gameState, halfText)}`,
       displayMessage: `🏈 NCAAF TWO MINUTE WARNING | Q${gameState.quarter}`,
 
       context: {
@@ -103,5 +103,46 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     const trailingScore = Math.min(gameState.homeScore, gameState.awayScore);
 
     return `${leadingTeam} leads ${leadingScore}-${trailingScore}`;
+  }
+
+  private createDynamicMessage(gameState: GameState, halfText: string): string {
+    const timeRemaining = gameState.timeRemaining;
+    const quarter = gameState.quarter;
+    const possession = gameState.possession;
+    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+    
+    // Create contextual two-minute warning message
+    if (quarter === 2) {
+      // First half - focus on halftime approach
+      if (scoreDiff === 0) {
+        return `2:00 warning - Tied game approaching halftime`;
+      } else if (scoreDiff <= 7) {
+        return `2:00 warning - Close game approaching halftime`;
+      } else {
+        return `2:00 warning - ${halfText} final drive`;
+      }
+    } else if (quarter === 4) {
+      // Fourth quarter - more critical
+      if (possession) {
+        if (scoreDiff === 0) {
+          return `2:00 warning - ${possession} driving, tied game`;
+        } else if (scoreDiff <= 3) {
+          return `2:00 warning - ${possession} driving, ${scoreDiff}-pt game`;
+        } else {
+          return `2:00 warning - ${possession} driving in crucial situation`;
+        }
+      } else {
+        if (scoreDiff === 0) {
+          return `2:00 warning - Tied game, final two minutes`;
+        } else if (scoreDiff <= 7) {
+          return `2:00 warning - ${scoreDiff}-pt game, crunch time`;
+        } else {
+          return `2:00 warning - Critical final two minutes`;
+        }
+      }
+    } else {
+      // Fallback
+      return `2:00 warning - ${halfText} final two minutes`;
+    }
   }
 }

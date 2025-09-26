@@ -57,7 +57,7 @@ export default class UpsetOpportunityModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_upset_opportunity_${gameState.quarter}_${this.getTimeKey(gameState.timeRemaining)}`,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | UPSET OPPORTUNITY`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${this.createDynamicMessage(gameState, underdog, favorite, upsetProbability, upsetMagnitude)}`,
       displayMessage: `🏈 NCAAF UPSET OPPORTUNITY | Q${gameState.quarter}`,
 
       context: {
@@ -499,6 +499,36 @@ export default class UpsetOpportunityModule extends BaseAlertModule {
       return parseInt(cleanTime) || 0;
     } catch {
       return 0;
+    }
+  }
+
+  private createDynamicMessage(gameState: GameState, underdog: string, favorite: string, upsetProbability: number, upsetMagnitude: string): string {
+    const quarter = gameState.quarter;
+    const timeRemaining = gameState.timeRemaining;
+    const underdogScore = underdog === gameState.homeTeam ? gameState.homeScore : gameState.awayScore;
+    const favoriteScore = underdog === gameState.homeTeam ? gameState.awayScore : gameState.homeScore;
+    const leadSize = Math.abs(underdogScore - favoriteScore);
+    
+    // Determine if underdog is leading, tied, or trailing
+    if (underdogScore > favoriteScore) {
+      // Underdog is leading - this is the upset opportunity
+      if (quarter >= 4) {
+        return `${underdog} leads by ${leadSize} in Q${quarter} - Major upset brewing`;
+      } else {
+        return `${underdog} leads by ${leadSize} in Q${quarter} - Upset opportunity`;
+      }
+    } else if (underdogScore === favoriteScore) {
+      // Game is tied - upset opportunity exists
+      return `Tied game Q${quarter} - ${underdog} upset opportunity`;
+    } else {
+      // Underdog is trailing but upset is still possible
+      if (leadSize <= 7 && quarter >= 3) {
+        return `${underdog} trails by ${leadSize}, Q${quarter} - Comeback upset potential`;
+      } else if (upsetProbability >= 80) {
+        return `${underdog} trails by ${leadSize} - High upset probability`;
+      } else {
+        return `${underdog} trails by ${leadSize} - Upset opportunity building`;
+      }
     }
   }
 }

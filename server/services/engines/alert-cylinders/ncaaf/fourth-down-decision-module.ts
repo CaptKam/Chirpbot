@@ -61,7 +61,7 @@ export default class FourthDownDecisionModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_fourth_down_decision_${gameState.fieldPosition}_${gameState.yardsToGo}`,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | FOURTH DOWN DECISION`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${this.createDynamicMessage(gameState, goForItProbability, recommendedAction)}`,
       displayMessage: `🏈 NCAAF FOURTH DOWN DECISION | Q${gameState.quarter}`,
 
       context: {
@@ -384,6 +384,20 @@ export default class FourthDownDecisionModule extends BaseAlertModule {
     
     // Could add more sophisticated importance detection based on rankings, bowl implications, etc.
     return 'Regular';
+  }
+
+  private createDynamicMessage(gameState: GameState, goForItProbability: number, recommendedAction: string): string {
+    const yardsToGo = gameState.yardsToGo || 0;
+    const fieldPosition = gameState.fieldPosition || 0;
+    const possessionTeam = this.getPossessionTeam(gameState);
+    
+    if (fieldPosition <= 20) {
+      return `4th & ${yardsToGo} in red zone - ${recommendedAction} (${Math.round(goForItProbability)}% aggressive)`;
+    } else if (yardsToGo <= 2) {
+      return `4th & ${yardsToGo} at ${fieldPosition}-yard line - Short yardage decision`;
+    } else {
+      return `4th & ${yardsToGo} at ${fieldPosition}-yard line - ${recommendedAction}`;
+    }
   }
 
   private parseTimeToSeconds(timeString: string): number {

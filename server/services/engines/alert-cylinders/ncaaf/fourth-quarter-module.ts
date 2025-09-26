@@ -41,7 +41,7 @@ export default class FourthQuarterModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_fourth_quarter_start`,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | FOURTH QUARTER`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${this.createDynamicMessage(gameState, scoreDiff, isCloseGame)}`,
       displayMessage: `🏈 NCAAF FOURTH QUARTER | Q${gameState.quarter}`,
 
       context: {
@@ -67,5 +67,19 @@ export default class FourthQuarterModule extends BaseAlertModule {
     if (scoreDiff <= 7) return 95;
     if (scoreDiff <= 14) return 85;
     return 75;
+  }
+
+  private createDynamicMessage(gameState: GameState, scoreDiff: number, isCloseGame: boolean): string {
+    const timeRemaining = gameState.timeRemaining;
+    
+    if (isCloseGame) {
+      if (scoreDiff === 0) {
+        return `Tied entering Q4 - ${timeRemaining} to decide it`;
+      } else {
+        return `${scoreDiff}-point game entering Q4 - Crunch time`;
+      }
+    } else {
+      return `Fourth quarter begins - ${timeRemaining} remaining`;
+    }
   }
 }
