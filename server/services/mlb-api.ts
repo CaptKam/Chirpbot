@@ -10,7 +10,7 @@ export class MLBApiService extends BaseSportApi {
       sportTag: 'MLB',
       rateLimits: {
         live: 200,        // 200ms for live games (high priority)
-        scheduled: 8000,  // 8s for scheduled games (increased from 5s)
+        scheduled: 4000,  // 4s for scheduled games (fixed: was 8s, conflicted with 5s polling)
         final: 30000,     // 30s for final games
         delayed: 3000,    // 3s for delayed games (increased from 2s)
         default: 250      // Default fallback

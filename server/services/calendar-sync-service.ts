@@ -314,6 +314,7 @@ export class CalendarSyncService implements ICalendarSyncService {
     const game = games.find((g: BaseGameData) => g.id === gameId || g.gameId === gameId);
     
     if (!game) {
+      console.warn(`⚠️ Game ${gameId} not found in current ${sport} API response - may be cancelled/postponed`);
       throw new Error(`Game ${gameId} not found for sport ${sport}`);
     }
 
