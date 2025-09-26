@@ -244,18 +244,16 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
             </div>
           )}
 
-          {/* Main Gambling Insights - Featured Prominently */}
-          {isStructured ? (
-            <div className="mb-6 bg-gradient-to-r from-slate-800/80 to-slate-700/60 rounded-xl p-4 border border-slate-600/40" data-testid={`structured-insights-${alert.id}`}>
+          {/* Main Alert Content - Always Structured Format */}
+          {displayContent && (
+            <div className={`mb-6 rounded-xl p-4 border ${
+              isStructured 
+                ? 'bg-gradient-to-r from-slate-800/80 to-slate-700/60 border-slate-600/40' 
+                : 'bg-slate-800/60 border-slate-700/50'
+            }`} data-testid={`alert-content-${alert.id}`}>
               <pre className="text-slate-100 text-sm whitespace-pre-line font-medium leading-relaxed">
                 {displayContent}
               </pre>
-            </div>
-          ) : alert.message && (
-            <div className="mb-6 bg-slate-800/60 rounded-lg p-4 border border-slate-700/50">
-              <p className="text-slate-100 text-sm leading-relaxed font-medium" data-testid={`basic-message-${alert.id}`}>
-                {alert.message}
-              </p>
             </div>
           )}
 
