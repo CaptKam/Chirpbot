@@ -811,10 +811,10 @@ export class UnifiedAIProcessor {
         aiProcessingTime: aiResponse.aiProcessingTime,
         confidence: aiResponse.confidence,
         sportSpecificData: aiResponse.sportSpecificData,
-        enhancedContext: [
-          ...(Array.isArray(enhancedAlert.context) ? enhancedAlert.context : []),
-          ...(aiResponse.enhancedContext || []),
-        ],
+        enhancedContext: {
+          ...(typeof enhancedAlert.context === 'object' && enhancedAlert.context ? enhancedAlert.context : {}),
+          ...(aiResponse.enhancedContext || {}),
+        },
         tags: aiResponse.tags,
         analysis: aiResponse.analysis
       };

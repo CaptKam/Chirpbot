@@ -63,7 +63,7 @@ export default class ComebackPotentialModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_comeback_potential_${gameState.quarter}_${this.getTimeKey(gameState.timeRemaining)}_${deficitInfo.deficit}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | COMEBACK POTENTIAL`,
-      displayMessage: `🏈 NCAAF ${file##*/} | Q${gameState.quarter}`,
+      displayMessage: `🏈 NCAAF COMEBACK POTENTIAL | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,
