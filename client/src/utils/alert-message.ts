@@ -114,45 +114,17 @@ export function cleanMessage(message: string): string {
 }
 
 /**
- * Get display content using simplified approach - avoid double formatting
+ * Get display content using simplified consistent approach 
+ * NOTE: This function is deprecated - UniversalAlertCard now uses alert.message directly
+ * Kept for backward compatibility
  */
 export function getDisplayContent(alert: any): { content: string; isStructured: boolean } {
-  // Priority 1: Pre-formatted displayMessage (from cylinders using CleanAlertFormatter)
-  if (alert.displayMessage) {
-    return {
-      content: alert.displayMessage,
-      isStructured: false
-    };
-  }
+  // Simplified: always use alert.message for consistency across environments
+  const content = alert.message?.trim() || `${alert.type?.replace(/_/g, ' ') || 'Alert'} - ${alert.sport} game`;
   
-  // Priority 2: Gambling insights structured template (preserves emojis)
-  if (alert.gamblingInsights?.structuredTemplate?.trim()) {
-    return {
-      content: alert.gamblingInsights.structuredTemplate.trim(),
-      isStructured: true
-    };
-  }
-  
-  // Priority 3: Gambling insights bullets
-  if (alert.gamblingInsights?.bullets?.length > 0) {
-    return {
-      content: alert.gamblingInsights.bullets.join('\n'),
-      isStructured: false
-    };
-  }
-  
-  // Priority 4: Use existing alert message (already processed by backend)
-  if (alert.message?.trim()) {
-    return {
-      content: alert.message.trim(),
-      isStructured: false
-    };
-  }
-  
-  // Fallback: Basic alert information
   return {
-    content: `${alert.type?.replace(/_/g, ' ') || 'Alert'} - ${alert.sport} game`,
-    isStructured: false
+    content,
+    isStructured: false // Always use plain formatting for consistency
   };
 }
 

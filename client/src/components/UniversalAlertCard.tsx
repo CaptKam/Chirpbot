@@ -7,7 +7,7 @@ import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
 import { getSportTabColors } from '@shared/season-manager';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { getDisplayContent } from '@/utils/alert-message';
+// Removed getDisplayContent import - using simplified consistent rendering
 
 interface UniversalAlertProps {
   id: string;
@@ -55,15 +55,9 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps }) {
   const isConfidenceHigh = (alert.confidence || 0) >= 75;
   const { user, isAuthenticated } = useAuth();
 
-  // Get optimal display content with error handling
-  const { content: displayContent, isStructured } = (() => {
-    try {
-      return getDisplayContent(alert);
-    } catch (error) {
-      console.warn('Display content error for alert:', alert.id, error);
-      return { content: alert.message || 'Alert content unavailable', isStructured: false };
-    }
-  })();
+  // Use simple, consistent content - eliminates environment-dependent rendering
+  const displayContent = alert.message || 'Alert content unavailable';
+  const isStructured = false; // Always use plain formatting for consistency
 
   // Query user settings for gambling insights preference
   const { data: userSettings } = useQuery({
