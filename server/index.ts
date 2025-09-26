@@ -40,39 +40,60 @@ const instanceLock = new SingleInstanceLock();
   process.exit(1);
 });
 
-// 🔄 CALENDAR SYNC SERVICE: SINGLE DATA INGESTION SYSTEM
-console.log("🔍 DEBUG: Starting CalendarSyncService as primary data system");
-if (!(globalThis as any).__calendar_sync_bootstrapped__) {
-  console.log("🔍 DEBUG: __calendar_sync_bootstrapped__ is false, starting bootstrap");
-  (globalThis as any).__calendar_sync_bootstrapped__ = true;
-  console.log("📋 CALENDAR SYNC: BOOTSTRAP FIRING (simplified architecture)");
+// 🔄 V3 ALERT GENERATION SYSTEM: COMPLETE PIPELINE
+console.log("🔍 DEBUG: Starting V3 Alert Generation System");
+if (!(globalThis as any).__v3_alert_system_bootstrapped__) {
+  console.log("🔍 DEBUG: __v3_alert_system_bootstrapped__ is false, starting bootstrap");
+  (globalThis as any).__v3_alert_system_bootstrapped__ = true;
+  console.log("📋 V3 ALERT SYSTEM: BOOTSTRAP FIRING (complete pipeline)");
   void (async () => {
     try {
-      console.log("🔍 DEBUG: About to import CalendarSyncService");
+      console.log("🔍 DEBUG: Importing V3 alert system components");
       const { CalendarSyncService } = await import('./services/calendar-sync-service');
-      console.log("🔍 DEBUG: Import successful, creating instance");
+      const { GameStateManager } = await import('./services/game-state-manager');
+      const { EngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
+      console.log("🔍 DEBUG: All imports successful");
 
-      // 🔧 FIX: Use singleton CalendarSyncService instead of creating duplicate
+      // Initialize EngineLifecycleManager first
+      console.log("🚀 Initializing EngineLifecycleManager");
+      const engineLifecycleManager = new EngineLifecycleManager();
+      console.log("✅ EngineLifecycleManager started");
+
+      // Initialize GameStateManager with EngineLifecycleManager
+      console.log("🎮 Initializing GameStateManager with EngineLifecycleManager");
+      const gameStateManager = new GameStateManager(engineLifecycleManager);
+      await gameStateManager.start();
+      console.log("✅ GameStateManager started with alert generation enabled");
+
+      // Initialize CalendarSyncService 
+      console.log("📅 Initializing CalendarSyncService");
       const calendarSyncService = CalendarSyncService.getInstance({
         sports: ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL'],
         enableMetrics: true
       });
       
-      console.log('🔧 Using singleton CalendarSyncService from server/index.ts');
-
-      console.log("🔍 DEBUG: Instance created, calling start()");
+      // Connect CalendarSyncService to GameStateManager
+      console.log("🔗 Connecting CalendarSyncService to GameStateManager");
+      calendarSyncService.setGameStateManager(gameStateManager);
+      
+      console.log("🔍 DEBUG: Starting CalendarSyncService");
       await calendarSyncService.start();
-      console.log("🔍 DEBUG: Start completed, storing global reference");
+      console.log("🔍 DEBUG: CalendarSyncService started");
 
+      // Store global references
       (global as any).calendarSyncService = calendarSyncService;
-      console.log("✅ CALENDAR SYNC: STARTED - Single unified data system active");
+      (global as any).gameStateManager = gameStateManager;
+      (global as any).engineLifecycleManager = engineLifecycleManager;
+      
+      console.log("✅ V3 ALERT SYSTEM: COMPLETE PIPELINE ACTIVE");
+      console.log("📋 V3: CalendarSyncService → GameStateManager → EngineLifecycleManager → Alert Generation ✅");
     } catch (e) {
-      console.error("❌ CALENDAR SYNC: FAILED", e);
-      console.error("❌ CALENDAR SYNC: ERROR STACK:", e instanceof Error ? e.stack : 'No stack trace available');
+      console.error("❌ V3 ALERT SYSTEM: FAILED", e);
+      console.error("❌ V3 ALERT SYSTEM: ERROR STACK:", e instanceof Error ? e.stack : 'No stack trace available');
     }
   })();
 } else {
-  console.log("🔍 DEBUG: __calendar_sync_bootstrapped__ is true, skipping bootstrap");
+  console.log("🔍 DEBUG: __v3_alert_system_bootstrapped__ is true, skipping bootstrap");
 }
 
 // Startup guard to prevent double initialization within same process
