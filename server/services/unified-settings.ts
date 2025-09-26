@@ -234,14 +234,16 @@ export class UnifiedSettings {
     // This prevents alert bursts when cache fails or settings are incomplete
     const isEnabled = settings[alertType] === true;
     
-    // Debug logging for suppressed alerts
+    // Debug logging for suppressed alerts with detailed diagnostics
     if (!isEnabled) {
       const reason = settings[alertType] === false ? 'explicitly disabled' : 'not explicitly enabled (conservative default)';
-      console.log(`❌ Alert suppressed: ${alertType} (${sport.toLowerCase()}) - ${reason}`);
+      const settingsKeys = Object.keys(settings);
+      console.log(`❌ Alert suppressed: ${alertType} (${sport.toLowerCase()}) - ${reason}. Available settings: ${settingsKeys.length} keys: [${settingsKeys.slice(0, 3).join(', ')}${settingsKeys.length > 3 ? '...' : ''}]`);
     }
     
     return isEnabled;
   }
+
 
   /**
    * Pre-filter disabled alert types to skip processing entirely

@@ -630,9 +630,32 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
       const allAlerts = await this.getAllAlertTypes(sportUpper);
       const enabledAlerts = [];
       
+      // 🔍 DIAGNOSTICS: Log detailed info for football engines
+      if (sport === 'NCAAF' || sport === 'NFL') {
+        console.log(`🔍 ${sport} DIAGNOSTICS: Checking ${allAlerts.length} alert types: [${allAlerts.slice(0, 3).join(', ')}...]`);
+        
+        // Force cache invalidation for football engines
+        unifiedSettings.invalidateCache(sport);
+        console.log(`🔄 ${sport}: Cache invalidated, fetching fresh settings...`);
+      }
+      
       for (const alertType of allAlerts) {
-        if (await unifiedSettings.isAlertEnabled(sportUpper, alertType)) {
+        if (await unifiedSettings.isAlertEnabled(sport.toLowerCase(), alertType)) {
           enabledAlerts.push(alertType);
+        }
+      }
+      
+      // 📊 DIAGNOSTICS: Summary log for troubleshooting
+      console.log(`📊 ${sport} Module Loading: available=${allAlerts.length}, enabled=${enabledAlerts.length}, sport='${sport}', sample=[${enabledAlerts.slice(0, 3).join(', ')}...]`);
+      
+      if (enabledAlerts.length === 0 && allAlerts.length > 0) {
+        console.warn(`⚠️ ${sport}: All alerts disabled! This will result in 0 loaded modules. Retrying with fresh cache...`);
+        unifiedSettings.invalidateCache(sport);
+        // Single retry attempt
+        for (const alertType of allAlerts.slice(0, 1)) {
+          const retryResult = await unifiedSettings.isAlertEnabled(sport.toLowerCase(), alertType);
+          console.log(`🔄 ${sport} Retry: ${alertType} = ${retryResult}`);
+          break;
         }
       }
       
