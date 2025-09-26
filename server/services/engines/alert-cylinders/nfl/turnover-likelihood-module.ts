@@ -59,11 +59,13 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
     const alertKey = `${gameState.gameId}_turnover_risk_${gameState.down}_${gameState.yardsToGo}_${gameState.fieldPosition}_${timestamp}`;
     console.log(`🔑 NFL Turnover Alert Key Generated: ${alertKey}`);
     
+    const dynamicMessage = this.createDynamicMessage(gameState);
+
     return {
       alertKey,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | TURNOVER LIKELIHOOD`,
-      displayMessage: `🏈 TURNOVER LIKELIHOOD | Q${gameState.quarter}`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${dynamicMessage}`,
+      displayMessage: `🏈 ${dynamicMessage} | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,
@@ -301,6 +303,59 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
   private getOrdinal(num: number): string {
     const ordinals = ['', '1st', '2nd', '3rd', '4th'];
     return ordinals[num] || `${num}th`;
+  }
+
+  private createDynamicMessage(gameState: GameState): string {
+    const turnoverRisk = this.calculateTurnoverRisk(gameState);
+    const riskLevel = this.getRiskLevel(turnoverRisk);
+    const down = this.getOrdinal(gameState.down || 1);
+    const yardsToGo = gameState.yardsToGo || 10;
+    const fieldPosition = gameState.fieldPosition || 50;
+    const primaryRiskFactor = this.identifyRiskFactors(gameState)[0] || 'Standard';
+    
+    // Create contextual field position description
+    let positionDesc = '';
+    if (fieldPosition <= 20) {
+      positionDesc = `at opponent ${fieldPosition}-yard line`;
+    } else if (fieldPosition >= 80) {
+      positionDesc = `at own ${100 - fieldPosition}-yard line`;
+    } else {
+      positionDesc = `at ${fieldPosition}-yard line`;
+    }
+    
+    // Create risk context based on situation
+    let riskContext = '';
+    switch (riskLevel) {
+      case 'CRITICAL':
+        riskContext = 'High turnover risk situation';
+        break;
+      case 'HIGH':
+        riskContext = 'Elevated turnover risk';
+        break;
+      case 'ELEVATED':
+        riskContext = 'Moderate turnover risk';
+        break;
+      case 'MODERATE':
+        riskContext = 'Turnover risk situation';
+        break;
+      default:
+        riskContext = 'Turnover potential';
+    }
+    
+    // Add specific situation context
+    if (primaryRiskFactor !== 'Standard Situation') {
+      if (primaryRiskFactor === 'Fourth Down Conversion') {
+        riskContext = 'Critical 4th down risk';
+      } else if (primaryRiskFactor === 'Long Third Down') {
+        riskContext = 'Long 3rd down risk';
+      } else if (primaryRiskFactor === 'Deep Own Territory') {
+        riskContext = 'Own territory turnover risk';
+      } else if (primaryRiskFactor === 'Desperation Situation') {
+        riskContext = 'High-pressure turnover risk';
+      }
+    }
+    
+    return `${down} & ${yardsToGo} ${positionDesc} - ${riskContext}`;
   }
 
   private parseTimeToSeconds(timeString: string): number {

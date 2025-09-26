@@ -108,18 +108,66 @@ export default class GameStartModule extends BaseAlertModule {
       ]
     };
 
+    const dynamicMessage = this.createDynamicMessage(gameState);
+
     return {
       alertKey,
       type: this.alertType,
       priority: 75,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | GAME START`,
-      displayMessage: `🏈 GAME START | Q${gameState.quarter} • ${gameState.awayTeam} @ ${gameState.homeTeam}`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${dynamicMessage}`,
+      displayMessage: `🏈 ${dynamicMessage} | Q${gameState.quarter}`,
       context
     };
   }
 
   calculateProbability(gameState: GameState): number {
     return this.isTriggered(gameState) ? 100 : 0;
+  }
+
+  private createDynamicMessage(gameState: GameState): string {
+    // Create contextual game situation
+    let situationDesc = 'Game starting';
+    
+    // Add weather context if available
+    if (gameState.weatherContext) {
+      const weather = gameState.weatherContext;
+      let weatherDesc = '';
+      
+      if (weather.temperature !== undefined) {
+        if (weather.temperature <= 32) {
+          weatherDesc = `${weather.temperature}°F freezing conditions`;
+        } else if (weather.temperature >= 90) {
+          weatherDesc = `${weather.temperature}°F hot conditions`;
+        } else if (weather.windSpeed && weather.windSpeed >= 20) {
+          weatherDesc = `${weather.windSpeed}mph winds`;
+        }
+      }
+      
+      if (weather.condition && weather.condition.toLowerCase() !== 'clear') {
+        weatherDesc = weatherDesc ? `${weatherDesc}, ${weather.condition}` : weather.condition;
+      }
+      
+      if (weatherDesc) {
+        situationDesc = `Game starting in ${weatherDesc}`;
+      }
+    }
+    
+    // Add score context if this is a restart or continuation
+    if (gameState.homeScore > 0 || gameState.awayScore > 0) {
+      const scoreText = gameState.homeScore === gameState.awayScore ? 
+        `Tied ${gameState.homeScore}-${gameState.awayScore}` :
+        `${gameState.homeScore}-${gameState.awayScore}`;
+      situationDesc = `Game resuming - ${scoreText}`;
+    }
+    
+    // Add quarter context for specific situations
+    if (gameState.quarter === 1) {
+      situationDesc = situationDesc.replace('Game starting', 'Kickoff time');
+    } else if (gameState.quarter === 2) {
+      situationDesc = situationDesc.replace('Game starting', '2nd quarter beginning');
+    }
+    
+    return situationDesc;
   }
 
   private parseTimeToSeconds(timeString: string): number {

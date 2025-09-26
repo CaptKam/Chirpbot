@@ -18,12 +18,13 @@ export default class FourthDownModule extends BaseAlertModule {
     const priority = gameState.yardsToGo <= 3 ? 95 : 85; // Higher priority for short yardage
     const fieldPosition = gameState.fieldPosition || 50;
     const yardsToGo = gameState.yardsToGo || 10;
+    const dynamicMessage = this.createDynamicMessage(gameState);
 
     return {
       alertKey: `${gameState.gameId}_fourth_down_${yardsToGo}_${fieldPosition}`,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | FOURTH DOWN`,
-      displayMessage: `🏈 FOURTH DOWN | Q${gameState.quarter}`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${dynamicMessage}`,
+      displayMessage: `🏈 ${dynamicMessage} | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,
@@ -163,6 +164,45 @@ export default class FourthDownModule extends BaseAlertModule {
     return conversionProb >= 50 ? 'GO_FOR_IT' : 'PUNT';
   }
   
+  private createDynamicMessage(gameState: GameState): string {
+    const yardsToGo = gameState.yardsToGo || 10;
+    const fieldPosition = gameState.fieldPosition || 50;
+    const recommendation = this.getDecisionRecommendation(gameState);
+    const conversionProb = this.getConversionProbability(gameState);
+    
+    // Create contextual field position description
+    let positionDesc = '';
+    if (fieldPosition <= 5) {
+      positionDesc = `at ${fieldPosition}-yard line`;
+    } else if (fieldPosition <= 20) {
+      positionDesc = `at ${fieldPosition}-yard line (Red Zone)`;
+    } else if (fieldPosition <= 35) {
+      positionDesc = `at ${fieldPosition}-yard line (FG Range)`;
+    } else if (fieldPosition >= 80) {
+      positionDesc = `at own ${100 - fieldPosition}-yard line`;
+    } else {
+      positionDesc = `at ${fieldPosition}-yard line`;
+    }
+
+    // Create decision context
+    let decisionContext = '';
+    switch (recommendation) {
+      case 'GO_FOR_IT':
+        decisionContext = conversionProb >= 75 ? 'High conversion chance' : 'Critical decision';
+        break;
+      case 'FIELD_GOAL_ATTEMPT':
+        decisionContext = 'FG attempt likely';
+        break;
+      case 'PUNT':
+        decisionContext = 'Punt situation';
+        break;
+      default:
+        decisionContext = 'Decision pending';
+    }
+
+    return `4th & ${yardsToGo} ${positionDesc} - ${decisionContext}`;
+  }
+
   private parseTimeToSeconds(timeString: string): number {
     if (!timeString) return 0;
     const cleanTime = timeString.trim().split(' ')[0];

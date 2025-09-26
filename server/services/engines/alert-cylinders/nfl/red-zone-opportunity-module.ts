@@ -68,11 +68,13 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
     const situationDescription = this.getSituationDescription(gameState);
     const possessionTeam = this.getPossessionTeam(gameState);
     
+    const dynamicMessage = this.createDynamicMessage(gameState);
+
     return {
       alertKey: `${gameState.gameId}_red_zone_opportunity_${gameState.down}_${gameState.yardsToGo}_${gameState.fieldPosition}`,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | RED ZONE OPPORTUNITY`,
-      displayMessage: `🏈 RED ZONE OPPORTUNITY | Q${gameState.quarter}`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${dynamicMessage}`,
+      displayMessage: `🏈 ${dynamicMessage} | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,
@@ -287,6 +289,42 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
     return 'NORMAL';
   }
   
+  private createDynamicMessage(gameState: GameState): string {
+    const touchdownProbability = this.calculateTouchdownProbability(gameState);
+    const down = this.getOrdinal(gameState.down || 1);
+    const yardsToGo = gameState.yardsToGo || 10;
+    const fieldPosition = gameState.fieldPosition || 20;
+    
+    // Create contextual field position description
+    let situationDesc = '';
+    if (fieldPosition <= 3) {
+      situationDesc = `${down} & Goal at ${fieldPosition}-yard line`;
+    } else if (fieldPosition <= 10) {
+      situationDesc = `${down} & ${yardsToGo} at ${fieldPosition}-yard line`;
+    } else {
+      situationDesc = `${down} & ${yardsToGo} at ${fieldPosition}-yard line`;
+    }
+
+    // Create scoring context based on probability
+    let scoringContext = '';
+    if (touchdownProbability >= 80) {
+      scoringContext = 'Prime scoring opportunity';
+    } else if (touchdownProbability >= 65) {
+      scoringContext = 'Strong scoring chance';
+    } else if (touchdownProbability >= 50) {
+      scoringContext = 'Red zone scoring chance';
+    } else {
+      scoringContext = 'Red zone opportunity';
+    }
+
+    // Add goal line context
+    if (fieldPosition <= 5) {
+      scoringContext = 'Goal line ' + scoringContext.toLowerCase();
+    }
+
+    return `${situationDesc} - ${scoringContext}`;
+  }
+
   private getPlayCallingTendency(gameState: GameState): string {
     // Analyze down, distance, and field position to predict play type
     if (!gameState.down || !gameState.yardsToGo || !gameState.fieldPosition) {

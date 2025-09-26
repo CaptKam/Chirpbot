@@ -13,11 +13,13 @@ export default class SecondHalfKickoffModule extends BaseAlertModule {
 
   generateAlert(gameState: GameState): AlertResult | null {
     // isTriggered() already called by engine - removed duplicate check
+    const dynamicMessage = this.createDynamicMessage(gameState);
+
     return {
       alertKey: `${gameState.gameId}_second_half_kickoff`,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | SECOND HALF KICKOFF`,
-      displayMessage: `🏈 SECOND HALF KICKOFF | Q${gameState.quarter} • ${gameState.timeRemaining}`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${dynamicMessage}`,
+      displayMessage: `🏈 ${dynamicMessage} | Q${gameState.quarter}`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
@@ -30,6 +32,41 @@ export default class SecondHalfKickoffModule extends BaseAlertModule {
       },
       priority: 85
     };
+  }
+
+  private createDynamicMessage(gameState: GameState): string {
+    const homeScore = gameState.homeScore || 0;
+    const awayScore = gameState.awayScore || 0;
+    const scoreDiff = Math.abs(homeScore - awayScore);
+    
+    // Create score context
+    let situationDesc = '';
+    
+    if (homeScore === awayScore) {
+      if (homeScore === 0) {
+        situationDesc = 'Second half begins - Scoreless game';
+      } else {
+        situationDesc = `Second half begins - Tied ${homeScore}-${awayScore}`;
+      }
+    } else {
+      const leadingTeam = homeScore > awayScore ? gameState.homeTeam : gameState.awayTeam;
+      const leadingScore = Math.max(homeScore, awayScore);
+      const trailingScore = Math.min(homeScore, awayScore);
+      
+      if (scoreDiff >= 21) {
+        situationDesc = `Second half begins - ${leadingTeam} leads ${leadingScore}-${trailingScore} (blowout)`;
+      } else if (scoreDiff >= 14) {
+        situationDesc = `Second half begins - ${leadingTeam} leads ${leadingScore}-${trailingScore} (big lead)`;
+      } else if (scoreDiff >= 7) {
+        situationDesc = `Second half begins - ${leadingTeam} leads ${leadingScore}-${trailingScore} (1-score game)`;
+      } else if (scoreDiff >= 3) {
+        situationDesc = `Second half begins - ${leadingTeam} leads ${leadingScore}-${trailingScore} (field goal game)`;
+      } else {
+        situationDesc = `Second half begins - ${leadingTeam} leads ${leadingScore}-${trailingScore} (tight game)`;
+      }
+    }
+    
+    return situationDesc;
   }
 
   calculateProbability(gameState: GameState): number {

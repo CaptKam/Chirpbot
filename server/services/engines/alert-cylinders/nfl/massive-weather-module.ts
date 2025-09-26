@@ -98,11 +98,13 @@ export default class MassiveWeatherModule extends BaseAlertModule {
 
     const alertKey = `${gameId}_massive_weather_${current.severity}_${Date.now()}`;
 
+    const dynamicMessage = this.createDynamicMessage(gameState, current);
+
     return {
       alertKey,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | MASSIVE WEATHER`,
-      displayMessage: `🏈 MASSIVE WEATHER | Q${gameState.quarter}`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${dynamicMessage}`,
+      displayMessage: `🏈 ${dynamicMessage} | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,
@@ -201,6 +203,54 @@ export default class MassiveWeatherModule extends BaseAlertModule {
       case 'moderate': return 70;
       default: return 65;
     }
+  }
+
+  private createDynamicMessage(
+    gameState: GameState,
+    currentWeatherData: any
+  ): string {
+    const currentWeather = gameState.weatherContext!;
+    const condition = currentWeatherData.condition;
+    const severity = currentWeatherData.severity;
+    const impact = this.determineGameImpact(severity, currentWeather);
+    
+    // Base weather description
+    let weatherDesc = condition.charAt(0).toUpperCase() + condition.slice(1);
+    
+    // Add temperature if extreme
+    if (currentWeather.temperature !== undefined) {
+      if (currentWeather.temperature <= 20) {
+        weatherDesc = `${weatherDesc}, ${currentWeather.temperature}°F`;
+      } else if (currentWeather.temperature >= 95) {
+        weatherDesc = `${weatherDesc}, ${currentWeather.temperature}°F`;
+      }
+    }
+    
+    // Add wind information if significant
+    if (currentWeather.windSpeed !== undefined && currentWeather.windSpeed >= 20) {
+      weatherDesc = `${weatherDesc}, ${currentWeather.windSpeed}mph winds`;
+    }
+    
+    // Create impact description
+    let impactDesc = '';
+    switch (impact) {
+      case 'cancellation':
+        impactDesc = 'Game cancellation risk';
+        break;
+      case 'game_delay':
+        impactDesc = 'Game delay likely';
+        break;
+      case 'significant':
+        impactDesc = 'Major game impact';
+        break;
+      case 'moderate':
+        impactDesc = 'Weather impacting game';
+        break;
+      default:
+        impactDesc = 'Weather conditions developing';
+    }
+    
+    return `${weatherDesc} - ${impactDesc}`;
   }
 
   private generateWeatherMessage(

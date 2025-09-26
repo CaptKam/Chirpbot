@@ -50,11 +50,13 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     const halfText = isFirstHalf ? '1st Half' : '2nd Half';
     const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining);
 
+    const dynamicMessage = this.createDynamicMessage(gameState);
+
     return {
       alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}_${timeSeconds}`,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | TWO MINUTE WARNING`,
-      displayMessage: `🏈 TWO MINUTE WARNING | Q${gameState.quarter} • ${gameState.timeRemaining}`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${dynamicMessage}`,
+      displayMessage: `🏈 ${dynamicMessage} | Q${gameState.quarter}`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
@@ -70,6 +72,50 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
       },
       priority: 88
     };
+  }
+
+  private createDynamicMessage(gameState: GameState): string {
+    const isFirstHalf = gameState.quarter === 2;
+    const halfText = isFirstHalf ? '1st half' : '4th quarter';
+    const scoreDisplay = this.getScoreDisplay(gameState);
+    const clockPhase = this.getClockManagementPhase(gameState);
+    const urgencyLevel = this.getUrgencyLevel(gameState);
+    
+    // Create base message with time and situation
+    let situationDesc = `Two-minute warning - ${halfText}`;
+    
+    // Add score context
+    if (gameState.homeScore > 0 || gameState.awayScore > 0) {
+      situationDesc += `, ${scoreDisplay}`;
+    }
+    
+    // Add strategic context based on clock management phase
+    let strategicContext = '';
+    switch (clockPhase) {
+      case 'CRITICAL_LATE_GAME':
+        strategicContext = 'Critical end-game situation';
+        break;
+      case 'COMEBACK_ATTEMPT':
+        strategicContext = 'Comeback drive opportunity';
+        break;
+      case 'RUNNING_OUT_CLOCK':
+        strategicContext = 'Running out the clock';
+        break;
+      case 'END_OF_HALF':
+        strategicContext = 'End of half drive';
+        break;
+      default:
+        strategicContext = 'Clock management situation';
+    }
+    
+    // Add urgency context if high stakes
+    if (urgencyLevel === 'MAXIMUM') {
+      strategicContext = 'Game-deciding situation';
+    } else if (urgencyLevel === 'HIGH') {
+      strategicContext = 'High-pressure situation';
+    }
+    
+    return `${situationDesc} - ${strategicContext}`;
   }
 
   calculateProbability(gameState: GameState): number {

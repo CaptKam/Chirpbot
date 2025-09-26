@@ -19,11 +19,13 @@ export default class RedZoneModule extends BaseAlertModule {
     const down = gameState.down || 1;
     const yardsToGo = gameState.yardsToGo || 10;
 
+    const dynamicMessage = this.createDynamicMessage(gameState);
+
     return {
       alertKey: `${gameState.gameId}_NFL_RED_ZONE_${down}_${yardsToGo}`,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | RED ZONE`,
-      displayMessage: `🏈 RED ZONE | Q${gameState.quarter} • ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo}`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${dynamicMessage}`,
+      displayMessage: `🏈 ${dynamicMessage} | Q${gameState.quarter}`,
       context: {
         gameId: gameState.gameId,
         sport: gameState.sport,
@@ -51,6 +53,46 @@ export default class RedZoneModule extends BaseAlertModule {
       case 3: return 'rd';
       default: return 'th';
     }
+  }
+
+  private createDynamicMessage(gameState: GameState): string {
+    const down = gameState.down || 1;
+    const yardsToGo = gameState.yardsToGo || 10;
+    const fieldPosition = gameState.fieldPosition || 20;
+    const downText = `${down}${this.getOrdinalSuffix(down)}`;
+    
+    // Create contextual position description
+    let positionContext = '';
+    if (fieldPosition <= 3) {
+      positionContext = `${downText} & Goal at ${fieldPosition}-yard line`;
+    } else if (fieldPosition <= 10) {
+      positionContext = `${downText} & ${yardsToGo} at ${fieldPosition}-yard line (Goal Line)`;
+    } else {
+      positionContext = `${downText} & ${yardsToGo} at ${fieldPosition}-yard line`;
+    }
+    
+    // Create scoring situation description
+    let situationDesc = '';
+    if (fieldPosition <= 5) {
+      situationDesc = 'Goal line scoring opportunity';
+    } else if (fieldPosition <= 10) {
+      situationDesc = 'Prime red zone position';
+    } else if (fieldPosition <= 15) {
+      situationDesc = 'Red zone scoring chance';
+    } else {
+      situationDesc = 'Red zone opportunity';
+    }
+    
+    // Add down-specific context
+    if (down === 1 && yardsToGo <= 3) {
+      situationDesc = 'Short yardage TD opportunity';
+    } else if (down === 4) {
+      situationDesc = 'Critical 4th down in red zone';
+    } else if (down === 3 && yardsToGo >= 8) {
+      situationDesc = 'Long 3rd down red zone';
+    }
+    
+    return `${positionContext} - ${situationDesc}`;
   }
 
   calculateProbability(gameState: GameState): number {
