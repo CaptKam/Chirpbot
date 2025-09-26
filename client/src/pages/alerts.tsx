@@ -360,26 +360,24 @@ export default function AlertsPage() {
               <ErrorBoundary>
                 <UniversalAlertCard 
                   alert={{
-                    // Use backend-processed data directly - no manual type checking needed
+                    // Use backend-processed data directly with safe defaults
                     id: alert.id,
-                    type: alert.type,
-                    message: alert.message,
-                    gameId: alert.gameId,
-                    sport: alert.sport,
-                    homeTeam: alert.homeTeam,
-                    awayTeam: alert.awayTeam,
-                    confidence: alert.confidence,
-                    priority: alert.priority,
-                    createdAt: alert.createdAt || alert.timestamp,
+                    type: alert.type || 'UNKNOWN',
+                    message: alert.message || 'Alert content unavailable',
+                    gameId: alert.gameId || '',
+                    sport: alert.sport || 'OTHER',
+                    homeTeam: typeof alert.homeTeam === 'string' ? alert.homeTeam : (alert.homeTeam?.name || 'Unknown'),
+                    awayTeam: typeof alert.awayTeam === 'string' ? alert.awayTeam : (alert.awayTeam?.name || 'Unknown'),
+                    confidence: alert.confidence || 0,
+                    priority: alert.priority || 0,
+                    createdAt: alert.createdAt || alert.timestamp || new Date().toISOString(),
                     homeScore: alert.homeScore,
                     awayScore: alert.awayScore,
                     context: alert.context,
                     sentToTelegram: alert.sentToTelegram,
                     weather: alert.context?.weather || alert.weatherData,
                     gameInfo: alert.gameInfo,
-                    gamblingInsights: alert.gamblingInsights,
-                    displayMessage: alert.displayMessage,
-                    payload: alert.payload
+                    gamblingInsights: alert.gamblingInsights
                   }}
                 />
               </ErrorBoundary>
