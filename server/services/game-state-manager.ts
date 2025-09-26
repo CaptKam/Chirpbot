@@ -757,27 +757,22 @@ export class GameStateManager {
                         }
                       };
 
-                       // 1. Apply gambling insights enhancement
-                      const gamblingEnhancedAlert = await this.gamblingInsightsComposer.enhanceAlert(enhancedAlert, gameState);
-
-                      // Queue raw alert for unified enhancement (AI + gambling + weather in one pipeline)
-                      // TODO: Get actual userId for per-user delivery - using 'system' for now since these are broadcast alerts
-                      unifiedAIProcessor.queueAlert(gamblingEnhancedAlert, context, 'system').catch(error => {
+                       // Queue enhanced alert for unified enhancement pipeline (AI + gambling + weather)
+                      console.log(`🔗 GameStateManager: Sending ${alerts.length} alerts through unified enhancement pipeline`);
+                      unifiedAIProcessor.queueAlert(enhancedAlert, context, 'system').catch(error => {
                         console.warn(`⚠️ Failed to queue alert ${rawAlert.type} for unified enhancement:`, error);
                       });
 
                     } else {
-                       // 1. Apply gambling insights enhancement
-                      const gamblingEnhancedAlert = await this.gamblingInsightsComposer.enhanceAlert(rawAlert, gameState);
-                      // Queue raw alert for unified enhancement (AI + gambling + weather in one pipeline)
-                      // TODO: Get actual userId for per-user delivery - using 'system' for now since these are broadcast alerts
-                      unifiedAIProcessor.queueAlert(gamblingEnhancedAlert, context, 'system').catch(error => {
+                      // Queue raw alert for unified enhancement pipeline (AI + gambling + weather)
+                      console.log(`🔗 GameStateManager: Sending ${alerts.length} alerts through unified enhancement pipeline`);
+                      unifiedAIProcessor.queueAlert(rawAlert, context, 'system').catch(error => {
                         console.warn(`⚠️ Failed to queue alert ${rawAlert.type} for unified enhancement:`, error);
                       });
                     }
                   }
 
-                  console.log(`💾 Queued ${alerts.length} enhanced alerts with gambling insights for database storage`);
+                  console.log(`💾 Queued ${alerts.length} alerts for unified enhancement pipeline`);
                 } catch (error) {
                   console.error(`❌ Failed to queue enhanced alerts for database storage:`, error);
                 }
