@@ -99,12 +99,13 @@ export default class MassiveWeatherModule extends BaseAlertModule {
     const impact = this.determineGameImpact(current.severity, currentWeather);
 
     const alertKey = `${gameId}_massive_weather_${current.severity}_${Date.now()}`;
+    const dynamicMessage = this.createDynamicMessage(gameState, current, impact);
 
     return {
       alertKey,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | MASSIVE WEATHER`,
-      displayMessage: `🏈 NCAAF ${file##*/} | Q${gameState.quarter}`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${dynamicMessage}`,
+      displayMessage: `🏈 ${dynamicMessage} | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,
@@ -130,6 +131,25 @@ export default class MassiveWeatherModule extends BaseAlertModule {
 
   calculateProbability(): number {
     return 85; // High probability for severe weather events
+  }
+
+  private createDynamicMessage(gameState: GameState, current: any, impact: string): string {
+    const condition = current.condition || 'severe weather';
+    const severity = current.severity;
+    
+    // Create descriptive message based on impact and severity
+    switch (impact) {
+      case 'cancellation':
+        return `Dangerous weather conditions - game cancellation risk (${condition})`;
+      case 'game_delay':
+        return `Severe weather alert - potential game delay (${condition})`;
+      case 'significant':
+        return `Major weather impact on field conditions (${condition})`;
+      case 'moderate':
+        return `Weather conditions affecting gameplay (${condition})`;
+      default:
+        return `Weather alert - ${condition} conditions`;
+    }
   }
 
   private calculateWeatherSeverity(condition: string, weatherContext: any): number {

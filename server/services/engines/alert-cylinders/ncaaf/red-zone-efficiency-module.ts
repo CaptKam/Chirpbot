@@ -58,8 +58,8 @@ export default class RedZoneEfficiencyModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_red_zone_efficiency_${gameState.down}_${gameState.yardsToGo}_${gameState.fieldPosition}`,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | RED ZONE EFFICIENCY`,
-      displayMessage: `🏈 NCAAF RED ZONE EFFICIENCY | Q${gameState.quarter}`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${this.createDynamicMessage(gameState, touchdownProbability, gameState.fieldPosition)}`,
+      displayMessage: `🏈 ${this.createDynamicMessage(gameState, touchdownProbability, gameState.fieldPosition)} | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,
@@ -101,6 +101,29 @@ export default class RedZoneEfficiencyModule extends BaseAlertModule {
 
   calculateProbability(gameState: GameState): number {
     return this.calculateTouchdownProbability(gameState);
+  }
+
+  private createDynamicMessage(gameState: GameState, touchdownProbability: number, fieldPosition: number): string {
+    const possessionTeam = gameState.possession || 'Offense';
+    const down = gameState.down || 1;
+    const yardsToGo = gameState.yardsToGo || fieldPosition;
+    
+    if (touchdownProbability >= 80) {
+      return `${possessionTeam} high red zone efficiency - ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo} at ${fieldPosition}`;
+    } else if (touchdownProbability >= 70) {
+      return `${possessionTeam} good red zone position - ${touchdownProbability}% TD probability`;
+    } else {
+      return `${possessionTeam} red zone challenge - ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo}`;
+    }
+  }
+
+  private getOrdinalSuffix(num: number): string {
+    const j = num % 10;
+    const k = num % 100;
+    if (j == 1 && k != 11) return "st";
+    if (j == 2 && k != 12) return "nd";
+    if (j == 3 && k != 13) return "rd";
+    return "th";
   }
 
   private calculateTouchdownProbability(gameState: GameState): number {
@@ -477,9 +500,4 @@ export default class RedZoneEfficiencyModule extends BaseAlertModule {
     }
   }
 
-  private getOrdinalSuffix(num: number): string {
-    const suffixes = ['th', 'st', 'nd', 'rd'];
-    const remainder = num % 100;
-    return suffixes[(remainder - 20) % 10] || suffixes[remainder] || suffixes[0];
-  }
 }

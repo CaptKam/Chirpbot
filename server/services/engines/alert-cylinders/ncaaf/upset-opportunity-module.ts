@@ -58,7 +58,7 @@ export default class UpsetOpportunityModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_upset_opportunity_${gameState.quarter}_${this.getTimeKey(gameState.timeRemaining)}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${this.createDynamicMessage(gameState, underdog, favorite, upsetProbability, upsetMagnitude)}`,
-      displayMessage: `🏈 NCAAF UPSET OPPORTUNITY | Q${gameState.quarter}`,
+      displayMessage: `🏈 ${this.createDynamicMessage(gameState, underdog, favorite, upsetProbability, upsetMagnitude)} | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,

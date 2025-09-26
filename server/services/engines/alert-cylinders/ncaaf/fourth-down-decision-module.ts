@@ -62,7 +62,7 @@ export default class FourthDownDecisionModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_fourth_down_decision_${gameState.fieldPosition}_${gameState.yardsToGo}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${this.createDynamicMessage(gameState, goForItProbability, recommendedAction)}`,
-      displayMessage: `🏈 NCAAF FOURTH DOWN DECISION | Q${gameState.quarter}`,
+      displayMessage: `🏈 ${this.createDynamicMessage(gameState, goForItProbability, recommendedAction)} | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,

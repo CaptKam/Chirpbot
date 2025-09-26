@@ -18,8 +18,8 @@ export default class NCAAFSecondHalfKickoffModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_ncaaf_second_half_kickoff`,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | SECOND HALF KICKOFF`,
-      displayMessage: `🏈 NCAAF SECOND HALF KICKOFF | Q${gameState.quarter}`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${this.createDynamicMessage(gameState)}`,
+      displayMessage: `🏈 ${this.createDynamicMessage(gameState)} | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,
@@ -41,6 +41,20 @@ export default class NCAAFSecondHalfKickoffModule extends BaseAlertModule {
 
   calculateProbability(gameState: GameState): number {
     return this.isTriggered(gameState) ? 100 : 0;
+  }
+
+  private createDynamicMessage(gameState: GameState): string {
+    const homeScore = gameState.homeScore || 0;
+    const awayScore = gameState.awayScore || 0;
+    const scoreDiff = Math.abs(homeScore - awayScore);
+    
+    if (scoreDiff === 0) {
+      return `Second half kickoff - tied at ${homeScore}`;
+    } else if (scoreDiff <= 7) {
+      return `Second half kickoff - tight ${scoreDiff}-point game`;
+    } else {
+      return `Second half kickoff - ${homeScore}-${awayScore}`;
+    }
   }
 
   private isKickoffTime(timeRemaining: string): boolean {

@@ -85,8 +85,8 @@ export default class HalftimeModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_halftime`,
       type: this.alertType,
-      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | HALFTIME`,
-      displayMessage: `🏈 NCAAF HALFTIME | Q${gameState.quarter}`,
+      message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${this.createDynamicMessage(gameState, scoreDiff, isClose)}`,
+      displayMessage: `🏈 ${this.createDynamicMessage(gameState, scoreDiff, isClose)} | Q${gameState.quarter}`,
 
       context: {
         gameId: gameState.gameId,
@@ -105,5 +105,20 @@ export default class HalftimeModule extends BaseAlertModule {
   calculateProbability(gameState: GameState): number {
     // If it visually looks like halftime, call it certain; else zero.
     return this.isHalftimeNow(gameState) ? 100 : 0;
+  }
+
+  private createDynamicMessage(gameState: GameState, scoreDiff: number, isClose: boolean): string {
+    const homeScore = gameState.homeScore ?? 0;
+    const awayScore = gameState.awayScore ?? 0;
+    
+    if (isClose) {
+      if (scoreDiff === 0) {
+        return `Tied at halftime ${homeScore}-${awayScore}`;
+      } else {
+        return `${scoreDiff}-point game at halftime`;
+      }
+    } else {
+      return `Halftime break - ${homeScore}-${awayScore}`;
+    }
   }
 }

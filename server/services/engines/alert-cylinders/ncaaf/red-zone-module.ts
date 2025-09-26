@@ -49,7 +49,7 @@ export default class RedZoneModule extends BaseAlertModule {
       alertKey: `${gameState.gameId}_NCAAF_RED_ZONE_${down}_${yardsToGo}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${this.createDynamicMessage(gameState, down, yardsToGo)}`,
-      displayMessage: `🏈 RED ZONE | Q${gameState.quarter} • ${down}${this.getOrdinalSuffix(down)} & ${yardsToGo}`,
+      displayMessage: `🏈 ${this.createDynamicMessage(gameState, down, yardsToGo)} | Q${gameState.quarter}`,
       context: {
         gameId: gameState.gameId,
         sport: gameState.sport,
