@@ -218,11 +218,23 @@ export class UnifiedDeduplicator {
       cached.lastContext.timeRemaining === alertKey.timeRemaining
     );
 
-    // Block if exact same game state within 30 seconds
-    if (isSameGameState && timeSinceFirst < 30000) {
-      console.log(`🚫 DEDUP: Blocking duplicate ${alertKey.type} - exact same game state`);
+    // More aggressive blocking: Block if exact same game state within 2 minutes instead of 30 seconds
+    if (isSameGameState && timeSinceFirst < 120000) {
+      console.log(`🚫 DEDUP: Blocking duplicate ${alertKey.type} - exact same game state (2min window)`);
       console.log(`   ⏱️  Time since last: ${secondsSince}s`);
       console.log(`   📊 Duplicate count: ${cached.count + 1} for this key`);
+      return false;
+    }
+
+    // Additional check: Block alerts of same type for same game within 30 seconds regardless of game state
+    const isSameTypeAndGame = (
+      cached.lastContext.gameId === alertKey.gameId &&
+      cached.lastContext.type === alertKey.type
+    );
+    
+    if (isSameTypeAndGame && timeSinceFirst < 30000) {
+      console.log(`🚫 DEDUP: Blocking ${alertKey.type} - same type/game within 30s`);
+      console.log(`   ⏱️  Time since last: ${secondsSince}s`);
       return false;
     }
 

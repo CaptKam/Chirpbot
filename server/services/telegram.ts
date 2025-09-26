@@ -47,9 +47,20 @@ function shouldSend(dedupKey: string, ttlMs = 30_000): boolean {
 // --- Message builder (MarkdownV2) ---
 function formatUniversalTelegramMessage(alert: AlertPayload): { text: string; replyMarkup?: any } {
   const gameInfo = alert.context ?? alert.gameInfo ?? {};
-  const sport = gameInfo.sport || 'UNKNOWN';
+  
+  // Extract sport from multiple possible sources with better fallback logic
+  let sport = gameInfo.sport || 'UNKNOWN';
+  
+  // If sport is UNKNOWN, try to extract from alert type as fallback
+  if (sport === 'UNKNOWN' && alert.type) {
+    const typeStr = String(alert.type);
+    const sportMatch = typeStr.match(/^(MLB|NFL|NCAAF|NBA|WNBA|CFL|NHL)_/);
+    if (sportMatch) {
+      sport = sportMatch[1];
+    }
+  }
+  
   const emoji = getSportEmoji(sport);
-
   const typeStr = String(alert.type ?? 'ALERT');
   const alertType = typeStr.replace(/^(MLB|NFL|NCAAF|NBA|WNBA|CFL|NHL)_/, '').replace(/_/g, ' ');
 
@@ -61,11 +72,11 @@ function formatUniversalTelegramMessage(alert: AlertPayload): { text: string; re
   const situationLine = buildSituationLineMd(sport, gameInfo);
   const hashtag = `#${sport}Alert #ChirpBot`;
 
-  const title = `*${escapeMd(emoji)} ${escapeMd(alertType.toUpperCase())} ALERT*`;
+  const title = `${emoji} ${alertType.toUpperCase()} ALERT`;
   const vs = `${escapeMd(awayTeam)} ${escapeMd(awayScore)} @ ${escapeMd(homeTeam)} ${escapeMd(homeScore)}`;
 
   const parts = [
-    title,
+    `*${escapeMd(title)}*`,
     vs,
     situationLine && `${situationLine}`,
     alert.url ? `[${escapeMd('View Alert Details')}](${escapeMd(alert.url)})` : '',
