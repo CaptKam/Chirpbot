@@ -330,14 +330,20 @@ export class NCAAFApiService extends BaseSportApi {
       const responseTime = Date.now() - startTime;
       this.ncaafMetrics.averageResponseTime.push(responseTime);
       
+      // 🔧 FIX: Handle rate limiting and errors with enhanced fallback
+      if (result && result.error) {
+        console.log(`❌ NCAAF API: Enhanced data error for ${gameId}: ${result.message || result.error}`);
+        
+        // Trigger enhanced fallback for rate limiting and API errors
+        return await this.getEnhancedFallbackDataInternal(gameId);
+      }
+      
       // Check if we got meaningful data
       if (result && !result.error) {
         if (result.usingFallbackData) {
           console.log(`⚠️ NCAAF API: Using fallback data for game ${gameId} - some fields may be estimated`);
         }
         console.log(`✅ NCAAF API: Enhanced data retrieved for ${gameId} - Q${result.quarter}, ${result.timeRemaining}, field: ${result.fieldPosition}`);
-      } else if (result?.error) {
-        console.log(`❌ NCAAF API: Enhanced data error for ${gameId}: ${result.message || 'Unknown error'}`);
       }
       
       // Only log if critically slow (reduced from previous thresholds)
@@ -392,6 +398,54 @@ export class NCAAFApiService extends BaseSportApi {
       
       return fallbackData;
     }
+  }
+
+  // 🔧 ENHANCED FALLBACK: Get actual game data when rate limited
+  private async getEnhancedFallbackDataInternal(gameId: string): Promise<NCAAFEnhancedGameData> {
+    console.log(`🔄 NCAAF API: Attempting to get basic game data for fallback...`);
+    
+    let fallbackData: NCAAFEnhancedGameData = {
+      gameId,
+      quarter: 1,
+      timeRemaining: '15:00',
+      fieldPosition: 50,
+      homeScore: 0,
+      awayScore: 0,
+      error: "NCAAF enhanced data temporarily unavailable",
+      message: `NCAAF enhanced data temporarily unavailable`,
+      usingFallbackData: true
+    };
+    
+    try {
+      const todaysGames = await this.getTodaysGames();
+      const gameData = todaysGames.find(game => game.id === gameId);
+      
+      if (gameData) {
+        // Use actual game state data for better fallbacks
+        fallbackData = {
+          gameId,
+          quarter: gameData.quarter || 1,
+          timeRemaining: gameData.timeRemaining || '15:00',
+          fieldPosition: gameData.fieldPosition || 50,
+          homeScore: gameData.homeTeam.score || 0,
+          awayScore: gameData.awayTeam.score || 0,
+          down: gameData.down || 1,
+          yardsToGo: gameData.yardsToGo || 10,
+          possession: gameData.possession,
+          // 🔧 CRITICAL FIX: Remove error field when we have valid data
+          // The NCAAF engine rejects enhanced data with error field set
+          message: `NCAAF enhanced data from fallback`,
+          usingFallbackData: true
+        };
+        console.log(`✅ NCAAF API: Using basic game data fallback for ${gameId} - Q${fallbackData.quarter}, ${fallbackData.timeRemaining}, scores: ${fallbackData.awayScore}-${fallbackData.homeScore}`);
+      } else {
+        console.log(`⚠️ NCAAF API: Game ${gameId} not found in today's games, using defaults`);
+      }
+    } catch (fallbackError) {
+      console.log(`⚠️ NCAAF API: Basic fallback also failed for ${gameId}, using defaults`);
+    }
+    
+    return fallbackData;
   }
   
   // Generate deterministic player names for consistent alerts
