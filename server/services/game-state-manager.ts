@@ -14,6 +14,7 @@ import { GamblingInsightsComposer } from './gambling-insights-composer';
 import type { AlertResult as EngineAlertResult, GameState } from './engines/base-engine';
 import type { AlertResult } from '../../shared/schema';
 import type { WeatherChangeEvent } from './weather-on-live-service';
+import { sendTelegramAlert, type TelegramConfig } from './telegram';
 // V3: UNIFIED ENHANCEMENT - AI processing now handled by UnifiedAlertGenerator's Enhanced Alert Router
 // import { unifiedAIProcessor, CrossSportContext } from './unified-ai-processor';
 // import { generativeSportsAI } from './generative-sports-ai';
@@ -756,6 +757,50 @@ export class GameStateManager {
                         
                         await storage.createAlert(alertData);
                         console.log(`💾 Alert saved to database for user ${user.username}: ${rawAlert.alertKey}`);
+                        
+                        // 📱 TELEGRAM DELIVERY: Send alert via Telegram if user has it configured
+                        try {
+                          const userDetails = await storage.getUserById(user.id);
+                          if (userDetails?.telegramEnabled && userDetails?.telegramBotToken && userDetails?.telegramChatId) {
+                            const telegramConfig: TelegramConfig = {
+                              botToken: userDetails.telegramBotToken,
+                              chatId: userDetails.telegramChatId
+                            };
+                            
+                            // Create telegram-compatible alert payload
+                            const telegramAlert = {
+                              type: rawAlert.type,
+                              context: {
+                                sport: sport.toUpperCase(),
+                                gameId: gameId,
+                                awayTeam: gameState.awayTeam || 'Away',
+                                homeTeam: gameState.homeTeam || 'Home',
+                                awayScore: gameState.awayScore || 0,
+                                homeScore: gameState.homeScore || 0,
+                                ...rawAlert.context
+                              },
+                              gameInfo: {
+                                sport: sport.toUpperCase(),
+                                awayTeam: gameState.awayTeam || 'Away',
+                                homeTeam: gameState.homeTeam || 'Home',
+                                awayScore: gameState.awayScore || 0,
+                                homeScore: gameState.homeScore || 0
+                              }
+                            };
+                            
+                            console.log(`📱 Sending Telegram alert to ${user.username} (${user.id})`);
+                            const sent = await sendTelegramAlert(telegramConfig, telegramAlert);
+                            if (sent) {
+                              console.log(`📱 ✅ Telegram alert delivered to ${user.username}`);
+                            } else {
+                              console.log(`📱 ❌ Telegram delivery failed to ${user.username}`);
+                            }
+                          } else {
+                            console.log(`📱 ⏭️ Telegram not configured for user ${user.username}`);
+                          }
+                        } catch (telegramError) {
+                          console.error(`⚠️ Telegram notification failed for user ${user.username}:`, telegramError);
+                        }
                       }
                     } catch (saveError) {
                       console.error(`❌ Failed to save alert ${rawAlert.alertKey}:`, saveError);
