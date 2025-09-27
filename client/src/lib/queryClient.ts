@@ -24,22 +24,22 @@ export const shouldRetryError = (error: any): boolean => {
   if (error instanceof TypeError && error.message.includes('fetch')) {
     return true;
   }
-
+  
   // Parse status code from error message
   const statusMatch = error.message?.match(/^(\d{3}):/);
   if (statusMatch) {
     const status = parseInt(statusMatch[1]);
-
+    
     // Retry on 5xx server errors
     if (status >= 500) return true;
-
+    
     // Retry on specific 4xx errors (Request Timeout, Too Many Requests)
     if (status === 408 || status === 429) return true;
-
+    
     // Don't retry on other 4xx client errors
     if (status >= 400 && status < 500) return false;
   }
-
+  
   // Default: retry on unknown errors
   return true;
 };
@@ -61,7 +61,7 @@ export async function apiRequest(
   retryConfig?: RetryConfig,
 ): Promise<Response> {
   const config = { ...defaultRetryConfig, ...retryConfig };
-
+  
   return pRetry(async () => {
     const res = await fetch(url, {
       method,
@@ -98,12 +98,12 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior, retryConfig }) =>
   async ({ queryKey }) => {
     const config = { ...defaultRetryConfig, ...retryConfig };
-
+    
     return pRetry(async () => {
       // Extract base URL and query parameters
       const baseUrl = queryKey[0] as string;
       const queryParams = queryKey[1] as Record<string, any> || {};
-
+      
       // Construct URL with query parameters
       const url = new URL(baseUrl, window.location.origin);
       Object.entries(queryParams).forEach(([key, value]) => {
@@ -111,7 +111,7 @@ export const getQueryFn: <T>(options: {
           url.searchParams.append(key, String(value));
         }
       });
-
+      
       const res = await fetch(url.toString(), {
         credentials: "include",
       });
@@ -149,17 +149,8 @@ export const queryClient = new QueryClient({
       refetchOnWindowFocus: false, // Avoid unnecessary refetches in production
       staleTime: 30000, // 30 seconds - good balance of freshness and performance
       gcTime: 5 * 60 * 1000, // 5 minutes - reasonable cache retention
-      retry: (failureCount, error) => {
-        // Don't retry on 4xx errors
-        if (error instanceof Error && 'status' in error) {
-          const status = (error as any).status;
-          if (status >= 400 && status < 500) {
-            return false;
-          }
-        }
-        return failureCount < 3;
-      },
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      retry: 0, // Disable React Query retries - p-retry handles all retry logic
+      retryDelay: undefined, // No retry delay needed since retry is disabled
     },
     mutations: {
       retry: 0, // Disable React Query retries - p-retry handles all retry logic

@@ -2,7 +2,6 @@ import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { unifiedSettings } from '../../storage';
 import { storage } from '../../storage';
 import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
-import { footballPerformanceTracker } from './football-performance-tracker';
 
 export class NCAAFEngine extends BaseSportEngine {
   // Deduplication tracking - tracks sent alerts to prevent duplicates (standardized from MLB)
@@ -599,90 +598,6 @@ export class NCAAFEngine extends BaseSportEngine {
     }
     if (this.performanceMetrics.aiEnhancementTime.length > maxEntries) {
       this.performanceMetrics.aiEnhancementTime = this.performanceMetrics.aiEnhancementTime.slice(-maxEntries);
-    }
-  }
-
-  /**
-   * Get performance context for enhanced NCAAF alerts
-   */
-  getPerformanceContext(gameId: string, teamId?: string, playerId?: string): string | null {
-    const contextParts: string[] = [];
-
-    // Get quarterback performance if playerId provided
-    if (playerId) {
-      const qbSummary = footballPerformanceTracker.getQuarterbackSummary(gameId, playerId);
-      if (qbSummary) {
-        contextParts.push(`QB: ${qbSummary}`);
-      }
-    }
-
-    // Get team momentum if teamId provided
-    if (teamId) {
-      const teamSummary = footballPerformanceTracker.getTeamMomentumSummary(gameId, teamId);
-      if (teamSummary) {
-        contextParts.push(`Team: ${teamSummary}`);
-      }
-
-      const defenseSummary = footballPerformanceTracker.getDefenseSummary(gameId, teamId);
-      if (defenseSummary) {
-        contextParts.push(`Defense: ${defenseSummary}`);
-      }
-    }
-
-    // Get unusual patterns
-    const patterns = footballPerformanceTracker.detectUnusualPatterns(gameId);
-    if (patterns.length > 0) {
-      contextParts.push(`Patterns: ${patterns.slice(0, 2).join(', ')}`);
-    }
-
-    return contextParts.length > 0 ? contextParts.join(' | ') : null;
-  }
-
-  /**
-   * Update performance tracking based on NCAAF game state
-   */
-  updateGamePerformance(gameState: GameState): void {
-    if (!gameState.gameId || !gameState.isLive) return;
-
-    try {
-      // Update team momentum for NCAAF-specific events
-      if (gameState.homeScore !== undefined && gameState.awayScore !== undefined) {
-        const quarter = gameState.quarter || 1;
-        
-        // Update for both teams
-        if (gameState.homeTeam) {
-          footballPerformanceTracker.updateTeamMomentum(
-            gameState.gameId,
-            gameState.homeTeam,
-            gameState.homeTeam,
-            quarter,
-            {
-              type: 'possession_change',
-              fieldPosition: gameState.fieldPosition
-            }
-          );
-        }
-
-        if (gameState.awayTeam) {
-          footballPerformanceTracker.updateTeamMomentum(
-            gameState.gameId,
-            gameState.awayTeam,
-            gameState.awayTeam,
-            quarter,
-            {
-              type: 'possession_change',
-              fieldPosition: gameState.fieldPosition ? 100 - gameState.fieldPosition : undefined
-            }
-          );
-        }
-      }
-
-      // Cleanup old performance data periodically
-      if (Math.random() < 0.01) { // 1% chance to trigger cleanup
-        footballPerformanceTracker.cleanupOldGames();
-      }
-    } catch (error) {
-      console.error('NCAAF Engine: Error updating performance tracking:', error);
     }
   }
 

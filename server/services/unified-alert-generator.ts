@@ -1160,7 +1160,6 @@ export class UnifiedAlertGenerator {
             alertResults.map(async (alert) => {
               try {
                 // Use Enhanced Alert Router for consolidated AI enhancement
-                console.log(`🚀 UnifiedAlertGenerator: Calling Enhanced Alert Router for ${alert.type} on game ${gameState.gameId}`);
                 const unifiedAlert = await enhancedAlertRouter.enhanceAlert(alert, gameState);
                 
                 // Convert unified format back to legacy format for compatibility
@@ -1238,18 +1237,26 @@ export class UnifiedAlertGenerator {
                 // Create alert for each user monitoring this game
                 for (const userId of gameMonitoringUsers) {
                   try {
-                    // 🎯 UNIFIED PREFERENCE CHECK: Use single authoritative function
-                    const userHasAlertEnabled = await storage.isAlertEnabledForUser(userId, sport, alertResult.type);
+                    // 🔒 CRITICAL FIX: Check if this specific user has this alert type enabled
+                    const userPrefs = await storage.getUserAlertPreferencesBySport(userId, sport.toUpperCase());
+                    const userPref = userPrefs.find(pref => pref.alertType === alertResult.type);
+                    
+                    // If user has explicit preference, respect it. If no preference, fall back to global settings.
+                    let userHasAlertEnabled = false;
+                    if (userPref) {
+                      // User has explicit preference - respect it
+                      userHasAlertEnabled = userPref.enabled === true;
+                    } else {
+                      // No explicit user preference - check global default
+                      userHasAlertEnabled = await this.settingsCache.isAlertEnabled(sport, alertResult.type);
+                    }
                     
                     if (!userHasAlertEnabled) {
+                      const reason = userPref ? 'explicitly disabled by user' : 'not enabled globally';
                       if (this.logLevel !== 'quiet') {
-                        console.log(`🚫 User ${userId} doesn't get ${alertResult.type}: preference disabled - skipping (preference: disabled)`);
+                        console.log(`🚫 User ${userId} doesn't get ${alertResult.type}: ${reason} - skipping`);
                       }
                       continue; // Skip this user - they don't want this alert type
-                    } else {
-                      if (this.logLevel !== 'quiet') {
-                        console.log(`✅ User ${userId} gets ${alertResult.type} (preference: enabled)`);
-                      }
                     }
                     
                     // CRITICAL: Validate alertResult before processing to prevent constraint violations

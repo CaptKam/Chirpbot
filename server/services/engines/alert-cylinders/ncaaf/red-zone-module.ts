@@ -7,7 +7,7 @@ export default class RedZoneModule extends BaseAlertModule {
   sport = 'NCAAF';
 
   isTriggered(gameState: GameState): boolean {
-    console.log(`🔍 NCAAF Red Zone check for ${gameState.gameId}: status=${gameState.status}, fieldPos=${gameState.fieldPosition}, quarter=${gameState.quarter}, scores=${gameState.homeScore}-${gameState.awayScore}`);
+    console.log(`🔍 NCAAF Red Zone check for ${gameState.gameId}: status=${gameState.status}, fieldPos=${gameState.fieldPosition}, quarter=${gameState.quarter}`);
     
     // Must be a live game
     if (gameState.status !== 'live') {
@@ -24,31 +24,18 @@ export default class RedZoneModule extends BaseAlertModule {
       return true;
     }
     
-    // ENHANCED: More generous fallback conditions when field position is missing
+    // RELAXED: Fallback for close games in Q4 when field position is missing
     if (gameState.fieldPosition === null || gameState.fieldPosition === undefined) {
-      const scoreDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
-      const quarter = gameState.quarter || 1;
+      const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+      const isCloseQ4Game = gameState.quarter === 4 && scoreDiff <= 7;
       
-      // Fallback 1: Close games in Q3 or Q4
-      if ((quarter === 3 || quarter === 4) && scoreDiff <= 7) {
-        console.log(`🎯 NCAAF Red Zone TRIGGERED (close game fallback Q${quarter}) for ${gameState.gameId}: score diff ${scoreDiff}`);
-        return true;
-      }
-      
-      // Fallback 2: 4th down situations (likely near goal line)
-      if (gameState.down === 4 && gameState.yardsToGo && gameState.yardsToGo <= 5) {
-        console.log(`🎯 NCAAF Red Zone TRIGGERED (4th & short fallback) for ${gameState.gameId}: 4th & ${gameState.yardsToGo}`);
-        return true;
-      }
-      
-      // Fallback 3: Any tied game after Q1
-      if (scoreDiff === 0 && quarter > 1) {
-        console.log(`🎯 NCAAF Red Zone TRIGGERED (tied game fallback Q${quarter}) for ${gameState.gameId}`);
+      if (isCloseQ4Game) {
+        console.log(`🎯 NCAAF Red Zone TRIGGERED (Q4 close game fallback) for ${gameState.gameId}: score diff ${scoreDiff}`);
         return true;
       }
     }
     
-    console.log(`❌ Red Zone: Not in red zone or fallback conditions (fieldPos: ${gameState.fieldPosition}, quarter: ${gameState.quarter})`);
+    console.log(`❌ Red Zone: Not in red zone or fallback conditions`);
     return false;
   }
 

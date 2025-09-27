@@ -709,29 +709,15 @@ export class GameStateManager {
             console.log(`🚨 Generating alerts for ${sport} game ${gameId}`);
             let alerts = await engine.generateLiveAlerts(gameState);
 
-            // ✅ ENABLED: Delegate to UnifiedAlertGenerator with Enhanced Alert Router
+            // 🚫 DISABLED: Competing AI enhancement pipeline now handled by Enhanced Alert Router in UnifiedAlertGenerator
             if (alerts && alerts.length > 0) {
-              console.log(`✅ GameStateManager: Generated ${alerts.length} alerts - delegating to UnifiedAlertGenerator`);
+              console.log(`✅ GameStateManager: Generated ${alerts.length} alerts - enhancement handled by UnifiedAlertGenerator`);
               console.log(`🔗 Alert processing delegated to UnifiedAlertGenerator with Enhanced Alert Router`);
               
-              // ACTUAL DELEGATION: Call Enhanced Alert Router directly to process generated alerts
-              const { EnhancedAlertRouter } = await import('./enhanced-alert-router');
-              const enhancedAlertRouter = new EnhancedAlertRouter();
-              
-              try {
-                console.log(`🚀 GameStateManager: Actually calling Enhanced Alert Router for ${alerts.length} alerts`);
-                
-                // Process each alert through Enhanced Alert Router
-                for (const alert of alerts) {
-                  console.log(`🔍 Enhanced Alert Router: Processing ${alert.type} for game ${gameState.gameId}`);
-                  const enhancedAlert = await enhancedAlertRouter.enhanceAlert(alert, gameState);
-                  console.log(`✅ Enhanced Alert Router: Successfully processed ${alert.type} alert`);
-                }
-                
-                console.log(`✅ GameStateManager: Successfully processed ${alerts.length} enhanced alerts`);
-              } catch (error) {
-                console.error(`❌ GameStateManager: Failed to process alerts through Enhanced Alert Router:`, error);
-              }
+              // NOTE: Enhancement is now handled by:
+              // 1. UnifiedAlertGenerator receives alerts from sport engines
+              // 2. Enhanced Alert Router provides unified enhancement (narrative + predictive + betting + weather)
+              // 3. No more competing AI systems or duplicate processing
               
               // Previously: GameStateManager → generativeSportsAI → unifiedAIProcessor (CONFLICTS)
               // Now: SportEngine → UnifiedAlertGenerator → Enhanced Alert Router (UNIFIED)

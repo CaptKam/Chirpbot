@@ -14,31 +14,20 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
       return false;
     }
 
-    // Check for quarter data - be more forgiving
-    const quarter = gameState.quarter || 1;
-    
-    // Must be in 2nd or 4th quarter (end of half situations) OR if quarter is unknown but time looks like 2-minute warning
-    const isCorrectQuarter = quarter === 2 || quarter === 4;
-    const timeRemaining = gameState.timeRemaining || '';
-    
-    if (!isCorrectQuarter) {
-      // If quarter is missing/unknown but we have 2:00 time, allow it as fallback
-      if ((quarter === 0 || quarter === undefined) && this.isExactlyTwoMinutes(timeRemaining)) {
-        console.log(`🔧 Two Minute: Quarter unknown but time indicates 2-minute warning (${timeRemaining})`);
-      } else {
-        console.log(`❌ Two Minute: Wrong quarter (Q${quarter})`);
-        return false;
-      }
-    }
-
-    // Must be exactly at 2:00 remaining (within 10 second window)
-    const exactlyTwoMinutes = this.isExactlyTwoMinutes(timeRemaining);
-    if (!exactlyTwoMinutes) {
-      console.log(`❌ Two Minute: Not exactly 2:00 remaining (${timeRemaining})`);
+    // Must be in 2nd or 4th quarter (end of half situations)
+    if (gameState.quarter !== 2 && gameState.quarter !== 4) {
+      console.log(`❌ Two Minute: Wrong quarter (Q${gameState.quarter})`);
       return false;
     }
 
-    console.log(`🎯 NCAAF Two Minute WARNING TRIGGERED for ${gameState.gameId} in Q${quarter}`);
+    // RELAXED: Must be under 2:30 remaining (instead of exactly 2:00)
+    const underTwoThirty = this.isUnderTwoThirty(gameState.timeRemaining);
+    if (!underTwoThirty) {
+      console.log(`❌ Two Minute: Not under 2:30 remaining (${gameState.timeRemaining})`);
+      return false;
+    }
+
+    console.log(`🎯 NCAAF Two Minute WARNING TRIGGERED for ${gameState.gameId}`);
     return true;
   }
 
@@ -49,7 +38,7 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining);
 
     return {
-      alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}`,
+      alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}_${timeSeconds}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${this.createDynamicMessage(gameState, halfText)}`,
       displayMessage: `🏈 ${this.createDynamicMessage(gameState, halfText)} | Q${gameState.quarter}`,
@@ -76,17 +65,21 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     return 95; // High probability since it's exactly at 2:00 mark
   }
 
-  private isExactlyTwoMinutes(timeRemaining: string): boolean {
+  private isUnderTwoThirty(timeRemaining: string): boolean {
     if (!timeRemaining) return false;
 
     try {
       const [minutes, seconds] = timeRemaining.split(':').map(Number);
       const totalSeconds = minutes * 60 + seconds;
-      // Allow for 10-second window around exactly 2:00 (115-125 seconds)
-      return totalSeconds >= 115 && totalSeconds <= 125;
+      // RELAXED: Trigger when under 2:30 (150 seconds)
+      return totalSeconds <= 150 && totalSeconds > 0;
     } catch (error) {
       return false;
     }
+  }
+
+  private isExactlyTwoMinutes(timeRemaining: string): boolean {
+    return this.isUnderTwoThirty(timeRemaining); // Use relaxed version
   }
 
   private parseTimeToSeconds(timeString: string): number {

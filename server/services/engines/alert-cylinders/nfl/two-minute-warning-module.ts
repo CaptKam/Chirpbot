@@ -1,6 +1,5 @@
 
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
-import { footballPerformanceTracker } from '../../football-performance-tracker';
 
 export default class TwoMinuteWarningModule extends BaseAlertModule {
   alertType = 'NFL_TWO_MINUTE_WARNING';
@@ -51,149 +50,31 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     const halfText = isFirstHalf ? '1st Half' : '2nd Half';
     const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining);
 
-    // Get performance data for enhanced context
-    const performanceContext = this.getPerformanceContext(gameState);
-    const dynamicMessage = this.createDynamicMessage(gameState, performanceContext);
-
-    // Extract weather context if available
-    const weatherContext = gameState.weatherContext;
-    const weatherImpact = weatherContext ? this.analyzeWeatherImpact(weatherContext) : null;
-
-    // Build context with weather and performance data
-    const context: any = {
-      gameId: gameState.gameId,
-      homeTeam: gameState.homeTeam,
-      awayTeam: gameState.awayTeam,
-      homeScore: gameState.homeScore,
-      awayScore: gameState.awayScore,
-      quarter: gameState.quarter,
-      timeRemaining: gameState.timeRemaining,
-      timeSeconds,
-      halfText,
-      isFirstHalf,
-      twoMinuteWarning: true,
-      situationType: 'TWO_MINUTE_WARNING',
-      // Add performance context
-      ...performanceContext
-    };
-
-    // Add weather context if available
-    if (weatherContext) {
-      context.weatherCondition = weatherContext.condition;
-      context.temperature = weatherContext.temperature;
-      context.windSpeed = weatherContext.windSpeed;
-      context.windDirection = weatherContext.windDirection;
-      context.humidity = weatherContext.humidity;
-      context.precipitation = this.hasPrecipitation(weatherContext.condition);
-      context.weatherImpact = weatherImpact;
-    }
+    const dynamicMessage = this.createDynamicMessage(gameState);
 
     return {
-      alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}`,
+      alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}_${timeSeconds}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${dynamicMessage}`,
       displayMessage: `🏈 ${dynamicMessage} | Q${gameState.quarter}`,
-      context,
+      context: {
+        gameId: gameState.gameId,
+        homeTeam: gameState.homeTeam,
+        awayTeam: gameState.awayTeam,
+        homeScore: gameState.homeScore,
+        awayScore: gameState.awayScore,
+        quarter: gameState.quarter,
+        timeRemaining: gameState.timeRemaining,
+        timeSeconds,
+        halfText,
+        isFirstHalf,
+        twoMinuteWarning: true
+      },
       priority: 88
     };
   }
 
-  /**
-   * Get comprehensive performance context for both teams
-   */
-  private getPerformanceContext(gameState: GameState): any {
-    const gameId = gameState.gameId;
-    const context: any = {};
-    
-    try {
-      // Get current quarterback performance (possession team)
-      const possessionTeam = gameState.possession === 'home' ? gameState.homeTeam : gameState.awayTeam;
-      const possessionTeamId = gameState.possession === 'home' ? 'home' : 'away';
-      
-      if (gameState.currentQuarterback) {
-        const qbId = gameState.currentQuarterbackId || `qb_${gameState.currentQuarterback.replace(/\s+/g, '_')}`;
-        const qbSummary = footballPerformanceTracker.getQuarterbackSummary(gameId, qbId);
-        if (qbSummary) {
-          context.quarterbackPerformance = qbSummary;
-          context.quarterbackName = gameState.currentQuarterback;
-        }
-      }
-      
-      // Get team momentum for both teams
-      const homeTeamMomentum = footballPerformanceTracker.getTeamMomentumSummary(gameId, 'home');
-      const awayTeamMomentum = footballPerformanceTracker.getTeamMomentumSummary(gameId, 'away');
-      
-      if (homeTeamMomentum) {
-        context.homeTeamMomentum = homeTeamMomentum;
-      }
-      if (awayTeamMomentum) {
-        context.awayTeamMomentum = awayTeamMomentum;
-      }
-      
-      // Get defensive performance for both teams
-      const homeDefense = footballPerformanceTracker.getDefenseSummary(gameId, 'home');
-      const awayDefense = footballPerformanceTracker.getDefenseSummary(gameId, 'away');
-      
-      if (homeDefense) {
-        context.homeDefensePerformance = homeDefense;
-      }
-      if (awayDefense) {
-        context.awayDefensePerformance = awayDefense;
-      }
-      
-      // Get unusual patterns that might be relevant
-      const unusualPatterns = footballPerformanceTracker.detectUnusualPatterns(gameId);
-      if (unusualPatterns.length > 0) {
-        context.unusualPatterns = unusualPatterns;
-      }
-      
-      // Add context for possession team specifically
-      context.possessionTeam = possessionTeam;
-      context.possessionTeamMomentum = gameState.possession === 'home' ? homeTeamMomentum : awayTeamMomentum;
-      
-    } catch (error) {
-      console.warn('Error retrieving performance context:', error);
-    }
-    
-    return context;
-  }
-
-  /**
-   * Create performance-enhanced dynamic message
-   */
-  private createPerformanceMessage(gameState: GameState, performanceContext: any): string {
-    const parts: string[] = [];
-    
-    // Add quarterback performance if available
-    if (performanceContext.quarterbackPerformance && performanceContext.quarterbackName) {
-      parts.push(`${performanceContext.quarterbackName}: ${performanceContext.quarterbackPerformance}`);
-    }
-    
-    // Add possession team momentum
-    if (performanceContext.possessionTeamMomentum) {
-      parts.push(`${performanceContext.possessionTeam} momentum: ${performanceContext.possessionTeamMomentum}`);
-    }
-    
-    // Add defensive context for opposing team
-    const opposingTeam = gameState.possession === 'home' ? gameState.awayTeam : gameState.homeTeam;
-    const opposingDefense = gameState.possession === 'home' ? 
-      performanceContext.awayDefensePerformance : 
-      performanceContext.homeDefensePerformance;
-    
-    if (opposingDefense) {
-      parts.push(`${opposingTeam} defense: ${opposingDefense}`);
-    }
-    
-    // Add unusual patterns
-    if (performanceContext.unusualPatterns && performanceContext.unusualPatterns.length > 0) {
-      const relevantPatterns = performanceContext.unusualPatterns.slice(0, 2); // Limit to top 2
-      parts.push(`Patterns: ${relevantPatterns.join(', ')}`);
-    }
-    
-    return parts.length > 0 ? parts.join(' | ') : null;
-  }
-
-  private createDynamicMessage(gameState: GameState, performanceContext?: any): string {
+  private createDynamicMessage(gameState: GameState): string {
     const isFirstHalf = gameState.quarter === 2;
     const halfText = isFirstHalf ? '1st half' : '4th quarter';
     const scoreDisplay = this.getScoreDisplay(gameState);
@@ -232,24 +113,6 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
       strategicContext = 'Game-deciding situation';
     } else if (urgencyLevel === 'HIGH') {
       strategicContext = 'High-pressure situation';
-    }
-    
-    // Add performance context if available
-    if (performanceContext) {
-      const performanceMessage = this.createPerformanceMessage(gameState, performanceContext);
-      if (performanceMessage) {
-        strategicContext += ` | ${performanceMessage}`;
-      }
-    }
-    
-    // Add weather context if available
-    const weatherContext = gameState.weatherContext;
-    let weatherInfo = '';
-    if (weatherContext) {
-      weatherInfo = this.getWeatherDescription(weatherContext);
-      if (weatherInfo) {
-        strategicContext += ` | ${weatherInfo}`;
-      }
     }
     
     return `${situationDesc} - ${strategicContext}`;
@@ -348,93 +211,5 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     if (clockPhase === 'RUNNING_OUT_CLOCK') return 'LOW';
     
     return 'MEDIUM';
-  }
-
-  // Weather analysis helper methods
-  private analyzeWeatherImpact(weatherContext: any): 'minimal' | 'moderate' | 'significant' | 'severe' {
-    let impactScore = 0;
-    
-    // Analyze temperature impact
-    if (weatherContext.temperature !== undefined) {
-      if (weatherContext.temperature <= 20) impactScore += 2; // Extreme cold affects ball handling
-      if (weatherContext.temperature >= 95) impactScore += 1; // Heat affects player endurance
-    }
-    
-    // Analyze wind impact (significant for field goals/passing)
-    if (weatherContext.windSpeed !== undefined) {
-      if (weatherContext.windSpeed >= 20) impactScore += 2; // Strong winds affect passing/kicking
-      if (weatherContext.windSpeed >= 30) impactScore += 1; // Extreme winds
-    }
-    
-    // Analyze precipitation impact
-    if (weatherContext.condition) {
-      const condition = weatherContext.condition.toLowerCase();
-      if (this.hasPrecipitation(condition)) {
-        impactScore += 2; // Rain/snow affects ball handling and field conditions
-        if (condition.includes('heavy') || condition.includes('storm')) {
-          impactScore += 1; // Heavy precipitation is worse
-        }
-      }
-    }
-    
-    // Determine impact level
-    if (impactScore >= 5) return 'severe';
-    if (impactScore >= 3) return 'significant';
-    if (impactScore >= 1) return 'moderate';
-    return 'minimal';
-  }
-
-  private hasPrecipitation(condition: string | undefined): boolean {
-    if (!condition) return false;
-    const precipitationKeywords = ['rain', 'snow', 'sleet', 'drizzle', 'shower', 'storm', 'precipitation'];
-    return precipitationKeywords.some(keyword => condition.toLowerCase().includes(keyword));
-  }
-
-  private getWeatherDescription(weatherContext: any): string {
-    const parts: string[] = [];
-    
-    // Temperature information (if extreme)
-    if (weatherContext.temperature !== undefined) {
-      if (weatherContext.temperature <= 32) {
-        parts.push(`${weatherContext.temperature}°F (freezing)`);
-      } else if (weatherContext.temperature <= 20) {
-        parts.push(`${weatherContext.temperature}°F (extreme cold)`);
-      } else if (weatherContext.temperature >= 95) {
-        parts.push(`${weatherContext.temperature}°F (extreme heat)`);
-      }
-    }
-    
-    // Wind information (if significant)
-    if (weatherContext.windSpeed !== undefined && weatherContext.windSpeed >= 15) {
-      let windDesc = `${weatherContext.windSpeed}mph winds`;
-      if (weatherContext.windDirection) {
-        windDesc += ` ${weatherContext.windDirection}`;
-      }
-      parts.push(windDesc);
-    }
-    
-    // Precipitation information
-    if (weatherContext.condition && this.hasPrecipitation(weatherContext.condition)) {
-      parts.push(weatherContext.condition.toLowerCase());
-    }
-    
-    // Add impact assessment
-    if (parts.length > 0) {
-      const impact = this.analyzeWeatherImpact(weatherContext);
-      const impactDesc = this.getImpactDescription(impact);
-      return `${parts.join(', ')} (${impactDesc})`;
-    }
-    
-    return '';
-  }
-
-  private getImpactDescription(impact: string): string {
-    switch (impact) {
-      case 'severe': return 'major game impact';
-      case 'significant': return 'significant impact';
-      case 'moderate': return 'moderate impact';
-      case 'minimal': return 'minimal impact';
-      default: return 'weather conditions';
-    }
   }
 }

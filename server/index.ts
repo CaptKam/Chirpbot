@@ -17,8 +17,8 @@ import { EmergencyMemoryMonitor } from "./emergency-memory-monitor";
 // 🔒 PERMANENT PORT CONFLICT SOLUTION - ACQUIRE SINGLE INSTANCE LOCK FIRST
 console.log('🔒 Checking for existing ChirpBot instances...');
 
-// Determine target port early - force port 3000 for Replit compatibility  
-const TARGET_PORT = process.env.REPL_ID ? 3000 : parseInt(process.env.PORT || "3000", 10);
+// Determine target port early - use platform PORT or default to 3000
+const TARGET_PORT = parseInt(process.env.PORT || "3000", 10);
 const ALLOW_DYNAMIC_PORT = process.env.ALLOW_DYNAMIC_PORT === 'true';
 
 // Create and acquire singleton lock with development restart support

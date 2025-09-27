@@ -4,7 +4,6 @@ import { storage } from '../../storage';
 import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
 import { weatherService } from '../weather-service';
 import { alertComposer, EnhancedAlertPayload } from '../alert-composer';
-import { footballPerformanceTracker } from './football-performance-tracker';
 
 export class NFLEngine extends BaseSportEngine {
   private lineMovementCache: Map<string, any> = new Map(); // Track line movements
@@ -169,9 +168,6 @@ export class NFLEngine extends BaseSportEngine {
         console.log(`🔄 NFL: No alerts generated for game ${enhancedGameState.gameId}`);
       }
 
-      // Update performance tracking with latest game state
-      this.updatePerformanceTracking(enhancedGameState);
-      
       // Track NFL-specific metrics
       if (enhancedGameState.fieldPosition && enhancedGameState.fieldPosition <= 20) {
         this.performanceMetrics.redZoneOpportunities++;
@@ -315,7 +311,7 @@ export class NFLEngine extends BaseSportEngine {
 
         console.log(`🧠 NFL AI Enhancement: Processing ${alert.type} alert (${probability}%)`);
 
-        // Build cross-sport context for NFL with enhanced performance tracking
+        // Build cross-sport context for NFL
         const aiContext: CrossSportContext = {
             sport: 'NFL',
             gameId: gameState.gameId,
@@ -335,78 +331,13 @@ export class NFLEngine extends BaseSportEngine {
             possession: gameState.possession,
             redZone: gameState.fieldPosition ? gameState.fieldPosition <= 20 : false,
             goalLine: gameState.fieldPosition ? gameState.fieldPosition <= 5 : false,
-            // Enhanced weather context with more detail
             weather: gameState.weather ? {
               temperature: gameState.weather.data?.temperature || 72,
               condition: gameState.weather.data?.condition || 'Clear',
               windSpeed: gameState.weather.data?.windSpeed || 0,
-              windDirection: gameState.weather.data?.windDirection || '',
               humidity: gameState.weather.data?.humidity || 50,
-              impact: gameState.weather.impact?.description || 'Minimal impact',
-              precipitation: alert.context?.precipitation || false
+              impact: gameState.weather.impact?.description || 'Minimal impact'
             } : undefined,
-            // === PERFORMANCE TRACKING DATA (from alert context) ===
-            quarterbackPerformance: alert.context?.quarterbackPerformance ? {
-              name: alert.context.quarterbackName || 'QB',
-              completions: alert.context.quarterbackPerformance.completions,
-              attempts: alert.context.quarterbackPerformance.attempts,
-              yards: alert.context.quarterbackPerformance.passingYards,
-              touchdowns: alert.context.quarterbackPerformance.touchdownPasses,
-              interceptions: alert.context.quarterbackPerformance.interceptions,
-              rating: alert.context.quarterbackPerformance.qbRating,
-              currentDriveStats: alert.context.quarterbackPerformance.currentDrive ? 
-                `${alert.context.quarterbackPerformance.currentDrive.completions}/${alert.context.quarterbackPerformance.currentDrive.attempts} for ${alert.context.quarterbackPerformance.currentDrive.yards} yards` : undefined,
-              pressureStats: alert.context.quarterbackPerformance.pressureStats ? 
-                `${alert.context.quarterbackPerformance.pressureStats.completionsUnderPressure}/${alert.context.quarterbackPerformance.pressureStats.attemptsUnderPressure} under pressure` : undefined,
-              clutchPerformance: alert.context.quarterbackPerformance.redZoneStats ? 
-                `${alert.context.quarterbackPerformance.redZoneStats.completions}/${alert.context.quarterbackPerformance.redZoneStats.attempts} in red zone` : undefined
-            } : undefined,
-            teamMomentum: {
-              homeTeam: alert.context?.homeTeamMomentum ? {
-                scoringDrives: alert.context.homeTeamMomentum.scoringDrives,
-                totalDrives: alert.context.homeTeamMomentum.totalDrives,
-                redZoneEfficiency: alert.context.homeTeamMomentum.redZoneEfficiency?.percentage,
-                timeOfPossession: alert.context.homeTeamMomentum.timeOfPossession?.average,
-                bigPlays: alert.context.homeTeamMomentum.bigPlays?.plays20Plus,
-                currentDriveYards: alert.context.homeTeamMomentum.currentDrive?.yards,
-                momentum: alert.context.homeTeamMomentum.scoringStreaks?.current >= 2 ? 'hot' : 
-                         alert.context.homeTeamMomentum.scorelessStreak?.drives >= 3 ? 'cold' : 'neutral'
-              } : undefined,
-              awayTeam: alert.context?.awayTeamMomentum ? {
-                scoringDrives: alert.context.awayTeamMomentum.scoringDrives,
-                totalDrives: alert.context.awayTeamMomentum.totalDrives,
-                redZoneEfficiency: alert.context.awayTeamMomentum.redZoneEfficiency?.percentage,
-                timeOfPossession: alert.context.awayTeamMomentum.timeOfPossession?.average,
-                bigPlays: alert.context.awayTeamMomentum.bigPlays?.plays20Plus,
-                currentDriveYards: alert.context.awayTeamMomentum.currentDrive?.yards,
-                momentum: alert.context.awayTeamMomentum.scoringStreaks?.current >= 2 ? 'hot' : 
-                         alert.context.awayTeamMomentum.scorelessStreak?.drives >= 3 ? 'cold' : 'neutral'
-              } : undefined,
-              possessionTeam: gameState.possession,
-              possessionTeamMomentum: alert.context?.possessionTeamMomentum || alert.context?.homeTeamMomentum || alert.context?.awayTeamMomentum
-            },
-            defensePerformance: {
-              homeDefense: alert.context?.homeDefensePerformance ? {
-                sacks: alert.context.homeDefensePerformance.sacks,
-                turnoversForced: alert.context.homeDefensePerformance.interceptions + alert.context.homeDefensePerformance.fumbleRecoveries,
-                thirdDownStops: alert.context.homeDefensePerformance.thirdDownDefense?.attempts - alert.context.homeDefensePerformance.thirdDownDefense?.conversionsAllowed,
-                redZoneDefense: alert.context.homeDefensePerformance.redZoneDefense?.efficiency,
-                pressureRate: alert.context.homeDefensePerformance.pressureRate,
-                momentum: alert.context.homeDefensePerformance.currentMomentum?.type
-              } : undefined,
-              awayDefense: alert.context?.awayDefensePerformance ? {
-                sacks: alert.context.awayDefensePerformance.sacks,
-                turnoversForced: alert.context.awayDefensePerformance.interceptions + alert.context.awayDefensePerformance.fumbleRecoveries,
-                thirdDownStops: alert.context.awayDefensePerformance.thirdDownDefense?.attempts - alert.context.awayDefensePerformance.thirdDownDefense?.conversionsAllowed,
-                redZoneDefense: alert.context.awayDefensePerformance.redZoneDefense?.efficiency,
-                pressureRate: alert.context.awayDefensePerformance.pressureRate,
-                momentum: alert.context.awayDefensePerformance.currentMomentum?.type
-              } : undefined,
-              opposingDefense: gameState.possession === 'home' ? 
-                (alert.context?.awayDefensePerformance ? `${alert.context.awayDefensePerformance.sacks} sacks, ${alert.context.awayDefensePerformance.pressureRate?.toFixed(1)}% pressure rate` : undefined) :
-                (alert.context?.homeDefensePerformance ? `${alert.context.homeDefensePerformance.sacks} sacks, ${alert.context.homeDefensePerformance.pressureRate?.toFixed(1)}% pressure rate` : undefined)
-            },
-            unusualPatterns: alert.context?.unusualPatterns || [],
             originalMessage: alert.message,
             originalContext: alert.context
           };
@@ -677,302 +608,6 @@ export class NFLEngine extends BaseSportEngine {
         enhancementTimes: this.performanceMetrics.gameStateEnhancementTime.slice(-20)
       }
     };
-  }
-
-  /**
-   * Get performance context for enhanced alerts
-   */
-  getPerformanceContext(gameId: string, teamId?: string, playerId?: string): string | null {
-    const contextParts: string[] = [];
-
-    // Get quarterback performance if playerId provided
-    if (playerId) {
-      const qbSummary = footballPerformanceTracker.getQuarterbackSummary(gameId, playerId);
-      if (qbSummary) {
-        contextParts.push(`QB: ${qbSummary}`);
-      }
-    }
-
-    // Get team momentum if teamId provided
-    if (teamId) {
-      const teamSummary = footballPerformanceTracker.getTeamMomentumSummary(gameId, teamId);
-      if (teamSummary) {
-        contextParts.push(`Team: ${teamSummary}`);
-      }
-
-      const defenseSummary = footballPerformanceTracker.getDefenseSummary(gameId, teamId);
-      if (defenseSummary) {
-        contextParts.push(`Defense: ${defenseSummary}`);
-      }
-    }
-
-    // Get unusual patterns
-    const patterns = footballPerformanceTracker.detectUnusualPatterns(gameId);
-    if (patterns.length > 0) {
-      contextParts.push(`Patterns: ${patterns.slice(0, 2).join(', ')}`);
-    }
-
-    return contextParts.length > 0 ? contextParts.join(' | ') : null;
-  }
-
-  /**
-   * Update performance tracking based on game state changes
-   * Similar to MLB engine pattern but for football
-   */
-  private updatePerformanceTracking(gameState: GameState): void {
-    try {
-      const gameId = gameState.gameId;
-      const quarter = gameState.quarter || 1;
-      const down = gameState.down || 1;
-      const yardsToGo = gameState.yardsToGo || 10;
-      const fieldPosition = gameState.fieldPosition || 50;
-      
-      // Track quarterback performance if we have play data
-      if (gameState.lastPlay?.description && gameState.currentQuarterback) {
-        const playOutcome = this.parsePlayOutcome(gameState.lastPlay.description);
-        if (playOutcome) {
-          const possessionTeam = gameState.possession === 'home' ? gameState.homeTeam : gameState.awayTeam;
-          const qbId = gameState.currentQuarterbackId || `qb_${gameState.currentQuarterback.replace(/\s+/g, '_')}`;
-          
-          footballPerformanceTracker.updateQuarterbackPerformance(
-            gameId,
-            qbId,
-            gameState.currentQuarterback,
-            possessionTeam,
-            {
-              type: playOutcome.type,
-              completed: playOutcome.completed,
-              yards: playOutcome.yards,
-              touchdown: playOutcome.touchdown,
-              interception: playOutcome.interception,
-              underPressure: playOutcome.underPressure,
-              quarter: quarter,
-              down: down,
-              yardsToGo: yardsToGo,
-              fieldPosition: fieldPosition,
-              redZone: fieldPosition <= 20,
-              thirdDown: down === 3,
-              fourthDown: down === 4
-            }
-          );
-        }
-      }
-      
-      // Track defensive performance for sacks, turnovers, etc.
-      if (gameState.lastPlay?.description) {
-        const play = gameState.lastPlay.description.toLowerCase();
-        const defensiveTeam = gameState.possession === 'home' ? gameState.awayTeam : gameState.homeTeam;
-        
-        if (play.includes('sack')) {
-          footballPerformanceTracker.updateDefensePerformance(
-            gameId,
-            defensiveTeam,
-            defensiveTeam,
-            {
-              type: 'sack',
-              quarter: quarter,
-              yardsAllowed: this.extractYards(play) || 0,
-              redZone: fieldPosition <= 20,
-              thirdDown: down === 3,
-              pressure: true
-            }
-          );
-        } else if (play.includes('interception') || play.includes('fumble')) {
-          footballPerformanceTracker.updateDefensePerformance(
-            gameId,
-            defensiveTeam,
-            defensiveTeam,
-            {
-              type: play.includes('interception') ? 'interception' : 'fumble_recovery',
-              quarter: quarter,
-              redZone: fieldPosition <= 20,
-              thirdDown: down === 3
-            }
-          );
-        } else if (play.includes('tackle')) {
-          footballPerformanceTracker.updateDefensePerformance(
-            gameId,
-            defensiveTeam,
-            defensiveTeam,
-            {
-              type: 'tackle',
-              quarter: quarter,
-              yardsAllowed: this.extractYards(play) || 0,
-              redZone: fieldPosition <= 20,
-              thirdDown: down === 3
-            }
-          );
-        }
-      }
-      
-      // Track team momentum for various events
-      const possessionTeam = gameState.possession === 'home' ? gameState.homeTeam : gameState.awayTeam;
-      const possessionTeamId = gameState.possession === 'home' ? 'home' : 'away';
-      
-      // Parse last play for team events
-      if (gameState.lastPlay?.description) {
-        const play = gameState.lastPlay.description.toLowerCase();
-        
-        if (play.includes('touchdown')) {
-          footballPerformanceTracker.updateTeamMomentum(
-            gameId,
-            possessionTeamId,
-            possessionTeam,
-            quarter,
-            {
-              type: 'touchdown',
-              fieldPosition: fieldPosition
-            }
-          );
-        } else if (play.includes('field goal')) {
-          footballPerformanceTracker.updateTeamMomentum(
-            gameId,
-            possessionTeamId,
-            possessionTeam,
-            quarter,
-            {
-              type: 'field_goal',
-              fieldPosition: fieldPosition
-            }
-          );
-        } else if (play.includes('fumble') || play.includes('interception')) {
-          footballPerformanceTracker.updateTeamMomentum(
-            gameId,
-            possessionTeamId,
-            possessionTeam,
-            quarter,
-            {
-              type: 'turnover',
-              fieldPosition: fieldPosition
-            }
-          );
-        } else if (play.includes('punt')) {
-          footballPerformanceTracker.updateTeamMomentum(
-            gameId,
-            possessionTeamId,
-            possessionTeam,
-            quarter,
-            {
-              type: 'punt',
-              fieldPosition: fieldPosition
-            }
-          );
-        }
-      }
-      
-      // Clean up old games periodically
-      footballPerformanceTracker.cleanupOldGames();
-      
-    } catch (error) {
-      console.error('❌ NFL Performance tracking error:', error);
-      // Don't let tracking errors stop alert generation
-    }
-  }
-
-  /**
-   * Parse play outcome from play description
-   */
-  private parsePlayOutcome(playDescription: string): { 
-    type: 'pass' | 'sack' | 'run' | 'scramble'; 
-    completed?: boolean; 
-    yards?: number; 
-    touchdown?: boolean; 
-    interception?: boolean; 
-    underPressure?: boolean 
-  } | null {
-    if (!playDescription) return null;
-    
-    const play = playDescription.toLowerCase();
-    const yards = this.extractYards(play) || 0;
-    
-    if (play.includes('sack')) {
-      return { type: 'sack', yards: Math.abs(yards), underPressure: true };
-    }
-    
-    if (play.includes('pass')) {
-      return {
-        type: 'pass',
-        completed: !play.includes('incomplete'),
-        yards: yards,
-        touchdown: play.includes('touchdown'),
-        interception: play.includes('interception'),
-        underPressure: play.includes('pressure') || play.includes('blitz')
-      };
-    }
-    
-    if (play.includes('rush') || play.includes('run')) {
-      return {
-        type: 'run',
-        yards: yards,
-        touchdown: play.includes('touchdown')
-      };
-    }
-    
-    if (play.includes('scramble')) {
-      return {
-        type: 'scramble',
-        yards: yards,
-        touchdown: play.includes('touchdown')
-      };
-    }
-    
-    return null;
-  }
-  
-  /**
-   * Extract yards from play description
-   */
-  private extractYards(playDescription: string): number {
-    const yardMatch = playDescription.match(/(-?\d+)\s*yard/i);
-    return yardMatch ? parseInt(yardMatch[1]) : 0;
-  }
-
-  updateGamePerformance(gameState: GameState): void {
-    if (!gameState.gameId || !gameState.isLive) return;
-
-    try {
-      // Update comprehensive performance tracking
-      this.updatePerformanceTracking(gameState);
-      
-      // Update team momentum for scoring events (legacy method)
-      if (gameState.homeScore !== undefined && gameState.awayScore !== undefined) {
-        const quarter = gameState.quarter || 1;
-        
-        // Update for both teams
-        if (gameState.homeTeam) {
-          footballPerformanceTracker.updateTeamMomentum(
-            gameState.gameId,
-            gameState.homeTeam,
-            gameState.homeTeam,
-            quarter,
-            {
-              type: 'possession_change',
-              fieldPosition: gameState.fieldPosition
-            }
-          );
-        }
-
-        if (gameState.awayTeam) {
-          footballPerformanceTracker.updateTeamMomentum(
-            gameState.gameId,
-            gameState.awayTeam,
-            gameState.awayTeam,
-            quarter,
-            {
-              type: 'possession_change',
-              fieldPosition: gameState.fieldPosition ? 100 - gameState.fieldPosition : undefined
-            }
-          );
-        }
-      }
-
-      // Cleanup old performance data periodically
-      if (Math.random() < 0.01) { // 1% chance to trigger cleanup
-        footballPerformanceTracker.cleanupOldGames();
-      }
-    } catch (error) {
-      console.error('NFL Engine: Error updating performance tracking:', error);
-    }
   }
 
   // Override to return all available NFL alert types

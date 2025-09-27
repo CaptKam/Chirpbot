@@ -136,14 +136,7 @@ export default function AlertsPage() {
 
   // Fetch alerts using React Query with HTTP polling every 5 seconds
   const { data: alerts = [], isLoading: alertsLoading, refetch: refetchAlerts, error: alertsError } = useQuery<Alert[]>({
-    queryKey: ['alerts'],
-    queryFn: async () => {
-      const response = await fetch('/api/alerts?limit=120');
-      if (!response.ok) {
-        throw new Error('Failed to fetch alerts');
-      }
-      return response.json();
-    },
+    queryKey: ['/api/alerts', { limit: 120 }],
     refetchInterval: 5000, // Poll every 5 seconds for real-time updates
     refetchIntervalInBackground: true, // Keep polling when tab is inactive
     retry: 3,
@@ -154,14 +147,7 @@ export default function AlertsPage() {
 
   // Fetch alert stats
   const { data: stats, isLoading: statsLoading } = useQuery<AlertStats>({
-    queryKey: ['alert-stats'],
-    queryFn: async () => {
-      const response = await fetch('/api/alerts/stats');
-      if (!response.ok) {
-        throw new Error('Failed to fetch alert stats');
-      }
-      return response.json();
-    },
+    queryKey: ['/api/alerts/stats'],
     refetchInterval: 60000, // Refetch every minute
   });
 
@@ -176,12 +162,9 @@ export default function AlertsPage() {
     return grouped;
   }, [alerts]);
 
-  const filteredAlerts = useMemo(() => {
-    const alertsArray = Array.isArray(alerts) ? alerts : [];
-    return filter === 'all' 
-      ? alertsArray
-      : alertsArray.filter((alert: Alert) => alert.sport === filter);
-  }, [alerts, filter]);
+  const filteredAlerts = filter === 'all' 
+    ? (alerts as Alert[] || [])
+    : (alerts as Alert[] || []).filter((alert: Alert) => alert.sport === filter);
 
 
   if (alertsLoading || statsLoading) {
@@ -239,11 +222,8 @@ export default function AlertsPage() {
               <h3 className="text-xl font-black uppercase tracking-wide text-slate-100 mb-2">
                 Connection Error
               </h3>
-              <p className="text-slate-300 text-base mb-4">
-                Unable to load alerts. Error: {alertsError instanceof Error ? alertsError.message : 'Unknown error'}
-              </p>
-              <p className="text-slate-400 text-sm mb-6">
-                Please check your connection or try refreshing the page.
+              <p className="text-slate-300 text-base mb-6">
+                Unable to load alerts. Please check your connection.
               </p>
               <Button 
                 onClick={() => refetchAlerts()} 
@@ -399,7 +379,6 @@ export default function AlertsPage() {
                     gameInfo: alert.gameInfo,
                     gamblingInsights: alert.gamblingInsights
                   }}
-                  showEnhancements={true}
                 />
               </ErrorBoundary>
             </div>
