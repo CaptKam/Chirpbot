@@ -179,12 +179,7 @@ export class EnhancedAlertRouter {
         }
       };
       
-      // Create CrossSportContext for queueAlert
-      const context = {
-        sport: enhancedAlert.sport,
-        alertType: enhancedAlert.type,
-        gameId: enhancedAlert.gameId
-      };
+      // Context no longer needed - Enhanced Alert Router saves directly to database
       
       // Direct database save and Telegram delivery (no more parallel enhancement!)
       try {
