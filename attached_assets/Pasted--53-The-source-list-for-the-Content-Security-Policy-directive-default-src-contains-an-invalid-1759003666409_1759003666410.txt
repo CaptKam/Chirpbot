@@ -1,0 +1,157 @@
+
+﻿
+53
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+
+53
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+53
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+_app-c451d89af5286c66.js:34 
+      /////////////////////
+   ///////////////////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////        Curious and driven?
+  ///////////////@@@@@@@///////        Work with us!
+  ///////////////@@@@@@@///////
+  ///////////////@@@@@@@///////        https://join.replit.com/hack.with.us
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@#//////////////
+   ///////////////////////////
+      /////////////////////
+      
+Chirpbot:1 The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+Chirpbot:1 The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+Chirpbot:1 The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+_app-c451d89af5286c66.js:34 [LaunchDarkly] LaunchDarkly client initialized
+main.MWQ4YTc2MGFlMQ.js:1 Deprecated API for given entry type.
+Chirpbot:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+9
+[GroupMarkerNotSet(crbug.com/242999)!:A090260024700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.
+6
+[GroupMarkerNotSet(crbug.com/242999)!:A010EF0424700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.
+sp.replit.com/v1/t:1 
+ Failed to load resource: the server responded with a status of 400 ()
+29
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+framework-5a6fd955b62105ec.js:1 Unrecognized feature: 'ambient-light-sensor'.
+framework-5a6fd955b62105ec.js:1 Unrecognized feature: 'battery'.
+framework-5a6fd955b62105ec.js:1 Unrecognized feature: 'execution-while-not-rendered'.
+framework-5a6fd955b62105ec.js:1 Unrecognized feature: 'execution-while-out-of-viewport'.
+framework-5a6fd955b62105ec.js:1 Unrecognized feature: 'layout-animations'.
+framework-5a6fd955b62105ec.js:1 Unrecognized feature: 'legacy-image-formats'.
+framework-5a6fd955b62105ec.js:1 Unrecognized feature: 'navigation-override'.
+framework-5a6fd955b62105ec.js:1 Unrecognized feature: 'oversized-images'.
+framework-5a6fd955b62105ec.js:1 Unrecognized feature: 'publickey-credentials'.
+framework-5a6fd955b62105ec.js:1 Unrecognized feature: 'speaker-selection'.
+framework-5a6fd955b62105ec.js:1 Unrecognized feature: 'unoptimized-images'.
+framework-5a6fd955b62105ec.js:1 Unrecognized feature: 'unsized-media'.
+framework-5a6fd955b62105ec.js:1 Unrecognized feature: 'pointer-lock'.
+framework-5a6fd955b62105ec.js:1 Allow attribute will take precedence over 'allowfullscreen'.
+framework-5a6fd955b62105ec.js:1 Allow attribute will take precedence over 'allowpaymentrequest'.
+24
+[GroupMarkerNotSet(crbug.com/242999)!:A000DB0224700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.
+18
+[GroupMarkerNotSet(crbug.com/242999)!:A060260024700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.
+14
+[GroupMarkerNotSet(crbug.com/242999)!:A000260024700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.
+13
+[GroupMarkerNotSet(crbug.com/242999)!:A030DB0224700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.
+2
+_app-c451d89af5286c66.js:1 Uncaught (in promise) ApolloError: Notification alert not found
+    at new t (_app-c451d89af5286c66.js:1:218938)
+    at _app-c451d89af5286c66.js:4:243169
+    at r (_app-c451d89af5286c66.js:4:227504)
+    at _app-c451d89af5286c66.js:4:227430
+    at new Promise (<anonymous>)
+    at Object.then (_app-c451d89af5286c66.js:4:227397)
+    at Object.next (_app-c451d89af5286c66.js:4:227514)
+    at v (_app-c451d89af5286c66.js:4:6272)
+    at y (_app-c451d89af5286c66.js:4:6794)
+    at t.next (_app-c451d89af5286c66.js:4:7295)
+    at _app-c451d89af5286c66.js:1:460492
+    at Array.forEach (<anonymous>)
+    at n (_app-c451d89af5286c66.js:1:460461)
+    at Object.next (_app-c451d89af5286c66.js:4:228625)
+    at v (_app-c451d89af5286c66.js:4:6272)
+    at y (_app-c451d89af5286c66.js:4:6794)
+    at t.next (_app-c451d89af5286c66.js:4:7295)
+    at Object.onNext [as next] (_app-c451d89af5286c66.js:10:19161)
+    at v (_app-c451d89af5286c66.js:4:6272)
+    at y (_app-c451d89af5286c66.js:4:6794)
+    at t.next (_app-c451d89af5286c66.js:4:7295)
+    at Object.next (_app-c451d89af5286c66.js:10:18283)
+    at v (_app-c451d89af5286c66.js:4:6272)
+    at y (_app-c451d89af5286c66.js:4:6794)
+    at t.next (_app-c451d89af5286c66.js:4:7295)
+    at _app-c451d89af5286c66.js:10:15125
+    at Array.forEach (<anonymous>)
+    at _app-c451d89af5286c66.js:10:15098
+    at Array.forEach (<anonymous>)
+    at Object.next (_app-c451d89af5286c66.js:10:15065)
+    at v (_app-c451d89af5286c66.js:4:6272)
+    at y (_app-c451d89af5286c66.js:4:6794)
+    at t.next (_app-c451d89af5286c66.js:4:7295)
+    at _app-c451d89af5286c66.js:10:17725
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A0B0EE0424700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.
+18
+[GroupMarkerNotSet(crbug.com/242999)!:A060DB0224700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.
+10
+[GroupMarkerNotSet(crbug.com/242999)!:A090DB0224700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.
+2
+stallwart.build.js:1 stallwart: failed ping 1
+stallwart.build.js:1 stallwart: failed ping 2
+2
+stallwart.build.js:1 stallwart: failed ping 1
+stallwart.build.js:1 stallwart: failed ping 2
+stallwart.build.js:1 stallwart: failed ping 3
+stallwart.build.js:1 stallwart: failed ping 4
+stallwart.build.js:1 stallwart: failed ping 5
+stallwart.build.js:1 stallwart: session stalled
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A0B0EE0424700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A0E0EE0424700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A0B0EE0424700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'ambient-light-sensor'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'ambient-light-sensor'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'battery'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'battery'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'execution-while-not-rendered'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'execution-while-not-rendered'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'execution-while-out-of-viewport'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'execution-while-out-of-viewport'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'layout-animations'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'layout-animations'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'navigation-override'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'navigation-override'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'oversized-images'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'oversized-images'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'publickey-credentials'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'publickey-credentials'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'speaker-selection'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'speaker-selection'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'unoptimized-images'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'unoptimized-images'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'unsized-media'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Unrecognized feature: 'unsized-media'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Allow attribute will take precedence over 'allowfullscreen'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Allow attribute will take precedence over 'allowfullscreen'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Allow attribute will take precedence over 'allowpaymentrequest'.
+workspace_iframe.htm…ts&id=%3Ar7rk%3A:32 Allow attribute will take precedence over 'allowpaymentrequest'.
+61067e14-b9f8-41f4-9…admin-auth/verify:1 
+ Failed to load resource: the server responded with a status of 401 (Unauthorized)
+61067e14-b9f8-41f4-9…admin-auth/verify:1 
+ Failed to load resource: the server responded with a status of 401 (Unauthorized)
+61067e14-b9f8-41f4-9…dev/api/auth/user:1 
+ Failed to load resource: the server responded with a status of 401 (Unauthorized)
+61067e14-b9f8-41f4-9…dev/api/auth/user:1 
+ Failed to load resource: the server responded with a status of 401 (Unauthorized)
+61067e14-b9f8-41f4-9…admin-auth/verify:1 
+ Failed to load resource: the server responded with a status of 401 (Unauthorized)
+61067e14-b9f8-41f4-9…admin-auth/verify:1 
+ Failed to load resource: the server responded with a status of 401 (Unauthorized)
+injected.js:278 
+ GET https://61067e14-b9f8-41f4-9745-9c5f308c9213-00-212l7oe1swfvy.riker.replit.dev/api/admin-auth/verify 401 (Unauthorized)
