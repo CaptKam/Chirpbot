@@ -49,9 +49,24 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
     }
   })();
 
-  // Use simple, consistent content - eliminates environment-dependent rendering
-  const displayContent = alert.message || 'Alert content unavailable';
-  const isStructured = false; // Always use plain formatting for consistency
+  // Enhanced content display - prioritize structured gambling insights and enhanced content
+  const getDisplayContent = () => {
+    // 1. Priority: Structured gambling insights template (rich format with emojis)
+    if (alert.gamblingInsights?.structuredTemplate) {
+      return alert.gamblingInsights.structuredTemplate;
+    }
+    
+    // 2. Fallback: Enhanced message from Alert Router
+    if (alert.context?.enhancedMessage) {
+      return alert.context.enhancedMessage;
+    }
+    
+    // 3. Fallback: Original message
+    return alert.message || 'Alert content unavailable';
+  };
+  
+  const displayContent = getDisplayContent();
+  const isStructured = !!alert.gamblingInsights?.structuredTemplate;
 
   // Fixed urgency label to ensure consistent styling across environments
   const urgencyLabel = 'ALERT';
@@ -211,60 +226,191 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
             </div>
           </div>
 
-          {/* Main Alert Content - Normalized Format */}
+          {/* Enhanced Alert Content - Rich Format Support */}
           {displayContent && (
             <div className="mb-6 rounded-xl p-4 border bg-slate-800/60 border-slate-700/50" data-testid={`alert-content-${alert.id}`}>
-              <div className="text-slate-100 text-sm font-medium leading-relaxed whitespace-normal break-words overflow-hidden max-h-24 line-clamp-4">
-                {displayContent}
+              {isStructured ? (
+                <div className="text-slate-100 text-sm font-medium leading-relaxed whitespace-pre-line">
+                  {displayContent}
+                </div>
+              ) : (
+                <div className="text-slate-100 text-sm font-medium leading-relaxed whitespace-normal break-words overflow-hidden max-h-24 line-clamp-4">
+                  {displayContent}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Enhanced Gambling Insights Section */}
+          {showEnhancements && alert.gamblingInsights && (
+            <div className="mb-6">
+              {/* Betting Market Data */}
+              {alert.gamblingInsights.market && (
+                <div className="mb-4 p-4 bg-gradient-to-r from-emerald-900/30 to-blue-900/30 rounded-lg border border-emerald-800/30">
+                  <div className="flex items-center gap-2 mb-3">
+                    <DollarSign className="w-4 h-4 text-emerald-400" />
+                    <span className="font-bold text-emerald-300 text-sm">Live Betting Markets</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    {alert.gamblingInsights.market.spread && (
+                      <div className="bg-slate-800/50 rounded p-2">
+                        <div className="text-slate-400 mb-1">Spread</div>
+                        <div className="text-emerald-300 font-bold">
+                          {alert.gamblingInsights.market.spread.points > 0 ? '+' : ''}{alert.gamblingInsights.market.spread.points}
+                        </div>
+                      </div>
+                    )}
+                    {alert.gamblingInsights.market.total && (
+                      <div className="bg-slate-800/50 rounded p-2">
+                        <div className="text-slate-400 mb-1">Total</div>
+                        <div className="text-blue-300 font-bold">
+                          O/U {alert.gamblingInsights.market.total.points}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Betting Situation Analysis */}
+              {alert.gamblingInsights.situation && (
+                <div className="mb-4 p-3 bg-purple-900/20 rounded-lg border border-purple-800/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Target className="w-4 h-4 text-purple-400" />
+                    <span className="font-bold text-purple-300 text-sm">Situation Analysis</span>
+                  </div>
+                  <div className="text-xs text-slate-300 space-y-1">
+                    <div><span className="text-purple-400">Context:</span> {alert.gamblingInsights.situation.context}</div>
+                    <div><span className="text-purple-400">Timing:</span> {alert.gamblingInsights.situation.timing}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Enhanced Weather Impact Display */}
+          {showEnhancements && alert.weather && (
+            <div className="mb-6 p-4 bg-gradient-to-r from-cyan-900/30 to-slate-900/30 rounded-lg border border-cyan-800/30">
+              <div className="flex items-center gap-2 mb-3">
+                <Cloud className="w-4 h-4 text-cyan-400" />
+                <span className="font-bold text-cyan-300 text-sm">Weather Impact</span>
+              </div>
+              <div className="text-xs text-slate-300">
+                {alert.weather?.impact || 'Weather conditions affecting game dynamics'}
+                {alert.weather?.conditions && (
+                  <div className="mt-2 text-cyan-400">
+                    Conditions: {alert.weather.conditions}
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {/* Generative AI Enhanced Content */}
-        {showEnhancements && alert.context?.generativeAI && (
-          <div className="mt-3 p-3 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-purple-600 dark:text-purple-400">🤖</span>
-              <span className="font-medium text-purple-700 dark:text-purple-300">AI Generated Insights</span>
+          {/* Enhanced AI Insights from Alert Router */}
+          {showEnhancements && (
+            <div className="mb-6 space-y-4">
+              {/* AI Enhanced Predictions */}
+              {(alert.context?.prediction || alert.context?.generativeAI) && (
+                <div className="p-4 bg-gradient-to-r from-purple-900/30 to-indigo-900/30 rounded-lg border border-purple-800/30">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Zap className="w-4 h-4 text-purple-400" />
+                    <span className="font-bold text-purple-300 text-sm">AI Predictions</span>
+                  </div>
+                  
+                  {/* Next Critical Moment */}
+                  {alert.context?.prediction?.nextCriticalMoment && (
+                    <div className="mb-3">
+                      <div className="text-xs text-purple-400 mb-1">Next Critical Moment:</div>
+                      <div className="text-sm text-purple-200 font-medium">
+                        {alert.context.prediction.nextCriticalMoment}
+                        {alert.context.prediction.probability && (
+                          <span className="text-xs text-purple-400 ml-2">
+                            ({alert.context.prediction.probability}% probability)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AI Generated Content (Legacy Support) */}
+                  {alert.context.generativeAI?.aiGeneratedContent?.headline && (
+                    <div className="mb-2">
+                      <div className="text-xs text-purple-400 mb-1">AI Headline:</div>
+                      <div className="text-sm text-purple-200 font-medium">
+                        {alert.context.generativeAI.aiGeneratedContent.headline}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Key Factors */}
+                  {alert.context?.prediction?.keyFactors && alert.context.prediction.keyFactors.length > 0 && (
+                    <div className="mt-3">
+                      <div className="text-xs text-purple-400 mb-2">Key Factors:</div>
+                      <div className="flex flex-wrap gap-2">
+                        {alert.context.prediction.keyFactors.map((factor: string, index: number) => (
+                          <span key={index} className="px-2 py-1 bg-purple-800/40 rounded text-xs text-purple-200">
+                            {factor}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Fan Engagement Score (Legacy) */}
+                  {alert.context.generativeAI?.fanEngagement && (
+                    <div className="mt-3 flex items-center gap-4 text-xs text-purple-300">
+                      <div className="flex items-center gap-1">
+                        <span>🔥</span>
+                        <span>Excitement: {alert.context.generativeAI.fanEngagement.excitementLevel}/10</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span>📺</span>
+                        <span>Watchability: {alert.context.generativeAI.fanEngagement.watchabilityScore}%</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Action Recommendations */}
+              {alert.context?.action && (
+                <div className="p-4 bg-gradient-to-r from-orange-900/30 to-red-900/30 rounded-lg border border-orange-800/30">
+                  <div className="flex items-center gap-2 mb-3">
+                    <TrendingUp className="w-4 h-4 text-orange-400" />
+                    <span className="font-bold text-orange-300 text-sm">Recommended Action</span>
+                  </div>
+                  
+                  {alert.context.action.primaryAction && (
+                    <div className="mb-2">
+                      <div className="text-sm text-orange-200 font-medium mb-1">
+                        {alert.context.action.primaryAction}
+                      </div>
+                      {alert.context.action.confidence && (
+                        <div className="text-xs text-orange-400">
+                          Confidence: {alert.context.action.confidence}%
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Action Reasoning */}
+                  {alert.context.action.reasoning && alert.context.action.reasoning.length > 0 && (
+                    <div className="mt-2">
+                      <div className="text-xs text-orange-400 mb-1">Reasoning:</div>
+                      <ul className="text-xs text-orange-200 space-y-1">
+                        {alert.context.action.reasoning.map((reason: string, index: number) => (
+                          <li key={index} className="flex items-start gap-2">
+                            <span className="text-orange-400">•</span>
+                            <span>{reason}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-
-            {/* AI Generated Headline */}
-            {alert.context.generativeAI.aiGeneratedContent?.headline && (
-              <div className="mb-2">
-                <div className="text-sm font-semibold text-purple-800 dark:text-purple-200">
-                  {alert.context.generativeAI.aiGeneratedContent.headline}
-                </div>
-              </div>
-            )}
-
-            {/* Predictive Insights */}
-            {alert.context.generativeAI.predictiveInsights && (
-              <div className="mb-2">
-                <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">Next Play Prediction:</div>
-                <div className="text-sm text-purple-800 dark:text-purple-200">
-                  {alert.context.generativeAI.predictiveInsights.nextPlay} 
-                  <span className="text-xs text-purple-500 ml-2">
-                    ({alert.context.generativeAI.predictiveInsights.probability}% confidence)
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Fan Engagement Score */}
-            {alert.context.generativeAI.fanEngagement && (
-              <div className="flex items-center gap-4 text-xs">
-                <div className="flex items-center gap-1">
-                  <span>🔥</span>
-                  <span>Excitement: {alert.context.generativeAI.fanEngagement.excitementLevel}/10</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span>📺</span>
-                  <span>Watchability: {alert.context.generativeAI.fanEngagement.watchabilityScore}%</span>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+          )}
 
           {/* Game Context - Streamlined and Focused */}
           {showEnhancements && alert.context && (
