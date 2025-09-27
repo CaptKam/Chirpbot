@@ -27,7 +27,7 @@ export default class FirstAndThirdOneOutModule extends BaseAlertModule {
     let windText = '';
     if (gameState.weatherContext?.windSpeed) {
       const windSpeed = gameState.weatherContext.windSpeed;
-      const windDir = String(gameState.weatherContext.windDirection || '');
+      const windDir = gameState.weatherContext.windDirection || '';
       if (windSpeed >= 10 && (windDir.includes('out') || windDir.includes('center'))) {
         windBonus = 5;
         windText = ` | Wind: ${windSpeed}mph ${windDir} ⚡`;

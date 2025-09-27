@@ -615,9 +615,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // const { unifiedAIProcessor } = await import('./services/unified-ai-processor'); // Already imported above
 
   // Set up callback to save enhanced alerts to database
-  // V3: UNIFIED ENHANCEMENT - Alert saving now handled by UnifiedAlertGenerator pipeline
-  // DISABLED: Legacy enhancement callback to prevent duplicate alert processing
-  /* COMMENTED OUT ENTIRE CALLBACK FUNCTION
   unifiedAIProcessor.setOnEnhancedAlert(async (alert, userId, sport, wasActuallyEnhanced) => {
     try {
       console.log(`💾 Saving enhanced alert to database: ${alert.alertKey}`);
@@ -860,7 +857,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       console.error(`❌ Failed to process enhanced alert:`, error);
     }
   });
-  */ // END COMMENTED OUT CALLBACK FUNCTION
 
   // Export broadcast function with multiple names for compatibility
   (global as any).sseBroadcast = broadcast;

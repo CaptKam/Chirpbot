@@ -47,7 +47,7 @@ export default class RunnersOnHighScoringModule extends BaseAlertModule {
 
     // Determine wind impact
     const windSpeed = gameState.weatherContext?.windSpeed || 0;
-    const windDir = String(gameState.weatherContext?.windDirection || '').toLowerCase();
+    const windDir = gameState.weatherContext?.windDirection?.toLowerCase() || '';
     let windMsg = '';
     let windImpact: 'favorable' | 'neutral' | 'unfavorable' = 'neutral';
 
