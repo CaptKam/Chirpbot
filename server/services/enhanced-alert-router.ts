@@ -190,6 +190,14 @@ export class EnhancedAlertRouter {
         
         for (const userGame of gameMonitoringUsers) {
           try {
+            // 🎯 UNIFIED PREFERENCE CHECK: Only save/send alerts if user wants this alert type
+            const userWantsAlert = await storage.isAlertEnabledForUser(userGame.userId, enhancedAlert.sport, enhancedAlert.type);
+            
+            if (!userWantsAlert) {
+              console.log(`🚫 Skipping alert for user ${userGame.userId}: ${enhancedAlert.type} disabled in preferences (preference: disabled)`);
+              continue;
+            }
+
             // Save alert directly to database
             await storage.createAlert({
               alertKey: enhancedAlert.alertKey,
@@ -215,16 +223,16 @@ export class EnhancedAlertRouter {
               })
             });
 
-            console.log(`✅ Alert saved for user ${userGame.userId}: ${enhancedAlert.alertKey}`);
+            console.log(`✅ Alert saved for user ${userGame.userId}: ${enhancedAlert.alertKey} (user preference: enabled)`);
 
-            // Send to Telegram if configured
+            // Send to Telegram if configured and user wants this alert type
             const user = await storage.getUserById(userGame.userId);
             if (user?.telegramEnabled && user?.telegramBotToken && user?.telegramChatId) {
               const telegramConfig = {
                 botToken: user.telegramBotToken,
                 chatId: user.telegramChatId
               };
-              console.log(`📱 Sending enhanced alert to Telegram for ${user.username || user.id}`);
+              console.log(`📱 Sending enhanced alert to Telegram for ${user.username || user.id} (preference: enabled)`);
               const sent = await sendTelegramAlert(telegramConfig, legacyAlert);
               if (sent) {
                 console.log(`📱 ✅ Enhanced alert delivered to Telegram for ${user.username || user.id}`);

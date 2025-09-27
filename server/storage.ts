@@ -432,6 +432,38 @@ export const storage = {
     return result[0];
   },
 
+  // UNIFIED PREFERENCE CHECKER: Single authoritative function for all alert gating
+  async isAlertEnabledForUser(userId: string, sport: string, alertType: string): Promise<boolean> {
+    // Normalize inputs to prevent case mismatches and aliases
+    const normalizedSport = sport.toLowerCase();
+    const normalizedAlertType = alertType.toUpperCase();
+    
+    // Check explicit user preference first
+    const preference = await db.select().from(userAlertPreferences)
+      .where(and(
+        eq(userAlertPreferences.userId, userId),
+        eq(userAlertPreferences.sport, normalizedSport),
+        eq(userAlertPreferences.alertType, normalizedAlertType)
+      ));
+    
+    if (preference.length > 0) {
+      return !!preference[0].enabled;
+    }
+    
+    // TODO: Could add global defaults check here if needed
+    // const globalDefault = await getGlobalAlertDefault(normalizedSport, normalizedAlertType);
+    // if (globalDefault !== null) return globalDefault;
+    
+    // Default to disabled (opt-in behavior) - safer and aligned with user consent expectations
+    return false;
+  },
+
+  // DEPRECATED: Use isAlertEnabledForUser() instead for consistency
+  async isUserAlertEnabled(userId: string, sport: string, alertType: string): Promise<boolean> {
+    console.warn('⚠️ DEPRECATED: isUserAlertEnabled() - use isAlertEnabledForUser() instead');
+    return this.isAlertEnabledForUser(userId, sport, alertType);
+  },
+
   async bulkSetUserAlertPreferences(userId: string, sport: string, preferences: Array<{alertType: string, enabled: boolean}>) {
     const results = [];
     for (const pref of preferences) {

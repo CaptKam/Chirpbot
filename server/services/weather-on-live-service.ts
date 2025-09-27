@@ -771,7 +771,7 @@ export class WeatherOnLiveService {
         gameId: change.gameId,
         type: `WEATHER_${change.changeType}`,
         state: 'active',
-        payload: weatherAlert.payload,
+        payload: weatherAlert.payload || {},
         score: weatherAlert.score || 5
       };
       const savedAlert = await storage.createAlert(completeAlert);

@@ -699,7 +699,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       for (const userGame of usersMonitoring) {
         try {
-          // 🔎 CRITICAL FIX: Check user preferences FIRST before ANY other checks (including deduplication)
+          // 🎯 UNIFIED PREFERENCE CHECK: Use single authoritative function
           const sportKey = (sport || '').toString().toLowerCase();
           console.log(`🔎 PrefCheck start for user ${userGame.userId} type=${alert.type} sport=${sportKey}`);
 
@@ -708,22 +708,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             continue;
           }
 
-          const userPrefs = await storage.getUserAlertPreferencesBySport(userGame.userId, sportKey);
-          const alertPref = userPrefs.find(p => p.alertType === alert.type);
-          // CRITICAL FIX: Change default from true to false - opt-in instead of opt-out
-          const isEnabled = alertPref ? !!alertPref.enabled : false;
-
-          // Enhanced logging to track preference behavior
-          if (!alertPref) {
-            console.log(`🔍 NO_PREFERENCE_SET for user ${userGame.userId} alert ${alert.type} - defaulting to DISABLED (opt-in behavior)`);
-          } else {
-            console.log(`🔧 EXPLICIT_PREFERENCE for user ${userGame.userId} alert ${alert.type} = ${alertPref.enabled}`);
-          }
+          const isEnabled = await storage.isAlertEnabledForUser(userGame.userId, sportKey, alert.type);
 
           if (!isEnabled) {
             skippedCount++;
-            console.log(`🚫 Alert ${alert.type} disabled for user ${userGame.userId}, skipping`);
+            console.log(`🚫 Alert ${alert.type} disabled for user ${userGame.userId}, skipping (preference: disabled)`);
             continue;
+          } else {
+            console.log(`✅ Alert ${alert.type} enabled for user ${userGame.userId} (preference: enabled)`);
           }
 
           // Check global admin settings as final filter before sending alerts
