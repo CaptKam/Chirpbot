@@ -115,6 +115,14 @@
 }
 
 @layer utilities {
+  /* Custom line-clamp utility for consistent text truncation */
+  .line-clamp-4 {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
   /* Animation for new alerts */
   @keyframes pulse-subtle {
     0%, 100% {
