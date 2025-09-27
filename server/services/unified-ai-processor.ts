@@ -57,9 +57,79 @@ export interface CrossSportContext {
     temperature: number;
     condition: string;
     windSpeed?: number;
+    windDirection?: string;
     humidity?: number;
     impact?: string;
+    precipitation?: boolean;
   };
+
+  // === PERFORMANCE TRACKING FIELDS (Enhanced Context) ===
+  // Quarterback performance insights for football sports
+  quarterbackPerformance?: {
+    name?: string;
+    completions?: number;
+    attempts?: number;
+    yards?: number;
+    touchdowns?: number;
+    interceptions?: number;
+    rating?: number;
+    currentDriveStats?: string;
+    recentForm?: string;
+    pressureStats?: string;
+    clutchPerformance?: string;
+  };
+
+  // Team momentum analysis for both teams
+  teamMomentum?: {
+    homeTeam?: {
+      scoringDrives?: number;
+      totalDrives?: number;
+      redZoneEfficiency?: number;
+      timeOfPossession?: number;
+      bigPlays?: number;
+      currentDriveYards?: number;
+      momentum?: 'hot' | 'cold' | 'neutral';
+      recentPerformance?: string;
+    };
+    awayTeam?: {
+      scoringDrives?: number;
+      totalDrives?: number;
+      redZoneEfficiency?: number;
+      timeOfPossession?: number;
+      bigPlays?: number;
+      currentDriveYards?: number;
+      momentum?: 'hot' | 'cold' | 'neutral';
+      recentPerformance?: string;
+    };
+    possessionTeam?: 'home' | 'away';
+    possessionTeamMomentum?: string;
+  };
+
+  // Defensive performance for both teams
+  defensePerformance?: {
+    homeDefense?: {
+      sacks?: number;
+      turnoversForced?: number;
+      thirdDownStops?: number;
+      redZoneDefense?: number;
+      pressureRate?: number;
+      recentStops?: number;
+      momentum?: 'dominant' | 'struggling' | 'neutral';
+    };
+    awayDefense?: {
+      sacks?: number;
+      turnoversForced?: number;
+      thirdDownStops?: number;
+      redZoneDefense?: number;
+      pressureRate?: number;
+      recentStops?: number;
+      momentum?: 'dominant' | 'struggling' | 'neutral';
+    };
+    opposingDefense?: string; // Summary of defense facing current possession
+  };
+
+  // Unusual patterns and anomalies detected in the game
+  unusualPatterns?: string[];
 
   // Betting context
   spread?: number;
@@ -1098,26 +1168,113 @@ EXAMPLE:
       case 'NFL':
       case 'NCAAF':
       case 'CFL':
+        // Build enhanced football prompt with performance context
+        const qbContext = context.quarterbackPerformance;
+        const teamMomentumData = context.teamMomentum;
+        const defenseData = context.defensePerformance;
+        const patterns = context.unusualPatterns || [];
+        const weatherData = context.weather;
+        
+        let performanceSection = '';
+        
+        // Add quarterback performance insights if available
+        if (qbContext?.name && (qbContext.completions !== undefined || qbContext.attempts !== undefined)) {
+          performanceSection += `
+QUARTERBACK PERFORMANCE:
+- ${qbContext.name}: ${qbContext.completions || 0}/${qbContext.attempts || 0}`;
+          if (qbContext.yards !== undefined) performanceSection += ` for ${qbContext.yards} yards`;
+          if (qbContext.touchdowns || qbContext.interceptions) {
+            performanceSection += ` (${qbContext.touchdowns || 0} TD, ${qbContext.interceptions || 0} INT)`;
+          }
+          if (qbContext.rating) performanceSection += ` • ${qbContext.rating.toFixed(1)} QBR`;
+          if (qbContext.currentDriveStats) performanceSection += `
+- Current Drive: ${qbContext.currentDriveStats}`;
+          if (qbContext.pressureStats) performanceSection += `
+- Under Pressure: ${qbContext.pressureStats}`;
+          if (qbContext.clutchPerformance) performanceSection += `
+- Clutch Stats: ${qbContext.clutchPerformance}`;
+        }
+        
+        // Add team momentum data if available
+        if (teamMomentumData?.possessionTeamMomentum || teamMomentumData?.homeTeam || teamMomentumData?.awayTeam) {
+          performanceSection += `
+TEAM MOMENTUM:`;
+          if (teamMomentumData.possessionTeamMomentum) {
+            const possessionTeam = teamMomentumData.possessionTeam === 'home' ? context.homeTeam : context.awayTeam;
+            performanceSection += `
+- ${possessionTeam}: ${teamMomentumData.possessionTeamMomentum}`;
+          }
+          if (teamMomentumData.homeTeam?.redZoneEfficiency !== undefined) {
+            performanceSection += `
+- ${context.homeTeam}: ${teamMomentumData.homeTeam.redZoneEfficiency.toFixed(1)}% red zone efficiency`;
+            if (teamMomentumData.homeTeam.currentDriveYards) {
+              performanceSection += `, ${teamMomentumData.homeTeam.currentDriveYards} yards current drive`;
+            }
+          }
+          if (teamMomentumData.awayTeam?.redZoneEfficiency !== undefined) {
+            performanceSection += `
+- ${context.awayTeam}: ${teamMomentumData.awayTeam.redZoneEfficiency.toFixed(1)}% red zone efficiency`;
+            if (teamMomentumData.awayTeam.currentDriveYards) {
+              performanceSection += `, ${teamMomentumData.awayTeam.currentDriveYards} yards current drive`;
+            }
+          }
+        }
+        
+        // Add defensive performance data if available
+        if (defenseData?.homeDefense || defenseData?.awayDefense || defenseData?.opposingDefense) {
+          performanceSection += `
+DEFENSIVE PERFORMANCE:`;
+          if (defenseData.opposingDefense) {
+            performanceSection += `
+- Opposing Defense: ${defenseData.opposingDefense}`;
+          }
+          if (defenseData.homeDefense?.sacks !== undefined && defenseData.homeDefense.sacks > 0) {
+            performanceSection += `
+- ${context.homeTeam} Defense: ${defenseData.homeDefense.sacks} sacks, ${defenseData.homeDefense.momentum || 'neutral'} momentum`;
+          }
+          if (defenseData.awayDefense?.sacks !== undefined && defenseData.awayDefense.sacks > 0) {
+            performanceSection += `
+- ${context.awayTeam} Defense: ${defenseData.awayDefense.sacks} sacks, ${defenseData.awayDefense.momentum || 'neutral'} momentum`;
+          }
+        }
+        
+        // Add unusual patterns if detected
+        if (patterns.length > 0) {
+          performanceSection += `
+UNUSUAL PATTERNS:
+- ${patterns.slice(0, 2).join(', ')}`;
+        }
+
         return `${basePrompt}FOOTBALL SITUATION:
 - Q${context.quarter || 1}, ${context.timeRemaining || 'Unknown'} remaining
 ${context.down && context.yardsToGo ? `- ${this.getOrdinal(context.down)} & ${context.yardsToGo}` : ''}
 ${context.redZone ? '- RED ZONE: High scoring probability' : ''}
+${context.possession ? `- Possession: ${context.possession === 'home' ? context.homeTeam : context.awayTeam}` : ''}
+${performanceSection}
 
-DATA AVAILABLE:
-- Weather: ${context.weather?.windSpeed || 'Available'}mph winds, ${context.weather?.temperature || 'Available'}°F
-- Field Position: ${context.originalContext?.fieldPosition || 'Available'} yard line
-- Time Pressure: ${context.timeRemaining || 'Available'}
+WEATHER CONDITIONS:
+- Temperature: ${weatherData?.temperature || 'N/A'}°F, ${weatherData?.condition || 'Unknown conditions'}
+${weatherData?.windSpeed ? `- Wind: ${weatherData.windSpeed}mph ${weatherData.windDirection || ''}${weatherData.precipitation ? ' (with precipitation)' : ''}` : ''}
+${weatherData?.impact ? `- Impact: ${weatherData.impact}` : ''}
+
+DATA TO USE IN RESPONSE:
+- Use specific QB stats (e.g., "Mahomes 8/10 this drive")
+- Include defensive pressure context (e.g., "facing 3 sacks allowed")
+- Reference weather impact on passing/kicking accuracy
+- Highlight team momentum shifts or unusual patterns
+- Mention red zone efficiency for scoring situations
 
 BETTING FOCUS:
-1. Name key players (QB, RB, kicker) for situation
-2. Include weather impact on passing/kicking
-3. Suggest specific props (TD, FG, rushing yards)
-4. Provide urgency window
+1. Name specific players with their performance stats
+2. Include weather impact on passing/kicking success rates
+3. Reference momentum and defensive pressure context
+4. Suggest specific props with performance-backed reasoning
+5. Provide urgency window based on game flow
 
 EXAMPLE:
-🔥 4TH & 3 • Josh Allen (.75 4th down)
-⚡ 20mph winds • FG range (42yd)
-💰 TD +180 • Under 42.5 • 40sec window`;
+🔥 2-MIN WARNING • Burrow 8/10 drive (hot)
+⚡ Cincinnati D allowing pressure • 15mph winds affect FG
+💰 TD +165 • Over team total • 2min window`;
 
       case 'NBA':
       case 'WNBA':

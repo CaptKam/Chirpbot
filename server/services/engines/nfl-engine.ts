@@ -315,7 +315,7 @@ export class NFLEngine extends BaseSportEngine {
 
         console.log(`🧠 NFL AI Enhancement: Processing ${alert.type} alert (${probability}%)`);
 
-        // Build cross-sport context for NFL
+        // Build cross-sport context for NFL with enhanced performance tracking
         const aiContext: CrossSportContext = {
             sport: 'NFL',
             gameId: gameState.gameId,
@@ -335,13 +335,78 @@ export class NFLEngine extends BaseSportEngine {
             possession: gameState.possession,
             redZone: gameState.fieldPosition ? gameState.fieldPosition <= 20 : false,
             goalLine: gameState.fieldPosition ? gameState.fieldPosition <= 5 : false,
+            // Enhanced weather context with more detail
             weather: gameState.weather ? {
               temperature: gameState.weather.data?.temperature || 72,
               condition: gameState.weather.data?.condition || 'Clear',
               windSpeed: gameState.weather.data?.windSpeed || 0,
+              windDirection: gameState.weather.data?.windDirection || '',
               humidity: gameState.weather.data?.humidity || 50,
-              impact: gameState.weather.impact?.description || 'Minimal impact'
+              impact: gameState.weather.impact?.description || 'Minimal impact',
+              precipitation: alert.context?.precipitation || false
             } : undefined,
+            // === PERFORMANCE TRACKING DATA (from alert context) ===
+            quarterbackPerformance: alert.context?.quarterbackPerformance ? {
+              name: alert.context.quarterbackName || 'QB',
+              completions: alert.context.quarterbackPerformance.completions,
+              attempts: alert.context.quarterbackPerformance.attempts,
+              yards: alert.context.quarterbackPerformance.passingYards,
+              touchdowns: alert.context.quarterbackPerformance.touchdownPasses,
+              interceptions: alert.context.quarterbackPerformance.interceptions,
+              rating: alert.context.quarterbackPerformance.qbRating,
+              currentDriveStats: alert.context.quarterbackPerformance.currentDrive ? 
+                `${alert.context.quarterbackPerformance.currentDrive.completions}/${alert.context.quarterbackPerformance.currentDrive.attempts} for ${alert.context.quarterbackPerformance.currentDrive.yards} yards` : undefined,
+              pressureStats: alert.context.quarterbackPerformance.pressureStats ? 
+                `${alert.context.quarterbackPerformance.pressureStats.completionsUnderPressure}/${alert.context.quarterbackPerformance.pressureStats.attemptsUnderPressure} under pressure` : undefined,
+              clutchPerformance: alert.context.quarterbackPerformance.redZoneStats ? 
+                `${alert.context.quarterbackPerformance.redZoneStats.completions}/${alert.context.quarterbackPerformance.redZoneStats.attempts} in red zone` : undefined
+            } : undefined,
+            teamMomentum: {
+              homeTeam: alert.context?.homeTeamMomentum ? {
+                scoringDrives: alert.context.homeTeamMomentum.scoringDrives,
+                totalDrives: alert.context.homeTeamMomentum.totalDrives,
+                redZoneEfficiency: alert.context.homeTeamMomentum.redZoneEfficiency?.percentage,
+                timeOfPossession: alert.context.homeTeamMomentum.timeOfPossession?.average,
+                bigPlays: alert.context.homeTeamMomentum.bigPlays?.plays20Plus,
+                currentDriveYards: alert.context.homeTeamMomentum.currentDrive?.yards,
+                momentum: alert.context.homeTeamMomentum.scoringStreaks?.current >= 2 ? 'hot' : 
+                         alert.context.homeTeamMomentum.scorelessStreak?.drives >= 3 ? 'cold' : 'neutral'
+              } : undefined,
+              awayTeam: alert.context?.awayTeamMomentum ? {
+                scoringDrives: alert.context.awayTeamMomentum.scoringDrives,
+                totalDrives: alert.context.awayTeamMomentum.totalDrives,
+                redZoneEfficiency: alert.context.awayTeamMomentum.redZoneEfficiency?.percentage,
+                timeOfPossession: alert.context.awayTeamMomentum.timeOfPossession?.average,
+                bigPlays: alert.context.awayTeamMomentum.bigPlays?.plays20Plus,
+                currentDriveYards: alert.context.awayTeamMomentum.currentDrive?.yards,
+                momentum: alert.context.awayTeamMomentum.scoringStreaks?.current >= 2 ? 'hot' : 
+                         alert.context.awayTeamMomentum.scorelessStreak?.drives >= 3 ? 'cold' : 'neutral'
+              } : undefined,
+              possessionTeam: gameState.possession,
+              possessionTeamMomentum: alert.context?.possessionTeamMomentum || alert.context?.homeTeamMomentum || alert.context?.awayTeamMomentum
+            },
+            defensePerformance: {
+              homeDefense: alert.context?.homeDefensePerformance ? {
+                sacks: alert.context.homeDefensePerformance.sacks,
+                turnoversForced: alert.context.homeDefensePerformance.interceptions + alert.context.homeDefensePerformance.fumbleRecoveries,
+                thirdDownStops: alert.context.homeDefensePerformance.thirdDownDefense?.attempts - alert.context.homeDefensePerformance.thirdDownDefense?.conversionsAllowed,
+                redZoneDefense: alert.context.homeDefensePerformance.redZoneDefense?.efficiency,
+                pressureRate: alert.context.homeDefensePerformance.pressureRate,
+                momentum: alert.context.homeDefensePerformance.currentMomentum?.type
+              } : undefined,
+              awayDefense: alert.context?.awayDefensePerformance ? {
+                sacks: alert.context.awayDefensePerformance.sacks,
+                turnoversForced: alert.context.awayDefensePerformance.interceptions + alert.context.awayDefensePerformance.fumbleRecoveries,
+                thirdDownStops: alert.context.awayDefensePerformance.thirdDownDefense?.attempts - alert.context.awayDefensePerformance.thirdDownDefense?.conversionsAllowed,
+                redZoneDefense: alert.context.awayDefensePerformance.redZoneDefense?.efficiency,
+                pressureRate: alert.context.awayDefensePerformance.pressureRate,
+                momentum: alert.context.awayDefensePerformance.currentMomentum?.type
+              } : undefined,
+              opposingDefense: gameState.possession === 'home' ? 
+                (alert.context?.awayDefensePerformance ? `${alert.context.awayDefensePerformance.sacks} sacks, ${alert.context.awayDefensePerformance.pressureRate?.toFixed(1)}% pressure rate` : undefined) :
+                (alert.context?.homeDefensePerformance ? `${alert.context.homeDefensePerformance.sacks} sacks, ${alert.context.homeDefensePerformance.pressureRate?.toFixed(1)}% pressure rate` : undefined)
+            },
+            unusualPatterns: alert.context?.unusualPatterns || [],
             originalMessage: alert.message,
             originalContext: alert.context
           };
