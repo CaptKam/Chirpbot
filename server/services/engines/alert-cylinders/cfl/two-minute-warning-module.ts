@@ -53,7 +53,7 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     const message = `⏰ Two Minutes Remaining in the ${halfText}! ${this.getScoreDisplay(gameState)}`;
     
     return {
-      alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}_${timeSeconds}`,
+      alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}`,
       type: this.alertType,
       message,
       context: {

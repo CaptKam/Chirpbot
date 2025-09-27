@@ -38,7 +38,7 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining);
 
     return {
-      alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}_${timeSeconds}`,
+      alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${this.createDynamicMessage(gameState, halfText)}`,
       displayMessage: `🏈 ${this.createDynamicMessage(gameState, halfText)} | Q${gameState.quarter}`,
