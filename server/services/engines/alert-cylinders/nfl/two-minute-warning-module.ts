@@ -52,24 +52,43 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
 
     const dynamicMessage = this.createDynamicMessage(gameState);
 
+    // Extract weather context if available
+    const weatherContext = gameState.weatherContext;
+    const weatherImpact = weatherContext ? this.analyzeWeatherImpact(weatherContext) : null;
+
+    // Build context with weather data when available
+    const context: any = {
+      gameId: gameState.gameId,
+      homeTeam: gameState.homeTeam,
+      awayTeam: gameState.awayTeam,
+      homeScore: gameState.homeScore,
+      awayScore: gameState.awayScore,
+      quarter: gameState.quarter,
+      timeRemaining: gameState.timeRemaining,
+      timeSeconds,
+      halfText,
+      isFirstHalf,
+      twoMinuteWarning: true,
+      situationType: 'TWO_MINUTE_WARNING'
+    };
+
+    // Add weather context if available
+    if (weatherContext) {
+      context.weatherCondition = weatherContext.condition;
+      context.temperature = weatherContext.temperature;
+      context.windSpeed = weatherContext.windSpeed;
+      context.windDirection = weatherContext.windDirection;
+      context.humidity = weatherContext.humidity;
+      context.precipitation = this.hasPrecipitation(weatherContext.condition);
+      context.weatherImpact = weatherImpact;
+    }
+
     return {
       alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}_${timeSeconds}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${dynamicMessage}`,
       displayMessage: `🏈 ${dynamicMessage} | Q${gameState.quarter}`,
-      context: {
-        gameId: gameState.gameId,
-        homeTeam: gameState.homeTeam,
-        awayTeam: gameState.awayTeam,
-        homeScore: gameState.homeScore,
-        awayScore: gameState.awayScore,
-        quarter: gameState.quarter,
-        timeRemaining: gameState.timeRemaining,
-        timeSeconds,
-        halfText,
-        isFirstHalf,
-        twoMinuteWarning: true
-      },
+      context,
       priority: 88
     };
   }
@@ -113,6 +132,16 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
       strategicContext = 'Game-deciding situation';
     } else if (urgencyLevel === 'HIGH') {
       strategicContext = 'High-pressure situation';
+    }
+    
+    // Add weather context if available
+    const weatherContext = gameState.weatherContext;
+    let weatherInfo = '';
+    if (weatherContext) {
+      weatherInfo = this.getWeatherDescription(weatherContext);
+      if (weatherInfo) {
+        strategicContext += ` | ${weatherInfo}`;
+      }
     }
     
     return `${situationDesc} - ${strategicContext}`;
@@ -211,5 +240,93 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     if (clockPhase === 'RUNNING_OUT_CLOCK') return 'LOW';
     
     return 'MEDIUM';
+  }
+
+  // Weather analysis helper methods
+  private analyzeWeatherImpact(weatherContext: any): 'minimal' | 'moderate' | 'significant' | 'severe' {
+    let impactScore = 0;
+    
+    // Analyze temperature impact
+    if (weatherContext.temperature !== undefined) {
+      if (weatherContext.temperature <= 20) impactScore += 2; // Extreme cold affects ball handling
+      if (weatherContext.temperature >= 95) impactScore += 1; // Heat affects player endurance
+    }
+    
+    // Analyze wind impact (significant for field goals/passing)
+    if (weatherContext.windSpeed !== undefined) {
+      if (weatherContext.windSpeed >= 20) impactScore += 2; // Strong winds affect passing/kicking
+      if (weatherContext.windSpeed >= 30) impactScore += 1; // Extreme winds
+    }
+    
+    // Analyze precipitation impact
+    if (weatherContext.condition) {
+      const condition = weatherContext.condition.toLowerCase();
+      if (this.hasPrecipitation(condition)) {
+        impactScore += 2; // Rain/snow affects ball handling and field conditions
+        if (condition.includes('heavy') || condition.includes('storm')) {
+          impactScore += 1; // Heavy precipitation is worse
+        }
+      }
+    }
+    
+    // Determine impact level
+    if (impactScore >= 5) return 'severe';
+    if (impactScore >= 3) return 'significant';
+    if (impactScore >= 1) return 'moderate';
+    return 'minimal';
+  }
+
+  private hasPrecipitation(condition: string | undefined): boolean {
+    if (!condition) return false;
+    const precipitationKeywords = ['rain', 'snow', 'sleet', 'drizzle', 'shower', 'storm', 'precipitation'];
+    return precipitationKeywords.some(keyword => condition.toLowerCase().includes(keyword));
+  }
+
+  private getWeatherDescription(weatherContext: any): string {
+    const parts: string[] = [];
+    
+    // Temperature information (if extreme)
+    if (weatherContext.temperature !== undefined) {
+      if (weatherContext.temperature <= 32) {
+        parts.push(`${weatherContext.temperature}°F (freezing)`);
+      } else if (weatherContext.temperature <= 20) {
+        parts.push(`${weatherContext.temperature}°F (extreme cold)`);
+      } else if (weatherContext.temperature >= 95) {
+        parts.push(`${weatherContext.temperature}°F (extreme heat)`);
+      }
+    }
+    
+    // Wind information (if significant)
+    if (weatherContext.windSpeed !== undefined && weatherContext.windSpeed >= 15) {
+      let windDesc = `${weatherContext.windSpeed}mph winds`;
+      if (weatherContext.windDirection) {
+        windDesc += ` ${weatherContext.windDirection}`;
+      }
+      parts.push(windDesc);
+    }
+    
+    // Precipitation information
+    if (weatherContext.condition && this.hasPrecipitation(weatherContext.condition)) {
+      parts.push(weatherContext.condition.toLowerCase());
+    }
+    
+    // Add impact assessment
+    if (parts.length > 0) {
+      const impact = this.analyzeWeatherImpact(weatherContext);
+      const impactDesc = this.getImpactDescription(impact);
+      return `${parts.join(', ')} (${impactDesc})`;
+    }
+    
+    return '';
+  }
+
+  private getImpactDescription(impact: string): string {
+    switch (impact) {
+      case 'severe': return 'major game impact';
+      case 'significant': return 'significant impact';
+      case 'moderate': return 'moderate impact';
+      case 'minimal': return 'minimal impact';
+      default: return 'weather conditions';
+    }
   }
 }
