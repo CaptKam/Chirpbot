@@ -211,16 +211,12 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
             </div>
           </div>
 
-          {/* Main Alert Content - Always Structured Format */}
+          {/* Main Alert Content - Normalized Format */}
           {displayContent && (
-            <div className={`mb-6 rounded-xl p-4 border ${
-              isStructured 
-                ? 'bg-gradient-to-r from-slate-800/80 to-slate-700/60 border-slate-600/40' 
-                : 'bg-slate-800/60 border-slate-700/50'
-            }`} data-testid={`alert-content-${alert.id}`}>
-              <pre className="text-slate-100 text-sm whitespace-pre-line font-medium leading-relaxed">
+            <div className="mb-6 rounded-xl p-4 border bg-slate-800/60 border-slate-700/50" data-testid={`alert-content-${alert.id}`}>
+              <div className="text-slate-100 text-sm font-medium leading-relaxed whitespace-normal break-words overflow-hidden max-h-24 line-clamp-4">
                 {displayContent}
-              </pre>
+              </div>
             </div>
           )}
 
