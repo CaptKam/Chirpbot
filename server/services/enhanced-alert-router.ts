@@ -1,5 +1,6 @@
 import type { AlertResult, GameState } from './engines/base-engine';
 import type { WeatherChangeEvent } from './weather-on-live-service';
+import { unifiedAIProcessor } from './unified-ai-processor';
 
 // === UNIFIED ENHANCED ALERT INTERFACE ===
 // Consolidates best features from all AI systems into single response
@@ -161,6 +162,35 @@ export class EnhancedAlertRouter {
       enhancedAlert.enhancement.aiProcessingTime = processingTime;
       
       console.log(`✅ Enhanced ${alert.type} in ${processingTime}ms (${gameState.sport})`);
+      
+      // 🔗 CRITICAL FIX: Trigger database save and Telegram delivery
+      // Convert UnifiedEnhancedAlert back to AlertResult format for compatibility
+      const legacyAlert: AlertResult = {
+        type: enhancedAlert.type,
+        priority: enhancedAlert.priority,
+        message: enhancedAlert.enhancedMessage,
+        alertKey: enhancedAlert.alertKey,
+        context: { 
+          gameId: enhancedAlert.gameId,
+          ...enhancedAlert.sportSpecificContext 
+        }
+      };
+      
+      // Create CrossSportContext for queueAlert
+      const context = {
+        sport: enhancedAlert.sport,
+        alertType: enhancedAlert.type,
+        gameId: enhancedAlert.gameId
+      };
+      
+      // Queue for background processing (database save + Telegram)
+      try {
+        console.log(`🔗 Queuing enhanced alert for database save: ${enhancedAlert.alertKey}`);
+        await unifiedAIProcessor.queueAlert(legacyAlert, context as any, userId || 'system');
+      } catch (queueError) {
+        console.error(`❌ Failed to queue enhanced alert for database save:`, queueError);
+      }
+      
       return enhancedAlert;
       
     } catch (error) {
