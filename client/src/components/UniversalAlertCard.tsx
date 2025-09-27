@@ -33,6 +33,20 @@ interface UniversalAlertProps {
     situation?: any;
   };
   hasComposerEnhancement?: boolean;
+  payload?: {
+    headline?: string;
+    action?: {
+      primaryAction?: string;
+      confidence?: number;
+      reasoning?: string[];
+    };
+    prediction?: {
+      nextCriticalMoment?: string;
+      probability?: number;
+      keyFactors?: string[];
+    };
+    [key: string]: any;
+  };
 }
 
 export function UniversalAlertCard({ alert, showEnhancements = false }: { alert: UniversalAlertProps; showEnhancements?: boolean }) {
@@ -49,24 +63,53 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
     }
   })();
 
-  // Enhanced content display - prioritize structured gambling insights and enhanced content
+  // Enhanced content display - robust precedence chain preserving backward compatibility
   const getDisplayContent = () => {
-    // 1. Priority: Structured gambling insights template (rich format with emojis)
+    // 1. Priority: Legacy structured template (full backward compatibility)
     if (alert.gamblingInsights?.structuredTemplate) {
       return alert.gamblingInsights.structuredTemplate;
     }
     
-    // 2. Fallback: Enhanced message from Alert Router
+    // 2. New enhanced content: Build from available AI payload data
+    const parts = [];
+    
+    // Use AI-enhanced headline if available
+    if (alert.payload?.headline) {
+      parts.push(alert.payload.headline);
+    }
+    
+    // Add primary action if available
+    if (alert.payload?.action?.primaryAction) {
+      parts.push(`🎯 ${alert.payload.action.primaryAction}`);
+    }
+    
+    // Add gambling insights bullets for context
+    if (alert.gamblingInsights?.bullets && alert.gamblingInsights.bullets.length > 0) {
+      const insights = alert.gamblingInsights.bullets.slice(0, 2).join(' • ');
+      parts.push(`💡 ${insights}`);
+    }
+    
+    // Add prediction if available
+    if (alert.payload?.prediction?.nextCriticalMoment) {
+      parts.push(`🔮 ${alert.payload.prediction.nextCriticalMoment}`);
+    }
+    
+    // If we have enhanced content, combine it
+    if (parts.length > 0) {
+      return parts.join('\n\n');
+    }
+    
+    // 3. Fallback: Enhanced message from Alert Router (backward compatibility)
     if (alert.context?.enhancedMessage) {
       return alert.context.enhancedMessage;
     }
     
-    // 3. Fallback: Original message
+    // 4. Final fallback: Original message
     return alert.message || 'Alert content unavailable';
   };
   
   const displayContent = getDisplayContent();
-  const isStructured = !!alert.gamblingInsights?.structuredTemplate;
+  const isStructured = !!(alert.gamblingInsights?.structuredTemplate || alert.payload?.headline || alert.payload?.action?.primaryAction || alert.gamblingInsights?.bullets?.length);
 
   // Fixed urgency label to ensure consistent styling across environments
   const urgencyLabel = 'ALERT';
