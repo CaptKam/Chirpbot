@@ -2,6 +2,7 @@ import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { unifiedSettings } from '../../storage';
 import { storage } from '../../storage';
 import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
+import { footballPerformanceTracker } from './football-performance-tracker';
 
 export class CFLEngine extends BaseSportEngine {
 
@@ -406,6 +407,88 @@ export class CFLEngine extends BaseSportEngine {
   }
 
 
+  /**
+   * Get performance context for enhanced CFL alerts
+   */
+  getPerformanceContext(gameId: string, teamId?: string, playerId?: string): string | null {
+    const contextParts: string[] = [];
 
+    // Get quarterback performance if playerId provided
+    if (playerId) {
+      const qbSummary = footballPerformanceTracker.getQuarterbackSummary(gameId, playerId);
+      if (qbSummary) {
+        contextParts.push(`QB: ${qbSummary}`);
+      }
+    }
+
+    // Get team momentum if teamId provided
+    if (teamId) {
+      const teamSummary = footballPerformanceTracker.getTeamMomentumSummary(gameId, teamId);
+      if (teamSummary) {
+        contextParts.push(`Team: ${teamSummary}`);
+      }
+
+      const defenseSummary = footballPerformanceTracker.getDefenseSummary(gameId, teamId);
+      if (defenseSummary) {
+        contextParts.push(`Defense: ${defenseSummary}`);
+      }
+    }
+
+    // Get unusual patterns
+    const patterns = footballPerformanceTracker.detectUnusualPatterns(gameId);
+    if (patterns.length > 0) {
+      contextParts.push(`Patterns: ${patterns.slice(0, 2).join(', ')}`);
+    }
+
+    return contextParts.length > 0 ? contextParts.join(' | ') : null;
+  }
+
+  /**
+   * Update performance tracking based on CFL game state
+   */
+  updateGamePerformance(gameState: GameState): void {
+    if (!gameState.gameId || !gameState.isLive) return;
+
+    try {
+      // Update team momentum for CFL-specific events (3-down system)
+      if (gameState.homeScore !== undefined && gameState.awayScore !== undefined) {
+        const quarter = gameState.quarter || 1;
+        
+        // Update for both teams - accounting for CFL's 110-yard field
+        if (gameState.homeTeam) {
+          footballPerformanceTracker.updateTeamMomentum(
+            gameState.gameId,
+            gameState.homeTeam,
+            gameState.homeTeam,
+            quarter,
+            {
+              type: 'possession_change',
+              fieldPosition: gameState.fieldPosition
+            }
+          );
+        }
+
+        if (gameState.awayTeam) {
+          footballPerformanceTracker.updateTeamMomentum(
+            gameState.gameId,
+            gameState.awayTeam,
+            gameState.awayTeam,
+            quarter,
+            {
+              type: 'possession_change',
+              fieldPosition: gameState.fieldPosition ? 110 - gameState.fieldPosition : undefined // CFL field is 110 yards
+            }
+          );
+        }
+      }
+
+      // Cleanup old performance data periodically
+      if (Math.random() < 0.01) { // 1% chance to trigger cleanup
+        footballPerformanceTracker.cleanupOldGames();
+      }
+    } catch (error) {
+      console.error('CFL Engine: Error updating performance tracking:', error);
+    }
+  }
 
 }
