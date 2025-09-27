@@ -2324,53 +2324,70 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const currentUserId = req.session?.userId;
       console.log(`🔍 ALERTS API: Session user ID: ${currentUserId || 'none'}`);
 
-      // If user is not authenticated, return empty array
+      let result;
+
       if (!currentUserId) {
-        console.log(`⚠️ ALERTS API: No authenticated user, returning empty array`);
-        res.json([]);
-        return;
+        // PUBLIC ACCESS: Allow viewing recent alerts without authentication
+        console.log(`🔓 ALERTS API: Public access - returning recent alerts from all games`);
+        
+        result = await db.select({
+          id: alerts.id,
+          type: alerts.type,
+          game_id: alerts.gameId,
+          sport: alerts.sport,
+          score: alerts.score,
+          payload: alerts.payload,
+          created_at: alerts.createdAt
+        })
+        .from(alerts)
+        .where(gte(alerts.createdAt, new Date(Date.now() - 24 * 60 * 60 * 1000))) // Last 24 hours
+        .orderBy(desc(alerts.createdAt))
+        .limit(limit)
+        .offset(offset);
+        
+        console.log(`🔓 ALERTS API: Returning ${result.length} public alerts from last 24 hours`);
+      } else {
+        // AUTHENTICATED ACCESS: Apply user-specific filtering
+        const user = await storage.getUserById(currentUserId);
+        if (!user) {
+          console.log(`⚠️ ALERTS API: User not found for ID: ${currentUserId}`);
+          res.json([]);
+          return;
+        }
+
+        console.log(`🔍 ALERTS API: User ${user.username} requesting alerts`);
+
+        // Get user's monitored games
+        const monitoredGames = await storage.getUserMonitoredTeams(currentUserId);
+        const monitoredGameIds = monitoredGames.map(game => game.gameId);
+        console.log(`🔍 ALERTS API: User ${currentUserId} has ${monitoredGameIds.length} monitored games`);
+
+        // If user has no monitored games, return empty array
+        if (monitoredGameIds.length === 0) {
+          console.log(`⚠️ ALERTS API: User has no monitored games, returning empty array`);
+          res.json([]);
+          return;
+        }
+
+        // Get alerts from database - filter by monitored game IDs AND current user ID
+        result = await db.select({
+          id: alerts.id,
+          type: alerts.type,
+          game_id: alerts.gameId,
+          sport: alerts.sport,
+          score: alerts.score,
+          payload: alerts.payload,
+          created_at: alerts.createdAt
+        })
+        .from(alerts)
+        .where(and(
+          inArray(alerts.gameId, monitoredGameIds),
+          eq(alerts.userId, currentUserId)
+        ))
+        .orderBy(desc(alerts.createdAt))
+        .limit(limit)
+        .offset(offset);
       }
-
-      // Get user details
-      const user = await storage.getUserById(currentUserId);
-      if (!user) {
-        console.log(`⚠️ ALERTS API: User not found for ID: ${currentUserId}`);
-        res.json([]);
-        return;
-      }
-
-      console.log(`🔍 ALERTS API: User ${user.username} requesting alerts`);
-
-      // Get user's monitored games
-      const monitoredGames = await storage.getUserMonitoredTeams(currentUserId);
-      const monitoredGameIds = monitoredGames.map(game => game.gameId);
-      console.log(`🔍 ALERTS API: User ${currentUserId} has ${monitoredGameIds.length} monitored games`);
-
-      // If user has no monitored games, return empty array
-      if (monitoredGameIds.length === 0) {
-        console.log(`⚠️ ALERTS API: User has no monitored games, returning empty array`);
-        res.json([]);
-        return;
-      }
-
-      // Get alerts from database - filter by monitored game IDs AND current user ID
-      const result = await db.select({
-        id: alerts.id,
-        type: alerts.type,
-        game_id: alerts.gameId,
-        sport: alerts.sport,
-        score: alerts.score,
-        payload: alerts.payload,
-        created_at: alerts.createdAt
-      })
-      .from(alerts)
-      .where(and(
-        inArray(alerts.gameId, monitoredGameIds),
-        eq(alerts.userId, currentUserId)
-      ))
-      .orderBy(desc(alerts.createdAt))
-      .limit(limit)
-      .offset(offset);
 
       const alertsData = [];
 
@@ -2578,30 +2595,42 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/alerts/snapshot', async (req, res) => {
     try {
       const currentUserId = req.session?.userId;
-      if (!currentUserId) {
-        res.json([]);
-        return;
-      }
-
-      const user = await storage.getUserById(currentUserId);
-      if (!user) {
-        res.json([]);
-        return;
-      }
-
       const since = req.query.since as string;
       const sinceSeq = req.query.seq ? parseInt(req.query.seq as string) : null;
 
-      console.log(`📸 Snapshot request: userId=${currentUserId}, since=${since}, seq=${sinceSeq}`);
+      console.log(`📸 Snapshot request: userId=${currentUserId || 'public'}, since=${since}, seq=${sinceSeq}`);
 
-      // Get monitored games and filter alerts
-      const monitoredGames = await storage.getAllMonitoredGames();
-      if (monitoredGames.length === 0) {
-        res.json([]);
-        return;
+      let monitoredGameIds;
+
+      if (!currentUserId) {
+        // PUBLIC ACCESS: For unauthenticated users, get all recent games
+        console.log(`🔓 SNAPSHOT API: Public access - returning recent snapshots from all games`);
+        
+        // Get all monitored games for public access
+        const allMonitoredGames = await storage.getAllMonitoredGames();
+        monitoredGameIds = allMonitoredGames.map((game: any) => game.gameId);
+        
+        if (monitoredGameIds.length === 0) {
+          res.json([]);
+          return;
+        }
+      } else {
+        // AUTHENTICATED ACCESS: Apply user-specific filtering
+        const user = await storage.getUserById(currentUserId);
+        if (!user) {
+          res.json([]);
+          return;
+        }
+
+        // Get monitored games and filter alerts
+        const monitoredGames = await storage.getAllMonitoredGames();
+        if (monitoredGames.length === 0) {
+          res.json([]);
+          return;
+        }
+
+        monitoredGameIds = monitoredGames.map((game: any) => game.gameId);
       }
-
-      const monitoredGameIds = monitoredGames.map((game: any) => game.gameId);
 
       // Build parameterized query to prevent SQL injection
       const gameIdsPlaceholder = monitoredGameIds.map(() => '?').join(',');
