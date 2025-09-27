@@ -89,7 +89,7 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     }
 
     return {
-      alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}_${timeSeconds}`,
+      alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${dynamicMessage}`,
       displayMessage: `🏈 ${dynamicMessage} | Q${gameState.quarter}`,
@@ -131,8 +131,8 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
       }
       
       // Get defensive performance for both teams
-      const homeDefense = footballPerformanceTracker.getDefenseSummary(gameId, gameState.homeTeam);
-      const awayDefense = footballPerformanceTracker.getDefenseSummary(gameId, gameState.awayTeam);
+      const homeDefense = footballPerformanceTracker.getDefenseSummary(gameId, 'home');
+      const awayDefense = footballPerformanceTracker.getDefenseSummary(gameId, 'away');
       
       if (homeDefense) {
         context.homeDefensePerformance = homeDefense;
