@@ -2482,6 +2482,106 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // DIAGNOSTIC: Environment comparison endpoint to identify simple vs advanced card differences
+  app.get('/api/diagnostics/environment', async (req, res) => {
+    try {
+      const currentUserId = req.session?.userId;
+      
+      // Environment variables that could affect card rendering
+      const environmentData = {
+        deployment: {
+          isReplit: !!process.env.REPLIT_DB_URL,
+          environment: process.env.NODE_ENV || 'development',
+          buildTimestamp: process.env.BUILD_TIMESTAMP || 'unknown',
+          version: process.env.npm_package_version || 'unknown'
+        },
+        features: {
+          openaiEnabled: !!process.env.OPENAI_API_KEY,
+          telegramEnabled: !!process.env.TELEGRAM_BOT_TOKEN,
+          oddsApiEnabled: !!process.env.ODDS_API_KEY,
+          enhancedCardsEnabled: process.env.VITE_ENABLE_ENHANCED_CARDS !== 'false',
+          debugMode: process.env.DEBUG === 'true',
+          masterAlertsEnabled: await storage.getMasterAlertEnabled()
+        },
+        user: currentUserId ? {
+          userId: currentUserId,
+          authenticated: true,
+          hasMonitoredGames: currentUserId ? (await storage.getUserMonitoredTeams(currentUserId)).length > 0 : false
+        } : {
+          userId: null,
+          authenticated: false,
+          hasMonitoredGames: false
+        }
+      };
+
+      // Get sample alert data to compare structures
+      let sampleAlert = null;
+      if (currentUserId) {
+        try {
+          const monitoredGames = await storage.getUserMonitoredTeams(currentUserId);
+          if (monitoredGames.length > 0) {
+            const sampleResult = await db.select()
+              .from(alerts)
+              .where(and(
+                inArray(alerts.gameId, monitoredGames.map(g => g.gameId)),
+                eq(alerts.userId, currentUserId)
+              ))
+              .orderBy(desc(alerts.createdAt))
+              .limit(1);
+              
+            if (sampleResult.length > 0) {
+              const alert = sampleResult[0];
+              const payload = alert.payload as any;
+              
+              sampleAlert = {
+                id: alert.id,
+                type: alert.type,
+                sport: alert.sport,
+                hasContext: !!payload.context,
+                hasGamblingInsights: !!payload.gamblingInsights,
+                hasComposerEnhancement: !!payload.hasComposerEnhancement,
+                hasBetbookData: !!payload.betbookData,
+                hasGameInfo: !!payload.gameInfo,
+                hasDisplayMessage: !!payload.displayMessage,
+                messageLength: payload.message ? payload.message.length : 0,
+                payloadKeys: Object.keys(payload),
+                contextKeys: payload.context ? Object.keys(payload.context) : []
+              };
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching sample alert:', error);
+        }
+      }
+
+      const diagnosticData = {
+        ...environmentData,
+        sampleAlert,
+        timestamp: new Date().toISOString(),
+        cardRenderingFactors: {
+          shouldRenderAdvanced: !!(
+            environmentData.features.openaiEnabled && 
+            environmentData.features.enhancedCardsEnabled &&
+            currentUserId
+          ),
+          factorsExplained: {
+            openaiForEnhancements: environmentData.features.openaiEnabled,
+            enhancedCardsFeatureFlag: environmentData.features.enhancedCardsEnabled,
+            userAuthenticated: !!currentUserId,
+            hasMonitoredGames: environmentData.user.hasMonitoredGames
+          }
+        }
+      };
+
+      console.log(`🔍 DIAGNOSTIC: Environment=${environmentData.deployment.environment}, Replit=${environmentData.deployment.isReplit}, User=${currentUserId}, Advanced=${diagnosticData.cardRenderingFactors.shouldRenderAdvanced}`);
+
+      res.json(diagnosticData);
+    } catch (error) {
+      console.error('Error in diagnostics endpoint:', error);
+      res.status(500).json({ message: 'Failed to generate diagnostics' });
+    }
+  });
+
   // Snapshot endpoint for delta synchronization - fetches alerts since sequence number or timestamp
   app.get('/api/alerts/snapshot', async (req, res) => {
     try {
