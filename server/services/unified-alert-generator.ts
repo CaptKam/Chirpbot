@@ -1160,6 +1160,7 @@ export class UnifiedAlertGenerator {
             alertResults.map(async (alert) => {
               try {
                 // Use Enhanced Alert Router for consolidated AI enhancement
+                console.log(`🚀 UnifiedAlertGenerator: Calling Enhanced Alert Router for ${alert.type} on game ${gameState.gameId}`);
                 const unifiedAlert = await enhancedAlertRouter.enhanceAlert(alert, gameState);
                 
                 // Convert unified format back to legacy format for compatibility

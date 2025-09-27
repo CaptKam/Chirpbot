@@ -128,6 +128,8 @@ export class EnhancedAlertRouter {
     userId?: string,
     config?: Partial<EnhancementConfig>
   ): Promise<UnifiedEnhancedAlert> {
+    console.log(`🔍 Enhanced Alert Router: Processing ${alert.type} for game ${gameState.gameId} (sport: ${gameState.sport})`);
+    const enhancementStartTime = Date.now();
     const startTime = Date.now();
     const enhancementConfig = { ...this.DEFAULT_CONFIG, ...config };
     
