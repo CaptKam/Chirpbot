@@ -709,76 +709,19 @@ export class GameStateManager {
             console.log(`🚨 Generating alerts for ${sport} game ${gameId}`);
             let alerts = await engine.generateLiveAlerts(gameState);
 
-            // UNIFIED ENHANCEMENT: Send all alerts through single enhancement pipeline
+            // 🚫 DISABLED: Competing AI enhancement pipeline now handled by Enhanced Alert Router in UnifiedAlertGenerator
             if (alerts && alerts.length > 0) {
-              console.log(`🔗 GameStateManager: Sending ${alerts.length} alerts through unified enhancement pipeline`);
-
-              // UNIFIED FIX: Use UnifiedAIProcessor as the single enhancement pipeline
-              // This eliminates competing enhancement systems (weather, gambling, AI) and ensures consistent contexts
-              try {
-                // Send each raw alert through unified enhancement pipeline
-                for (const rawAlert of alerts) {
-                    // Create context for unified enhancement
-                    const context: any = {
-                      sport: sport.toUpperCase(),
-                      alertType: rawAlert.type,
-                      gameId: gameId,
-                      priority: rawAlert.priority || 75,
-                      probability: rawAlert.priority || 75,
-                      homeTeam: gameState.homeTeam || 'Home',
-                      awayTeam: gameState.awayTeam || 'Away',
-                      homeScore: gameState.homeScore || 0,
-                      awayScore: gameState.awayScore || 0,
-                      isLive: gameState.isLive || false,
-                      originalMessage: rawAlert.message,
-                      originalContext: rawAlert.context || {}
-                    };
-
-                    // Apply Generative AI enhancement (new advanced layer)
-                    if (gameState.isLive && rawAlert.priority >= 7) {
-                      console.log(`🤖 Applying Generative AI enhancement for ${sport} ${rawAlert.type}`);
-                      const genAIResult = await generativeSportsAI.enhanceWithGenerativeAI(
-                        rawAlert, 
-                        gameState, 
-                        sport, 
-                        'system'
-                      );
-
-                      // Use the enhanced alert from GenerativeAI
-                      const enhancedAlert = genAIResult.enhancedAlert;
-
-                      // Store additional AI insights in context
-                      enhancedAlert.context = {
-                        ...enhancedAlert.context,
-                        generativeAI: {
-                          predictiveInsights: genAIResult.predictiveInsights,
-                          narrativeContext: genAIResult.narrativeContext,
-                          bettingIntelligence: genAIResult.bettingIntelligence,
-                          fanEngagement: genAIResult.fanEngagement,
-                          aiGeneratedContent: genAIResult.aiGeneratedContent
-                        }
-                      };
-
-                       // Queue enhanced alert for unified enhancement pipeline (AI + gambling + weather)
-                      console.log(`🔗 GameStateManager: Sending ${alerts.length} alerts through unified enhancement pipeline`);
-                      unifiedAIProcessor.queueAlert(enhancedAlert, context, 'system').catch(error => {
-                        console.warn(`⚠️ Failed to queue alert ${rawAlert.type} for unified enhancement:`, error);
-                      });
-
-                    } else {
-                      // Queue raw alert for unified enhancement pipeline (AI + gambling + weather)
-                      console.log(`🔗 GameStateManager: Sending ${alerts.length} alerts through unified enhancement pipeline`);
-                      unifiedAIProcessor.queueAlert(rawAlert, context, 'system').catch(error => {
-                        console.warn(`⚠️ Failed to queue alert ${rawAlert.type} for unified enhancement:`, error);
-                      });
-                    }
-                  }
-
-                  console.log(`💾 Queued ${alerts.length} alerts for unified enhancement pipeline`);
-                } catch (error) {
-                  console.error(`❌ Failed to queue enhanced alerts for database storage:`, error);
-                }
-
+              console.log(`✅ GameStateManager: Generated ${alerts.length} alerts - enhancement handled by UnifiedAlertGenerator`);
+              console.log(`🔗 Alert processing delegated to UnifiedAlertGenerator with Enhanced Alert Router`);
+              
+              // NOTE: Enhancement is now handled by:
+              // 1. UnifiedAlertGenerator receives alerts from sport engines
+              // 2. Enhanced Alert Router provides unified enhancement (narrative + predictive + betting + weather)
+              // 3. No more competing AI systems or duplicate processing
+              
+              // Previously: GameStateManager → generativeSportsAI → unifiedAIProcessor (CONFLICTS)
+              // Now: SportEngine → UnifiedAlertGenerator → Enhanced Alert Router (UNIFIED)
+              
               console.log(`✅ Generated ${alerts.length} alerts for game ${gameId}`);
             } else {
               console.log(`📝 No alerts generated for game ${gameId} (normal for stable game states)`);
