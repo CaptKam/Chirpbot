@@ -8,6 +8,7 @@ import { getHealthMonitor } from './unified-health-monitor';
 import { memoryManager } from '../middleware/memory-manager';
 import type { InsertAlert } from "../../shared/schema";
 import { GamblingInsightsComposer } from "./gambling-insights-composer";
+import { enhancedAlertRouter, type UnifiedEnhancedAlert } from "./enhanced-alert-router";
 
 // Extended interface for local calendar game data (renamed to avoid import conflict)
 interface LocalCalendarGameData {
@@ -1107,11 +1108,76 @@ export class UnifiedAlertGenerator {
           // Generate alerts using the sport engine
           const alertResults = await engine.generateLiveAlerts(gameState);
 
-          // V3: Enhance alerts with weather context for live games
-          const weatherEnhancedAlerts = await this.enhanceAlertsWithWeatherContext(alertResults, gameState, sport);
-
-          // Enhance alerts with gambling insights after weather enhancement but before AI processing
-          const enhancedAlerts = await this.enhanceAlertsWithGamblingInsights(weatherEnhancedAlerts, gameState, sport);
+          // UNIFIED AI ENHANCEMENT: Parallel processing for improved throughput
+          console.log(`🚀 Processing ${alertResults.length} alerts in parallel through Enhanced Alert Router`);
+          
+          const enhancementPromises = alertResults.map(async (alertResult) => {
+            try {
+              // Single enhancement call that consolidates all AI capabilities
+              const unifiedAlert = await enhancedAlertRouter.enhanceAlert(alertResult, gameState);
+              return { success: true, alert: unifiedAlert };
+            } catch (enhancementError) {
+              console.warn(`⚠️ Enhancement failed for ${alertResult.type}, using fallback:`, enhancementError);
+              // Fallback: convert to basic enhanced alert format
+              const fallbackAlert: UnifiedEnhancedAlert = {
+                type: alertResult.type,
+                sport: gameState.sport,
+                gameId: gameState.gameId,
+                alertKey: alertResult.alertKey || `${gameState.gameId}_${alertResult.type}_${Date.now()}`,
+                priority: alertResult.priority,
+                headline: `${sport}: ${alertResult.type}`,
+                enhancedMessage: alertResult.message || 'Alert detected',
+                timing: { whyNow: 'Alert triggered', urgencyLevel: 'moderate' as const },
+                action: { primaryAction: 'Monitor situation', confidence: 50, reasoning: ['Alert detected'] },
+                prediction: { nextCriticalMoment: 'Watch developments', probability: 50, keyFactors: ['Game evolving'] },
+                enhancement: { aiProcessingTime: 0, confidenceScore: 40, enhancementSources: ['fallback'], cacheUsed: false },
+                sportSpecificContext: alertResult.context
+              };
+              return { success: false, alert: fallbackAlert, error: enhancementError };
+            }
+          });
+          
+          // Wait for all enhancements to complete (parallel processing)
+          const enhancementResults = await Promise.allSettled(enhancementPromises);
+          
+          // Extract successful alerts and log any failures
+          const enhancedAlerts: UnifiedEnhancedAlert[] = [];
+          let successCount = 0;
+          let fallbackCount = 0;
+          
+          enhancementResults.forEach((result, index) => {
+            if (result.status === 'fulfilled') {
+              enhancedAlerts.push(result.value.alert);
+              if (result.value.success) {
+                successCount++;
+              } else {
+                fallbackCount++;
+              }
+            } else {
+              console.error(`❌ Enhancement promise failed for alert ${index}:`, result.reason);
+              // Create emergency fallback alert
+              const alertResult = alertResults[index];
+              enhancedAlerts.push({
+                type: alertResult.type,
+                sport: gameState.sport,
+                gameId: gameState.gameId,
+                alertKey: alertResult.alertKey || `${gameState.gameId}_${alertResult.type}_${Date.now()}`,
+                priority: alertResult.priority,
+                headline: `${sport}: ${alertResult.type}`,
+                enhancedMessage: 'Alert detected (emergency fallback)',
+                timing: { whyNow: 'Alert triggered', urgencyLevel: 'moderate' as const },
+                action: { primaryAction: 'Monitor situation', confidence: 30, reasoning: ['Emergency fallback'] },
+                prediction: { nextCriticalMoment: 'Watch developments', probability: 50, keyFactors: ['System recovery'] },
+                enhancement: { aiProcessingTime: 0, confidenceScore: 30, enhancementSources: ['emergency-fallback'], cacheUsed: false },
+                sportSpecificContext: alertResult.context
+              });
+              fallbackCount++;
+            }
+          });
+          
+          if (this.logLevel !== 'quiet') {
+            console.log(`✅ Enhanced ${alertResults.length} alerts: ${successCount} successful, ${fallbackCount} fallback`);
+          }
 
           if (enhancedAlerts && enhancedAlerts.length > 0) {
             if (this.logLevel !== 'quiet') {
@@ -1201,19 +1267,18 @@ export class UnifiedAlertGenerator {
                     }
                     
                     // CRITICAL: Validate alertResult before processing to prevent constraint violations
-                    if (!alertResult || !alertResult.type || !alertResult.alertKey || !alertResult.message) {
+                    if (!alertResult || !alertResult.type || !alertResult.alertKey || !alertResult.enhancedMessage) {
                       console.error(`❌ Invalid AlertResult object from ${sport} engine:`, {
                         alertResultExists: !!alertResult,
                         type: alertResult?.type,
                         alertKey: alertResult?.alertKey,
-                        message: alertResult?.message,
+                        enhancedMessage: alertResult?.enhancedMessage,
                         gameId: gameId
                       });
                       continue; // Skip this alert and move to next user
                     }
 
-                    // V3: Enhanced alert data with weather context
-                    const weatherAlert = alertResult as WeatherEnhancedAlert;
+                    // V3: Enhanced alert data (now unified)
                     const alertData = {
                       alertKey: `${situationKey}_${userId}`,
                       sport: sport,
@@ -1223,8 +1288,8 @@ export class UnifiedAlertGenerator {
                       score: alertResult.priority || 0,
                       userId: userId,
                       payload: {
-                        ...alertResult.context,
-                        message: alertResult.message,
+                        ...alertResult.sportSpecificContext,
+                        message: alertResult.enhancedMessage, // Map enhancedMessage -> message for API compatibility
                         homeTeam: game.homeTeam,
                         awayTeam: game.awayTeam,
                         homeScore: game.homeScore,
@@ -1234,9 +1299,9 @@ export class UnifiedAlertGenerator {
                         aiAdvice: betbookData.aiAdvice,
                         sportsbookLinks: betbookData.sportsbookLinks,
                         // V3: Weather enhancement data
-                        weatherContext: weatherAlert.weatherContext,
-                        isWeatherTriggered: weatherAlert.isWeatherTriggered || false,
-                        weatherSeverity: weatherAlert.weatherSeverity
+                        weatherContext: alertResult.weather?.impact,
+                        isWeatherTriggered: alertResult.weather?.isWeatherTriggered || false,
+                        weatherSeverity: alertResult.weather?.severity
                       }
                     };
 
@@ -1284,7 +1349,7 @@ export class UnifiedAlertGenerator {
                             sport: alertData.sport,
                             gameId: alertData.gameId,
                             score: alertData.score,
-                            message: alertResult.message,
+                            message: alertResult.enhancedMessage,
                             payload: alertData.payload,
                             createdAt: new Date().toISOString()
                           },
@@ -1331,9 +1396,9 @@ export class UnifiedAlertGenerator {
                             hasSecond: game.runners?.second,
                             hasThird: game.runners?.third,
                             // Additional context from alertResult
-                            ...alertResult.context
+                            ...alertResult.sportSpecificContext
                           },
-                          message: alertResult.message,
+                          message: alertResult.enhancedMessage,
                           payload: alertData.payload
                         };
 

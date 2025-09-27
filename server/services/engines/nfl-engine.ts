@@ -1,7 +1,8 @@
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { unifiedSettings } from '../../storage';
 import { storage } from '../../storage';
-import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
+// V3: UNIFIED ENHANCEMENT - AI processing now handled by UnifiedAlertGenerator's Enhanced Alert Router  
+// import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
 import { weatherService } from '../weather-service';
 import { alertComposer, EnhancedAlertPayload } from '../alert-composer';
 
@@ -342,11 +343,10 @@ export class NFLEngine extends BaseSportEngine {
             originalContext: alert.context
           };
 
-        // NON-BLOCKING: Queue for async AI enhancement and return base alert immediately
-        unifiedAIProcessor.queueAlert(alert, aiContext, 'system').catch(error => {
-          console.warn(`⚠️ NFL AI Queue failed for ${alert.type}:`, error);
-        });
-        console.log(`🚀 NFL Async AI: Queued ${alert.type} for background enhancement`);
+        // V3: UNIFIED ENHANCEMENT - AI processing now handled by UnifiedAlertGenerator's Enhanced Alert Router
+        // DISABLED: Legacy UnifiedAIProcessor queueing to prevent duplicate enhancements
+        console.log(`🚀 V3: ${alert.type} will be enhanced by UnifiedAlertGenerator's Enhanced Alert Router`);
+        console.log(`🚫 Legacy UnifiedAIProcessor queueing disabled to prevent conflicts`);
 
         // Always return base alert immediately (async enhancement happens via WebSocket)
         enhancedAlerts.push(alert);
