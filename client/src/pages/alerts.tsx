@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, Component, ErrorInfo, ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { EnhancedAlertCard } from '@/components/EnhancedAlertCard';
+import { UniversalAlertCard } from '@/components/UniversalAlertCard';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -378,7 +378,7 @@ export default function AlertsPage() {
               data-testid={`alert-container-${alert.id}`}
             >
               <ErrorBoundary>
-                <EnhancedAlertCard 
+                <UniversalAlertCard 
                   alert={{
                     // Use backend-processed data directly with safe defaults
                     id: alert.id,
@@ -395,15 +395,11 @@ export default function AlertsPage() {
                     awayScore: alert.awayScore,
                     context: alert.context,
                     sentToTelegram: alert.sentToTelegram,
-                    weather: alert.context?.weather || (alert.weatherData ? {
-                      impact: alert.weatherData.condition,
-                      conditions: alert.weatherData.condition,
-                      temperature: alert.weatherData.temperature
-                    } : undefined),
+                    weather: alert.context?.weather || alert.weatherData,
                     gameInfo: alert.gameInfo,
-                    gamblingInsights: alert.gamblingInsights,
-                    payload: (alert as any).payload
+                    gamblingInsights: alert.gamblingInsights
                   }}
+                  showEnhancements={true}
                 />
               </ErrorBoundary>
             </div>

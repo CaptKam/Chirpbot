@@ -115,7 +115,7 @@ export function cleanMessage(message: string): string {
 
 /**
  * Get display content using simplified consistent approach 
- * NOTE: This function is deprecated - EnhancedAlertCard now uses alert.message directly
+ * NOTE: This function is deprecated - UniversalAlertCard now uses alert.message directly
  * Kept for backward compatibility
  */
 export function getDisplayContent(alert: any): { content: string; isStructured: boolean } {
