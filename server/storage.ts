@@ -994,12 +994,8 @@ export const storage = {
   // Get all users monitoring a specific game
   async getUsersMonitoringGame(gameId: string) {
     try {
-      const result = await db.select({
-        id: userMonitoredTeams.userId,
-        username: users.username
-      })
+      const result = await db.select()
         .from(userMonitoredTeams)
-        .innerJoin(users, eq(userMonitoredTeams.userId, users.id))
         .where(eq(userMonitoredTeams.gameId, gameId));
       return result;
     } catch (error) {

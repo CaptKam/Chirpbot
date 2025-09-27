@@ -8,7 +8,6 @@
 
 import { RUNTIME, GameState as RuntimeGameState, WeatherArmReason } from '../config/runtime';
 // WebSocket import removed - using HTTP polling architecture
-import { storage } from '../storage';
 import type { BaseGameData } from './base-sport-api';
 import { GamblingInsightsComposer } from './gambling-insights-composer';
 import type { AlertResult as EngineAlertResult, GameState } from './engines/base-engine';
@@ -736,33 +735,16 @@ export class GameStateManager {
                       originalContext: rawAlert.context || {}
                     };
 
-                    // V3: SAVE ALERTS TO DATABASE - Create alerts for each user monitoring this game
-                    try {
-                      // Get all users monitoring this game
-                      const monitoringUsers = await storage.getUsersMonitoringGame(gameId);
-                      
-                      for (const user of monitoringUsers) {
-                        const alertData = {
-                          alertKey: `${rawAlert.alertKey}_${user.id}`,
-                          type: rawAlert.type,
-                          sport: sport.toUpperCase(),
-                          gameId: gameId,
-                          message: rawAlert.message,
-                          priority: rawAlert.priority || 75,
-                          payload: rawAlert.context || {},
-                          userId: user.id,
-                          score: rawAlert.priority || 75
-                        };
-                        
-                        await storage.createAlert(alertData);
-                        console.log(`💾 Alert saved to database for user ${user.username}: ${rawAlert.alertKey}`);
-                      }
-                    } catch (saveError) {
-                      console.error(`❌ Failed to save alert ${rawAlert.alertKey}:`, saveError);
-                    }
+                    // V3: UNIFIED ENHANCEMENT PIPELINE - All AI processing now handled by UnifiedAlertGenerator
+                    // DISABLED: Legacy enhancement pipelines to prevent conflicts and duplicate processing
+                    console.log(`🚀 V3: Alert ${rawAlert.type} will be enhanced by UnifiedAlertGenerator's Enhanced Alert Router`);
+                    console.log(`🚫 Legacy AI pipelines (GenerativeSportsAI + UnifiedAIProcessor) disabled to prevent conflicts`);
+                    
+                    // Raw alerts are now processed by: UnifiedAlertGenerator → Enhanced Alert Router → Unified Enhancement
+                    // This eliminates the duplicate enhancement conflicts that were causing issues
                   }
 
-                  console.log(`✅ Saved ${alerts.length} alerts to database`);
+                  console.log(`💾 Queued ${alerts.length} alerts for unified enhancement pipeline`);
                 } catch (error) {
                   console.error(`❌ Failed to queue enhanced alerts for database storage:`, error);
                 }
