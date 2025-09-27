@@ -1,5 +1,6 @@
 
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+import { footballPerformanceTracker } from '../../football-performance-tracker';
 
 export default class TwoMinuteWarningModule extends BaseAlertModule {
   alertType = 'NFL_TWO_MINUTE_WARNING';
@@ -50,13 +51,15 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     const halfText = isFirstHalf ? '1st Half' : '2nd Half';
     const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining);
 
-    const dynamicMessage = this.createDynamicMessage(gameState);
+    // Get performance data for enhanced context
+    const performanceContext = this.getPerformanceContext(gameState);
+    const dynamicMessage = this.createDynamicMessage(gameState, performanceContext);
 
     // Extract weather context if available
     const weatherContext = gameState.weatherContext;
     const weatherImpact = weatherContext ? this.analyzeWeatherImpact(weatherContext) : null;
 
-    // Build context with weather data when available
+    // Build context with weather and performance data
     const context: any = {
       gameId: gameState.gameId,
       homeTeam: gameState.homeTeam,
@@ -69,7 +72,9 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
       halfText,
       isFirstHalf,
       twoMinuteWarning: true,
-      situationType: 'TWO_MINUTE_WARNING'
+      situationType: 'TWO_MINUTE_WARNING',
+      // Add performance context
+      ...performanceContext
     };
 
     // Add weather context if available
@@ -93,7 +98,102 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     };
   }
 
-  private createDynamicMessage(gameState: GameState): string {
+  /**
+   * Get comprehensive performance context for both teams
+   */
+  private getPerformanceContext(gameState: GameState): any {
+    const gameId = gameState.gameId;
+    const context: any = {};
+    
+    try {
+      // Get current quarterback performance (possession team)
+      const possessionTeam = gameState.possession === 'home' ? gameState.homeTeam : gameState.awayTeam;
+      const possessionTeamId = gameState.possession === 'home' ? 'home' : 'away';
+      
+      if (gameState.currentQuarterback) {
+        const qbId = gameState.currentQuarterbackId || `qb_${gameState.currentQuarterback.replace(/\s+/g, '_')}`;
+        const qbSummary = footballPerformanceTracker.getQuarterbackSummary(gameId, qbId);
+        if (qbSummary) {
+          context.quarterbackPerformance = qbSummary;
+          context.quarterbackName = gameState.currentQuarterback;
+        }
+      }
+      
+      // Get team momentum for both teams
+      const homeTeamMomentum = footballPerformanceTracker.getTeamMomentumSummary(gameId, 'home');
+      const awayTeamMomentum = footballPerformanceTracker.getTeamMomentumSummary(gameId, 'away');
+      
+      if (homeTeamMomentum) {
+        context.homeTeamMomentum = homeTeamMomentum;
+      }
+      if (awayTeamMomentum) {
+        context.awayTeamMomentum = awayTeamMomentum;
+      }
+      
+      // Get defensive performance for both teams
+      const homeDefense = footballPerformanceTracker.getDefenseSummary(gameId, gameState.homeTeam);
+      const awayDefense = footballPerformanceTracker.getDefenseSummary(gameId, gameState.awayTeam);
+      
+      if (homeDefense) {
+        context.homeDefensePerformance = homeDefense;
+      }
+      if (awayDefense) {
+        context.awayDefensePerformance = awayDefense;
+      }
+      
+      // Get unusual patterns that might be relevant
+      const unusualPatterns = footballPerformanceTracker.detectUnusualPatterns(gameId);
+      if (unusualPatterns.length > 0) {
+        context.unusualPatterns = unusualPatterns;
+      }
+      
+      // Add context for possession team specifically
+      context.possessionTeam = possessionTeam;
+      context.possessionTeamMomentum = gameState.possession === 'home' ? homeTeamMomentum : awayTeamMomentum;
+      
+    } catch (error) {
+      console.warn('Error retrieving performance context:', error);
+    }
+    
+    return context;
+  }
+
+  /**
+   * Create performance-enhanced dynamic message
+   */
+  private createPerformanceMessage(gameState: GameState, performanceContext: any): string {
+    const parts: string[] = [];
+    
+    // Add quarterback performance if available
+    if (performanceContext.quarterbackPerformance && performanceContext.quarterbackName) {
+      parts.push(`${performanceContext.quarterbackName}: ${performanceContext.quarterbackPerformance}`);
+    }
+    
+    // Add possession team momentum
+    if (performanceContext.possessionTeamMomentum) {
+      parts.push(`${performanceContext.possessionTeam} momentum: ${performanceContext.possessionTeamMomentum}`);
+    }
+    
+    // Add defensive context for opposing team
+    const opposingTeam = gameState.possession === 'home' ? gameState.awayTeam : gameState.homeTeam;
+    const opposingDefense = gameState.possession === 'home' ? 
+      performanceContext.awayDefensePerformance : 
+      performanceContext.homeDefensePerformance;
+    
+    if (opposingDefense) {
+      parts.push(`${opposingTeam} defense: ${opposingDefense}`);
+    }
+    
+    // Add unusual patterns
+    if (performanceContext.unusualPatterns && performanceContext.unusualPatterns.length > 0) {
+      const relevantPatterns = performanceContext.unusualPatterns.slice(0, 2); // Limit to top 2
+      parts.push(`Patterns: ${relevantPatterns.join(', ')}`);
+    }
+    
+    return parts.length > 0 ? parts.join(' | ') : null;
+  }
+
+  private createDynamicMessage(gameState: GameState, performanceContext?: any): string {
     const isFirstHalf = gameState.quarter === 2;
     const halfText = isFirstHalf ? '1st half' : '4th quarter';
     const scoreDisplay = this.getScoreDisplay(gameState);
@@ -132,6 +232,14 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
       strategicContext = 'Game-deciding situation';
     } else if (urgencyLevel === 'HIGH') {
       strategicContext = 'High-pressure situation';
+    }
+    
+    // Add performance context if available
+    if (performanceContext) {
+      const performanceMessage = this.createPerformanceMessage(gameState, performanceContext);
+      if (performanceMessage) {
+        strategicContext += ` | ${performanceMessage}`;
+      }
     }
     
     // Add weather context if available
