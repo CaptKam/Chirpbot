@@ -2442,59 +2442,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             console.log(`⚠️ FALLBACK USED: Alert ${row.id} - ${teamData.awayTeam} @ ${teamData.homeTeam} (${environment})`);
           }
 
-          // Generate a proper display message from the payload
-          const generateAlertMessage = (type: string, payload: any) => {
-            // Check for pre-formatted messages first
-            if (payload.message || payload.displayMessage) {
-              return payload.message || payload.displayMessage;
-            }
-
-            // Generate readable messages based on alert type and payload data
-            const homeTeam = payload.homeTeam || 'Home Team';
-            const awayTeam = payload.awayTeam || 'Away Team';
-            const homeScore = payload.homeScore || '';
-            const awayScore = payload.awayScore || '';
-            const scoreText = (homeScore !== '' && awayScore !== '') ? ` (${awayScore}-${homeScore})` : '';
-
-            switch (type) {
-              case 'MLB_BASES_LOADED_TWO_OUTS':
-                return `🔥 BASES LOADED, 2 OUTS! ${awayTeam} @ ${homeTeam}${scoreText} - High pressure situation!`;
-              case 'MLB_BASES_LOADED_NO_OUTS':
-                return `⚾ Bases loaded, no outs! ${awayTeam} @ ${homeTeam}${scoreText} - Big scoring opportunity!`;
-              case 'MLB_SECOND_AND_THIRD_NO_OUTS':
-                return `🏃 Runners on 2nd & 3rd, no outs! ${awayTeam} @ ${homeTeam}${scoreText} - Prime scoring position!`;
-              case 'MLB_BATTER_DUE':
-                const batter = payload.currentBatter || 'Key batter';
-                return `🎯 ${batter} due up! ${awayTeam} @ ${homeTeam}${scoreText} - Watch this at-bat!`;
-              case 'WNBA_HIGH_SCORING_QUARTER':
-                const quarter = payload.quarter || '';
-                const totalScore = payload.totalScore || (payload.homeScore + payload.awayScore);
-                return `🔥 HIGH-SCORING QUARTER! ${awayTeam} vs ${homeTeam}${scoreText} - ${totalScore} combined points in Q${quarter}!`;
-              case 'WNBA_FOURTH_QUARTER':
-                return `⏱️ Fourth quarter! ${awayTeam} vs ${homeTeam}${scoreText} - Crunch time!`;
-              case 'NCAAF_COMEBACK_POTENTIAL':
-                const deficit = payload.deficit || '';
-                const quarterText = payload.quarter ? `Q${payload.quarter}` : '';
-                return `🏈 COMEBACK ALERT! ${awayTeam} trails by ${deficit}, ${quarterText} - Can they rally?`;
-              default:
-                // Better fallback - make it readable
-                const typeWords = type.split('_').map(word => 
-                  word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-                ).join(' ');
-                return `${typeWords} - ${awayTeam} @ ${homeTeam}${scoreText}`;
-            }
-          };
-
           // Use backend-processed data with enhanced fallback system
           alertsData.push({
             id: row.id,
             alertKey: `${row.game_id}_${row.type}`,
             type: row.type,
-            // Generate proper display message
-            message: generateAlertMessage(row.type, payload),
-            // Add title and description for frontend compatibility
-            title: generateAlertMessage(row.type, payload),
-            description: `${teamData.awayTeam} @ ${teamData.homeTeam}`,
+            // Preserve original backend message formatting
+            message: payload.message || payload.displayMessage || `${row.type} alert`,
             displayMessage: payload.displayMessage, // Preserve formatted messages from CleanAlertFormatter
             gameId: row.game_id,
             sport: row.sport || 'MLB',

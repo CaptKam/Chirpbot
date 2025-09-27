@@ -14,9 +14,9 @@ import { GamblingInsightsComposer } from './gambling-insights-composer';
 import type { AlertResult as EngineAlertResult, GameState } from './engines/base-engine';
 import type { AlertResult } from '../../shared/schema';
 import type { WeatherChangeEvent } from './weather-on-live-service';
-import { sendTelegramAlert, type TelegramConfig } from './telegram';
-// V3: UNIFIED ENHANCEMENT - Import Enhanced Alert Router for AI processing
-import { enhancedAlertRouter, type UnifiedEnhancedAlert } from './enhanced-alert-router';
+// V3: UNIFIED ENHANCEMENT - AI processing now handled by UnifiedAlertGenerator's Enhanced Alert Router
+// import { unifiedAIProcessor, CrossSportContext } from './unified-ai-processor';
+// import { generativeSportsAI } from './generative-sports-ai';
 
 // === CORE INTERFACES ===
 
@@ -715,99 +715,57 @@ export class GameStateManager {
             if (alerts && alerts.length > 0) {
               console.log(`🔗 GameStateManager: Sending ${alerts.length} alerts through unified enhancement pipeline`);
 
-              // SIMPLE AI ENHANCEMENT: Process alerts one by one
-              console.log(`🤖 Starting AI enhancement for ${alerts.length} alerts...`);
-              
-              for (const rawAlert of alerts) {
-                try {
-                  console.log(`🤖 Enhancing ${rawAlert.type}...`);
-                  
-                  // Call AI enhancement with timeout
-                  const enhancedAlert = await enhancedAlertRouter.enhanceAlert(
-                    rawAlert,
-                    gameState,
-                    undefined,
-                    { timeoutMs: 2500 }
-                  );
-                  
-                  console.log(`✅ AI enhanced ${rawAlert.type} in ${enhancedAlert.enhancement.aiProcessingTime}ms`);
-                  
-                  // Save enhanced alert to database
-                  const monitoringUsers = await storage.getUsersMonitoringGame(gameId);
-                  
-                  for (const user of monitoringUsers) {
-                    const alertData = {
-                      alertKey: `${enhancedAlert.alertKey}_${user.id}`,
-                      type: enhancedAlert.type,
+              // UNIFIED FIX: Use UnifiedAIProcessor as the single enhancement pipeline
+              // This eliminates competing enhancement systems (weather, gambling, AI) and ensures consistent contexts
+              try {
+                // Send each raw alert through unified enhancement pipeline
+                for (const rawAlert of alerts) {
+                    // Create context for unified enhancement
+                    const context: any = {
                       sport: sport.toUpperCase(),
+                      alertType: rawAlert.type,
                       gameId: gameId,
-                      message: enhancedAlert.enhancedMessage,
-                      priority: enhancedAlert.priority,
-                      payload: {
-                        ...enhancedAlert.sportSpecificContext,
-                        headline: enhancedAlert.headline,
-                        aiAdvice: enhancedAlert.action.primaryAction,
-                        prediction: enhancedAlert.prediction.nextCriticalMoment,
-                        confidence: enhancedAlert.action.confidence,
-                        aiProcessingTime: enhancedAlert.enhancement.aiProcessingTime
-                      },
-                      userId: user.id,
-                      score: enhancedAlert.priority
+                      priority: rawAlert.priority || 75,
+                      probability: rawAlert.priority || 75,
+                      homeTeam: gameState.homeTeam || 'Home',
+                      awayTeam: gameState.awayTeam || 'Away',
+                      homeScore: gameState.homeScore || 0,
+                      awayScore: gameState.awayScore || 0,
+                      isLive: gameState.isLive || false,
+                      originalMessage: rawAlert.message,
+                      originalContext: rawAlert.context || {}
                     };
-                    
-                    await storage.createAlert(alertData);
-                    console.log(`💾 AI-enhanced alert saved: ${enhancedAlert.alertKey}`);
-                    
-                    // Send Telegram if configured
-                    const userDetails = await storage.getUserById(user.id);
-                    if (userDetails?.telegramEnabled && userDetails?.telegramBotToken && userDetails?.telegramChatId) {
-                      const telegramConfig: TelegramConfig = {
-                        botToken: userDetails.telegramBotToken,
-                        chatId: userDetails.telegramChatId
-                      };
+
+                    // V3: SAVE ALERTS TO DATABASE - Create alerts for each user monitoring this game
+                    try {
+                      // Get all users monitoring this game
+                      const monitoringUsers = await storage.getUsersMonitoringGame(gameId);
                       
-                      const telegramAlert = {
-                        type: enhancedAlert.type,
-                        message: enhancedAlert.enhancedMessage,
-                        gameInfo: {
+                      for (const user of monitoringUsers) {
+                        const alertData = {
+                          alertKey: `${rawAlert.alertKey}_${user.id}`,
+                          type: rawAlert.type,
                           sport: sport.toUpperCase(),
-                          awayTeam: gameState.awayTeam || 'Away',
-                          homeTeam: gameState.homeTeam || 'Home',
-                          awayScore: gameState.awayScore || 0,
-                          homeScore: gameState.homeScore || 0
-                        }
-                      };
-                      
-                      await sendTelegramAlert(telegramConfig, telegramAlert);
-                      console.log(`📱 Telegram sent to ${user.username}`);
-                    } else {
-                      console.log(`📱 ⏭️ Telegram not configured for user ${user.username}`);
+                          gameId: gameId,
+                          message: rawAlert.message,
+                          priority: rawAlert.priority || 75,
+                          payload: rawAlert.context || {},
+                          userId: user.id,
+                          score: rawAlert.priority || 75
+                        };
+                        
+                        await storage.createAlert(alertData);
+                        console.log(`💾 Alert saved to database for user ${user.username}: ${rawAlert.alertKey}`);
+                      }
+                    } catch (saveError) {
+                      console.error(`❌ Failed to save alert ${rawAlert.alertKey}:`, saveError);
                     }
                   }
-                  
-                } catch (enhancementError) {
-                  console.error(`❌ AI enhancement failed for ${rawAlert.type}:`, enhancementError);
-                  
-                  // Save raw alert as fallback
-                  const monitoringUsers = await storage.getUsersMonitoringGame(gameId);
-                  for (const user of monitoringUsers) {
-                    const alertData = {
-                      alertKey: `${rawAlert.alertKey}_${user.id}`,
-                      type: rawAlert.type,
-                      sport: sport.toUpperCase(),
-                      gameId: gameId,
-                      message: rawAlert.message || 'Alert detected',
-                      priority: rawAlert.priority || 75,
-                      payload: rawAlert.context || {},
-                      userId: user.id,
-                      score: rawAlert.priority || 75
-                    };
-                    
-                    await storage.createAlert(alertData);
-                    console.log(`💾 Fallback alert saved: ${rawAlert.alertKey}`);
-                  }
+
+                  console.log(`✅ Saved ${alerts.length} alerts to database`);
+                } catch (error) {
+                  console.error(`❌ Failed to queue enhanced alerts for database storage:`, error);
                 }
-              }
 
               console.log(`✅ Generated ${alerts.length} alerts for game ${gameId}`);
             } else {
