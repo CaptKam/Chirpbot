@@ -35,7 +35,7 @@ interface UniversalAlertProps {
   hasComposerEnhancement?: boolean;
 }
 
-export function UniversalAlertCard({ alert, showEnhancements = false }: { alert: UniversalAlertProps; showEnhancements?: boolean }) {
+export function UniversalAlertCard({ alert, showEnhancements = true }: { alert: UniversalAlertProps; showEnhancements?: boolean }) {
   // Safe date parsing with fallback
   const formattedTime = (() => {
     try {
