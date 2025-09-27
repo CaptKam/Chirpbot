@@ -67,6 +67,17 @@ interface EnhancedAlertCardProps {
 }
 
 export function EnhancedAlertCard({ alert }: { alert: EnhancedAlertCardProps }) {
+  // DEBUG: Log component rendering to verify it's being called
+  console.log('🎯 EnhancedAlertCard rendering alert:', {
+    id: alert.id,
+    type: alert.type,
+    sport: alert.sport,
+    hasPayload: !!alert.payload,
+    hasGamblingInsights: !!alert.gamblingInsights,
+    headline: alert.payload?.headline,
+    action: alert.payload?.action?.primaryAction
+  });
+  
   // Safe date parsing with fallback using native Date constructor
   const formattedTime = (() => {
     try {
