@@ -1,6 +1,7 @@
 import type { AlertResult, GameState } from './engines/base-engine';
 import type { WeatherChangeEvent } from './weather-on-live-service';
-import { unifiedAIProcessor } from './unified-ai-processor';
+import { storage } from '../storage';
+import { sendTelegramAlert } from './telegram';
 
 // === UNIFIED ENHANCED ALERT INTERFACE ===
 // Consolidates best features from all AI systems into single response
@@ -185,12 +186,64 @@ export class EnhancedAlertRouter {
         gameId: enhancedAlert.gameId
       };
       
-      // Queue for background processing (database save + Telegram)
+      // Direct database save and Telegram delivery (no more parallel enhancement!)
       try {
-        console.log(`🔗 Queuing enhanced alert for database save: ${enhancedAlert.alertKey}`);
-        await unifiedAIProcessor.queueAlert(legacyAlert, context as any, userId || 'system');
-      } catch (queueError) {
-        console.error(`❌ Failed to queue enhanced alert for database save:`, queueError);
+        console.log(`💾 Saving enhanced alert directly to database: ${enhancedAlert.alertKey}`);
+        
+        // Find users monitoring this game and save alert for each
+        const gameMonitoringUsers = await storage.getUsersMonitoringGame(enhancedAlert.gameId);
+        
+        for (const userGame of gameMonitoringUsers) {
+          try {
+            // Save alert directly to database
+            await storage.createAlert({
+              alertKey: enhancedAlert.alertKey,
+              userId: userGame.userId,
+              sport: enhancedAlert.sport as any,
+              gameId: enhancedAlert.gameId,
+              type: enhancedAlert.type,
+              state: 'active',
+              score: enhancedAlert.priority || 80,
+              payload: JSON.stringify({
+                message: enhancedAlert.enhancedMessage,
+                priority: enhancedAlert.priority,
+                type: enhancedAlert.type,
+                gameId: enhancedAlert.gameId,
+                context: enhancedAlert.sportSpecificContext || {},
+                timestamp: new Date().toISOString(),
+                gamblingInsights: enhancedAlert.betting || null,
+                hasComposerEnhancement: true,
+                weather: enhancedAlert.weather || null,
+                headline: enhancedAlert.headline,
+                action: enhancedAlert.action,
+                prediction: enhancedAlert.prediction
+              })
+            });
+
+            console.log(`✅ Alert saved for user ${userGame.userId}: ${enhancedAlert.alertKey}`);
+
+            // Send to Telegram if configured
+            const user = await storage.getUserById(userGame.userId);
+            if (user?.telegramEnabled && user?.telegramBotToken && user?.telegramChatId) {
+              const telegramConfig = {
+                botToken: user.telegramBotToken,
+                chatId: user.telegramChatId
+              };
+              console.log(`📱 Sending enhanced alert to Telegram for ${user.username || user.id}`);
+              const sent = await sendTelegramAlert(telegramConfig, legacyAlert);
+              if (sent) {
+                console.log(`📱 ✅ Enhanced alert delivered to Telegram for ${user.username || user.id}`);
+              } else {
+                console.log(`📱 ❌ Telegram delivery failed for ${user.username || user.id}`);
+              }
+            }
+          } catch (userError) {
+            console.error(`❌ Failed to save/send alert for user ${userGame.userId}:`, userError);
+          }
+        }
+        
+      } catch (saveError) {
+        console.error(`❌ Failed to save enhanced alert directly:`, saveError);
       }
       
       return enhancedAlert;
