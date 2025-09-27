@@ -216,7 +216,7 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
               <div className="text-base font-bold text-slate-200" data-testid={`teams-${alert.id}`}>
                 {(alert.awayTeam || "Unknown") + " @ " + (alert.homeTeam || "Unknown")}
               </div>
-              {showEnhancements && (alert.awayScore !== undefined && alert.homeScore !== undefined) && (
+              {(alert.awayScore !== undefined && alert.homeScore !== undefined) && (
                 <div className="flex items-center gap-2 text-2xl font-black text-slate-100" data-testid={`score-${alert.id}`}>
                   <span>{alert.awayScore}</span>
                   <span className="text-slate-500 text-lg">-</span>

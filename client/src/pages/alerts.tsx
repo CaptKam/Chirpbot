@@ -399,6 +399,7 @@ export default function AlertsPage() {
                     gameInfo: alert.gameInfo,
                     gamblingInsights: alert.gamblingInsights
                   }}
+                  showEnhancements={true}
                 />
               </ErrorBoundary>
             </div>
