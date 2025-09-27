@@ -14,20 +14,31 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
       return false;
     }
 
-    // Must be in 2nd or 4th quarter (end of half situations)
-    if (gameState.quarter !== 2 && gameState.quarter !== 4) {
-      console.log(`❌ Two Minute: Wrong quarter (Q${gameState.quarter})`);
-      return false;
+    // Check for quarter data - be more forgiving
+    const quarter = gameState.quarter || 1;
+    
+    // Must be in 2nd or 4th quarter (end of half situations) OR if quarter is unknown but time looks like 2-minute warning
+    const isCorrectQuarter = quarter === 2 || quarter === 4;
+    const timeRemaining = gameState.timeRemaining || '';
+    
+    if (!isCorrectQuarter) {
+      // If quarter is missing/unknown but we have 2:00 time, allow it as fallback
+      if ((quarter === 0 || quarter === undefined) && this.isExactlyTwoMinutes(timeRemaining)) {
+        console.log(`🔧 Two Minute: Quarter unknown but time indicates 2-minute warning (${timeRemaining})`);
+      } else {
+        console.log(`❌ Two Minute: Wrong quarter (Q${quarter})`);
+        return false;
+      }
     }
 
     // Must be exactly at 2:00 remaining (within 10 second window)
-    const exactlyTwoMinutes = this.isExactlyTwoMinutes(gameState.timeRemaining);
+    const exactlyTwoMinutes = this.isExactlyTwoMinutes(timeRemaining);
     if (!exactlyTwoMinutes) {
-      console.log(`❌ Two Minute: Not exactly 2:00 remaining (${gameState.timeRemaining})`);
+      console.log(`❌ Two Minute: Not exactly 2:00 remaining (${timeRemaining})`);
       return false;
     }
 
-    console.log(`🎯 NCAAF Two Minute WARNING TRIGGERED for ${gameState.gameId}`);
+    console.log(`🎯 NCAAF Two Minute WARNING TRIGGERED for ${gameState.gameId} in Q${quarter}`);
     return true;
   }
 

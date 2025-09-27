@@ -78,19 +78,57 @@ export class NCAAFApiService extends BaseSportApi {
   }
 
   protected parseEnhancedGameResponse(data: any, gameId: string): any {
-    const competitions = data.header?.competitions?.[0] || {};
-    const situation = competitions.situation || {};
+    // Try multiple paths to find game data in ESPN API response
+    const headerCompetition = data.header?.competitions?.[0];
+    const gamepackage = data.gamepackage;
+    const gameInfo = data.gameInfo;
     
-    // Extract game situation details (optimized for speed)
-    const down = situation.down || null;
-    const yardsToGo = situation.distance || null;
-    const fieldPosition = situation.yardLine || null;
-    const possession = situation.possession || null;
-    const quarter = competitions.status?.period || 0;
-    const timeRemaining = competitions.status?.displayClock || '';
+    // Extract competition data from various possible locations
+    let competitions = headerCompetition;
+    if (!competitions && gamepackage?.competitions?.[0]) {
+      competitions = gamepackage.competitions[0];
+    }
+    if (!competitions && data.competitions?.[0]) {
+      competitions = data.competitions[0];
+    }
     
-    // OPTIMIZED: Extract live scores and competitors in one pass (performance optimization)
-    const competitors = competitions.competitors || [];
+    // Extract situation from multiple possible paths
+    const situation = competitions?.situation || 
+                     headerCompetition?.situation || 
+                     gamepackage?.situation || 
+                     data.situation || {};
+    
+    // Extract game status from multiple possible paths
+    const gameStatus = competitions?.status || 
+                      headerCompetition?.status || 
+                      data.status || 
+                      gamepackage?.status || {};
+    
+    // Extract game situation details with fallbacks
+    const down = situation.down || situation.downDistanceText?.split(' ')[0] || null;
+    const yardsToGo = situation.distance || situation.yardLine || null;
+    const fieldPosition = situation.yardLine || situation.fieldPosition || null;
+    const possession = situation.possession || situation.possessionText || null;
+    const quarter = gameStatus.period || gameStatus.quarter || competitions?.period || 0;
+    const timeRemaining = gameStatus.displayClock || gameStatus.clock || gameStatus.time || '';
+    
+    console.log(`🔍 NCAAF Enhanced Data Debug for ${gameId}:`, {
+      hasHeader: !!data.header,
+      hasGamepackage: !!gamepackage,
+      hasCompetitions: !!competitions,
+      hasSituation: !!situation,
+      hasStatus: !!gameStatus,
+      extractedQuarter: quarter,
+      extractedTime: timeRemaining,
+      extractedField: fieldPosition,
+      extractedDown: down
+    });
+    
+    // OPTIMIZED: Extract live scores and competitors with better fallbacks
+    const competitors = competitions?.competitors || 
+                       headerCompetition?.competitors || 
+                       gamepackage?.competitors || 
+                       data.competitors || [];
     let homeScore = 0, awayScore = 0, homeCompetitor = null, awayCompetitor = null;
     
     for (const competitor of competitors) {
@@ -100,6 +138,20 @@ export class NCAAFApiService extends BaseSportApi {
       } else if (competitor.homeAway === 'away') {
         awayScore = parseInt(competitor.score) || 0;
         awayCompetitor = competitor;
+      }
+    }
+    
+    // If no competitors found, try alternative structure
+    if (competitors.length === 0 && data.boxscore?.teams) {
+      const teams = data.boxscore.teams;
+      for (const team of teams) {
+        if (team.homeAway === 'home') {
+          homeScore = parseInt(team.score) || 0;
+          homeCompetitor = team;
+        } else if (team.homeAway === 'away') {
+          awayScore = parseInt(team.score) || 0;
+          awayCompetitor = team;
+        }
       }
     }
     
@@ -196,27 +248,40 @@ export class NCAAFApiService extends BaseSportApi {
     // OPTIMIZED: Pre-calculate common values to avoid repeated operations
     const fieldPos = fieldPosition !== null && fieldPosition !== undefined ? parseInt(fieldPosition) : null;
     
+    // If critical data is missing, log warning and provide reasonable fallbacks
+    if (!quarter || quarter === 0) {
+      console.log(`⚠️ NCAAF API: Missing quarter data for game ${gameId}, using fallback`);
+    }
+    if (!timeRemaining) {
+      console.log(`⚠️ NCAAF API: Missing time data for game ${gameId}, using fallback`);
+    }
+    if (fieldPos === null || fieldPos === undefined) {
+      console.log(`⚠️ NCAAF API: Missing field position for game ${gameId}, using fallback`);
+    }
+
     return {
       gameId,
-      quarter,
-      timeRemaining,
-      down,
-      yardsToGo,
-      fieldPosition: fieldPos,
+      quarter: quarter || 1, // Default to Q1 if missing
+      timeRemaining: timeRemaining || '15:00', // Default time if missing
+      down: down || 1, // Default to 1st down if missing
+      yardsToGo: yardsToGo || 10, // Default to 10 yards if missing
+      fieldPosition: fieldPos !== null && fieldPos !== undefined ? fieldPos : 50, // Default to midfield
       possession,
       possessionSide,
       possessionTeamAbbrev,
       homeScore,
       awayScore,
-      gameState: competitions.status?.type?.state || 'unknown',
+      gameState: gameStatus?.type?.state || competitions?.status?.type?.state || 'unknown',
       currentPlayer,
       currentQuarterback: currentQuarterback || currentPlayer,
       preGameHomeQB,
       preGameAwayQB,
       // Add NCAAF-specific contextual info (optimized calculations)
-      redZone: fieldPos !== null && fieldPos <= 20,
-      goalLine: fieldPos !== null && fieldPos <= 10,
-      fourthDown: down === 4
+      redZone: fieldPos !== null && fieldPos !== undefined && fieldPos <= 20,
+      goalLine: fieldPos !== null && fieldPos !== undefined && fieldPos <= 10,
+      fourthDown: down === 4,
+      // Add fallback indicators
+      usingFallbackData: !quarter || !timeRemaining || fieldPos === null || fieldPos === undefined
     };
   }
 
@@ -263,6 +328,16 @@ export class NCAAFApiService extends BaseSportApi {
       const responseTime = Date.now() - startTime;
       this.ncaafMetrics.averageResponseTime.push(responseTime);
       
+      // Check if we got meaningful data
+      if (result && !result.error) {
+        if (result.usingFallbackData) {
+          console.log(`⚠️ NCAAF API: Using fallback data for game ${gameId} - some fields may be estimated`);
+        }
+        console.log(`✅ NCAAF API: Enhanced data retrieved for ${gameId} - Q${result.quarter}, ${result.timeRemaining}, field: ${result.fieldPosition}`);
+      } else if (result?.error) {
+        console.log(`❌ NCAAF API: Enhanced data error for ${gameId}: ${result.message || 'Unknown error'}`);
+      }
+      
       // Only log if critically slow (reduced from previous thresholds)
       if (responseTime > 200) {
         console.log(`⚠️ NCAAF Slow game state enhancement: ${responseTime}ms for game ${gameId}`);
@@ -270,7 +345,20 @@ export class NCAAFApiService extends BaseSportApi {
       
       return result as NCAAFEnhancedGameData;
     } catch (error: any) {
-      throw error;
+      console.error(`❌ NCAAF API: Exception getting enhanced data for ${gameId}:`, error.message);
+      
+      // Return fallback data instead of throwing
+      return {
+        gameId,
+        quarter: 1,
+        timeRemaining: '15:00',
+        fieldPosition: 50,
+        homeScore: 0,
+        awayScore: 0,
+        error: true,
+        message: `Enhanced data unavailable: ${error.message}`,
+        usingFallbackData: true
+      } as NCAAFEnhancedGameData;
     }
   }
   
