@@ -263,8 +263,58 @@ const app = express();
 
 // Security and CORS
 app.set('trust proxy', 1);
+
+// Configure Content Security Policy properly
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
 app.use(helmet({
-  contentSecurityPolicy: false, // Disabled for Vite dev mode
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'", // Required for Vite in development
+        "'unsafe-eval'", // Required for Vite in development
+        ...(isDevelopment ? ["'unsafe-dynamic'"] : []), // Only in development
+        "https://fonts.googleapis.com",
+        "https://fonts.gstatic.com",
+        "https://unpkg.com", // For any CDN dependencies
+        "*.replit.com",
+        "*.replit.dev"
+      ],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'", // Required for dynamic styles and CSS-in-JS
+        "https://fonts.googleapis.com",
+        "https://fonts.gstatic.com"
+      ],
+      fontSrc: [
+        "'self'",
+        "https://fonts.googleapis.com",
+        "https://fonts.gstatic.com",
+        "data:"
+      ],
+      imgSrc: [
+        "'self'",
+        "data:",
+        "blob:",
+        "https:",
+        "*.replit.com"
+      ],
+      connectSrc: [
+        "'self'",
+        "wss:",
+        "ws:",
+        "*.replit.com",
+        "*.replit.dev",
+        ...(isDevelopment ? ["http://localhost:*", "ws://localhost:*"] : [])
+      ],
+      frameSrc: ["'self'", "*.replit.com"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
+    },
+    reportOnly: false
+  }
 }));
 // 🔒 PORT PREFLIGHT CHECK WITH BACKOFF - Ensure port is truly available
 let PORT = TARGET_PORT;
