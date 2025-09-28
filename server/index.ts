@@ -13,7 +13,6 @@ import { db } from "./db";
 import { alertCleanupService } from './services/alert-cleanup';
 import { SingleInstanceLock } from "./utils/singleton-lock";
 import { EmergencyMemoryMonitor } from "./emergency-memory-monitor";
-import { jsonValidator, handleJsonParseError } from './middleware/json-validator';
 
 // 🔒 PERMANENT PORT CONFLICT SOLUTION - ACQUIRE SINGLE INSTANCE LOCK FIRST
 console.log('🔒 Checking for existing ChirpBot instances...');
@@ -73,12 +72,12 @@ if (!(globalThis as any).__v3_alert_system_bootstrapped__) {
         sports: ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL'],
         enableMetrics: true
       });
-
+      
       // Connect CalendarSyncService to GameStateManager (both directions)
       console.log("🔗 Connecting CalendarSyncService to GameStateManager");
       calendarSyncService.setGameStateManager(gameStateManager);
       gameStateManager.setCalendarSyncService(calendarSyncService);
-
+      
       console.log("🔍 DEBUG: Starting CalendarSyncService");
       await calendarSyncService.start();
       console.log("🔍 DEBUG: CalendarSyncService started");
@@ -94,7 +93,7 @@ if (!(globalThis as any).__v3_alert_system_bootstrapped__) {
       (global as any).gameStateManager = gameStateManager;
       (global as any).engineLifecycleManager = engineLifecycleManager;
       (global as any).migrationAdapter = migrationAdapter;
-
+      
       console.log("✅ V3 ALERT SYSTEM: COMPLETE PIPELINE ACTIVE");
       console.log("📋 V3: CalendarSyncService → GameStateManager → EngineLifecycleManager → Alert Generation ✅");
     } catch (e) {
@@ -207,7 +206,7 @@ process.on('uncaughtException', (error: any) => {
   // The singleton lock ensures we never try to bind to a port that's already in use
 
   // For database errors, try to reconnect
-  if (error.message && error.message.ie?.includes('database')) {
+  if (error.message?.includes('database')) {
     console.log('🔄 Database error detected - continuing with degraded service');
     return;
   }
@@ -264,58 +263,8 @@ const app = express();
 
 // Security and CORS
 app.set('trust proxy', 1);
-
-// Configure Content Security Policy properly
-const isDevelopment = process.env.NODE_ENV !== 'production';
-
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: [
-        "'self'",
-        "'unsafe-inline'", // Required for Vite in development
-        "'unsafe-eval'", // Required for Vite in development
-        ...(isDevelopment ? ["'unsafe-dynamic'"] : []), // Only in development
-        "https://fonts.googleapis.com",
-        "https://fonts.gstatic.com",
-        "https://unpkg.com", // For any CDN dependencies
-        "*.replit.com",
-        "*.replit.dev"
-      ],
-      styleSrc: [
-        "'self'",
-        "'unsafe-inline'", // Required for dynamic styles and CSS-in-JS
-        "https://fonts.googleapis.com",
-        "https://fonts.gstatic.com"
-      ],
-      fontSrc: [
-        "'self'",
-        "https://fonts.googleapis.com",
-        "https://fonts.gstatic.com",
-        "data:"
-      ],
-      imgSrc: [
-        "'self'",
-        "data:",
-        "blob:",
-        "https:",
-        "*.replit.com"
-      ],
-      connectSrc: [
-        "'self'",
-        "wss:",
-        "ws:",
-        "*.replit.com",
-        "*.replit.dev",
-        ...(isDevelopment ? ["http://localhost:*", "ws://localhost:*"] : [])
-      ],
-      frameSrc: ["'self'", "*.replit.com"],
-      objectSrc: ["'none'"],
-      upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
-    },
-    reportOnly: false
-  }
+  contentSecurityPolicy: false, // Disabled for Vite dev mode
 }));
 // 🔒 PORT PREFLIGHT CHECK WITH BACKOFF - Ensure port is truly available
 let PORT = TARGET_PORT;
@@ -356,10 +305,6 @@ app.use(cors({
 // Body parsing with size limits
 app.use(express.json({ limit: '200kb' }));
 app.use(express.urlencoded({ extended: false, limit: '200kb' }));
-
-// Apply JSON validation middleware
-app.use(jsonValidator);
-app.use(handleJsonParseError);
 
 // Session middleware removed from here - handled route-specifically in routes.ts
 // This prevents conflicts between user and admin sessions
@@ -427,20 +372,20 @@ async function startServer() {
       console.log('✅ Static SPA serving configured - frontend ready');
     } else {
       console.log('🔧 No built assets found - will use Vite dev middleware');
-
+      
       // Prevent duplicate setupVite calls
       if (!(globalThis as any).__VITE_ATTACHED__) {
         // Temporarily override PORT for Vite HMR to avoid conflict
         const originalPort = process.env.PORT;
         const hmrPort = String(parseInt(process.env.PORT || "5000", 10) + 1000);
         process.env.PORT = hmrPort;
-
+        
         await setupVite(app, server);
-
+        
         // Restore original PORT for Express server
         process.env.PORT = originalPort;
         (globalThis as any).__VITE_ATTACHED__ = true;
-
+        
         console.log(`✅ Vite dev server configured - HMR on port ${hmrPort}, frontend ready`);
       } else {
         console.log('✅ Vite dev server already attached - skipping duplicate setup');

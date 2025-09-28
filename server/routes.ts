@@ -7,7 +7,7 @@ import bcrypt from "bcryptjs";
 import csrf from "csrf";
 import { storage } from "./storage";
 import { db } from "./db";
-import { sql, count } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
 import { z } from "zod";
 import { oddsApiService } from './services/odds-api-service';
@@ -17,7 +17,7 @@ import { unifiedDeduplicator } from "./services/unified-deduplicator";
 import { memoryManager } from "./middleware/memory-manager";
 import { registerHealthRoutes } from "./services/unified-health-monitor";
 import { unifiedSettings } from "./storage";
-import { alerts as alertsTable, alerts, settings, users, teams, userMonitoredTeams } from "../shared/schema";
+import { alerts as alertsTable, alerts, settings } from "../shared/schema";
 import { eq, desc, and, gte, inArray } from "drizzle-orm";
 // Migration Adapter replaces direct CalendarSyncService usage
 // import { getCalendarSyncService } from "./services/calendar-sync-service";
@@ -916,9 +916,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         diagnostics.database.connected = true;
 
         // Use Drizzle ORM for database queries
-        try {
-          const { users, userAlertPreferences, userMonitoredTeams } = await import('../shared/schema');
-          const { count } = await import('drizzle-orm');
+        const { users, userAlertPreferences, userMonitoredTeams } = await import('../shared/schema');
+        const { count } = await import('drizzle-orm');
 
         // Get user count
         const userCountResult = await db.select({ count: count() }).from(users);
@@ -935,10 +934,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         diagnostics.database.alertPreferences = alertPrefsResult[0].count;
 
         // Get monitored teams count
-        } catch (importError) {
-          console.error('Failed to import required modules:', importError);
-          throw new Error('Database schema import failed');
-        }
         const monitoredTeamsResult = await db.select({ count: count() }).from(userMonitoredTeams);
         diagnostics.database.monitoredTeams = monitoredTeamsResult[0].count;
 
@@ -1002,10 +997,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       res.json(diagnostics);
     } catch (error) {
-      console.error('Environment status error:', error);
       res.status(500).json({
-        error: 'Failed to get environment status',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Diagnostic failed',
+        message: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString()
       });
     }
@@ -1950,6 +1944,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     return uuidRegex.test(userId);
   }
 
+  function validateSportName(sport: string): boolean {
+    const validSports = ['mlb', 'nfl', 'ncaaf', 'nba', 'wnba', 'cfl', 'nhl'];
+    return validSports.includes(sport.toLowerCase());
+  }
 
   // Admin API routes
   app.post('/api/admin/cleanup-alerts', requireAdminAuth, validateCSRF, async (req, res) => {
@@ -2613,36 +2611,28 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       const monitoredGameIds = monitoredGames.map((game: any) => game.gameId);
 
-      // Build query using Drizzle query builder to prevent SQL injection
-      let whereCondition = inArray(alerts.gameId, monitoredGameIds);
+      // Build parameterized query to prevent SQL injection
+      const gameIdsPlaceholder = monitoredGameIds.map(() => '?').join(',');
+      const params = [...monitoredGameIds];
+      let whereClause = `game_id IN (${gameIdsPlaceholder})`;
 
       if (sinceSeq) {
-        whereCondition = and(
-          inArray(alerts.gameId, monitoredGameIds),
-          gte(alerts.sequenceNumber, sinceSeq)
-        )!;
+        whereClause += ` AND sequence_number > ?`;
+        params.push(sinceSeq);
       } else if (since) {
-        whereCondition = and(
-          inArray(alerts.gameId, monitoredGameIds),
-          gte(alerts.createdAt, new Date(since))
-        )!;
+        whereClause += ` AND created_at > ?`;
+        params.push(since);
       }
 
-      const result = await db.select({
-        id: alerts.id,
-        sequence_number: alerts.sequenceNumber,
-        type: alerts.type,
-        game_id: alerts.gameId,
-        sport: alerts.sport,
-        score: alerts.score,
-        payload: alerts.payload,
-        created_at: alerts.createdAt
-      }).from(alerts)
-        .where(whereCondition)
-        .orderBy(alerts.sequenceNumber)
-        .limit(200);
+      const result = await db.execute(sql.raw(`
+        SELECT id, sequence_number, type, game_id, sport, score, payload, created_at
+        FROM alerts
+        WHERE ${whereClause}
+        ORDER BY sequence_number ASC
+        LIMIT 200
+      `));
 
-      const alertsData = result.map((row: any) => {
+      const alerts = result.rows.map((row: any) => {
         let payload: any = {};
         try {
           payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload || {};
@@ -2670,8 +2660,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         };
       });
 
-      console.log(`📸 Snapshot response: ${alertsData.length} alerts since ${since || sinceSeq}`);
-      res.json(alertsData);
+      console.log(`📸 Snapshot response: ${alerts.length} alerts since ${since || sinceSeq}`);
+      res.json(alerts);
     } catch (error) {
       console.error("Error fetching alert snapshot:", error);
       res.status(500).json({ message: "Failed to fetch alert snapshot" });
@@ -3198,23 +3188,16 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       dbStatus.connection = 'OK';
 
       // Check all tables
-      const tableMapping = {
-        'users': users,
-        'alerts': alerts,
-        'settings': settings,
-        'teams': teams,
-        'user_monitored_teams': userMonitoredTeams
-      };
-      
-      for (const [tableName, tableSchema] of Object.entries(tableMapping)) {
+      const tables = ['users', 'alerts', 'settings', 'teams', 'user_monitored_teams', 'master_alert_controls'];
+      for (const table of tables) {
         try {
-          const result = await db.select({ count: count() }).from(tableSchema);
-          dbStatus.tables[tableName] = {
+          const count = await db.execute(sql.raw(`SELECT COUNT(*) as count FROM ${table}`));
+          dbStatus.tables[table] = {
             status: 'OK',
-            count: result[0]?.count || 0
+            count: parseInt(String(count.rows[0]?.count || '0'))
           };
         } catch (error: any) {
-          dbStatus.tables[tableName] = { status: 'ERROR', error: error.message };
+          dbStatus.tables[table] = { status: 'ERROR', error: error.message };
         }
       }
 

@@ -749,15 +749,11 @@ function renderSportSettings(sport, settings) {
             `;
         }).join('');
     
-    // Clear content safely
-    contentElement.textContent = '';
-    
-    // Create container using safe DOM methods
-    const gridContainer = document.createElement('div');
-    gridContainer.className = 'sport-alerts-grid';
-    gridContainer.innerHTML = categoriesHtml; // Still using innerHTML but with pre-processed safe content
-    
-    contentElement.appendChild(gridContainer);
+    contentElement.innerHTML = `
+        <div class="sport-alerts-grid">
+            ${categoriesHtml}
+        </div>
+    `;
 }
 
 function toggleAlertCategory(categoryId) {

@@ -20,10 +20,10 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
       return false;
     }
 
-    // Must be exactly at 2:00 remaining (within 10-second window like working modules)
-    const exactlyTwoMinutes = this.isExactlyTwoMinutes(gameState.timeRemaining);
-    if (!exactlyTwoMinutes) {
-      console.log(`❌ Two Minute: Not exactly 2:00 remaining (${gameState.timeRemaining})`);
+    // RELAXED: Must be under 2:30 remaining (instead of exactly 2:00)
+    const underTwoThirty = this.isUnderTwoThirty(gameState.timeRemaining);
+    if (!underTwoThirty) {
+      console.log(`❌ Two Minute: Not under 2:30 remaining (${gameState.timeRemaining})`);
       return false;
     }
 
@@ -38,7 +38,7 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining);
 
     return {
-      alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}`,
+      alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}_${timeSeconds}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${this.createDynamicMessage(gameState, halfText)}`,
       displayMessage: `🏈 ${this.createDynamicMessage(gameState, halfText)} | Q${gameState.quarter}`,
@@ -65,19 +65,22 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     return 95; // High probability since it's exactly at 2:00 mark
   }
 
-  private isExactlyTwoMinutes(timeRemaining: string): boolean {
+  private isUnderTwoThirty(timeRemaining: string): boolean {
     if (!timeRemaining) return false;
 
     try {
       const [minutes, seconds] = timeRemaining.split(':').map(Number);
       const totalSeconds = minutes * 60 + seconds;
-      // Use same tight window as working CFL/NBA modules (115-125 seconds = 10-second window around 2:00)
-      return totalSeconds >= 115 && totalSeconds <= 125;
+      // RELAXED: Trigger when under 2:30 (150 seconds)
+      return totalSeconds <= 150 && totalSeconds > 0;
     } catch (error) {
       return false;
     }
   }
 
+  private isExactlyTwoMinutes(timeRemaining: string): boolean {
+    return this.isUnderTwoThirty(timeRemaining); // Use relaxed version
+  }
 
   private parseTimeToSeconds(timeString: string): number {
     if (!timeString) return 0;

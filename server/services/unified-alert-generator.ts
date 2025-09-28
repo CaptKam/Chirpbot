@@ -8,7 +8,6 @@ import { getHealthMonitor } from './unified-health-monitor';
 import { memoryManager } from '../middleware/memory-manager';
 import type { InsertAlert } from "../../shared/schema";
 import { GamblingInsightsComposer } from "./gambling-insights-composer";
-import { enhancedAlertRouter, type UnifiedEnhancedAlert } from "./enhanced-alert-router";
 
 // Extended interface for local calendar game data (renamed to avoid import conflict)
 interface LocalCalendarGameData {
@@ -939,53 +938,6 @@ export class UnifiedAlertGenerator {
   }
 
   /**
-   * Convert Unified Enhanced Alert back to legacy format for compatibility
-   */
-  private convertUnifiedToLegacyFormat(unifiedAlert: UnifiedEnhancedAlert, originalAlert: any): WeatherEnhancedAlert {
-    return {
-      ...originalAlert,
-      // Preserve core alert properties
-      type: unifiedAlert.type,
-      alertKey: unifiedAlert.alertKey,
-      priority: unifiedAlert.priority,
-      message: unifiedAlert.enhancedMessage,
-      
-      // Convert unified gambling insights to legacy format
-      gamblingInsights: unifiedAlert.betting ? {
-        bullets: unifiedAlert.betting.bullets || [],
-        recommendation: unifiedAlert.betting.recommendation,
-        confidence: unifiedAlert.betting.confidence,
-        odds: unifiedAlert.betting.odds
-      } : undefined,
-      
-      // Convert unified weather context to legacy format
-      weatherContext: unifiedAlert.weather ? {
-        impact: unifiedAlert.weather.impact,
-        severity: unifiedAlert.weather.severity
-      } : undefined,
-      weatherSeverity: unifiedAlert.weather?.severity,
-      isWeatherTriggered: unifiedAlert.weather?.isWeatherTriggered || false,
-      
-      // Add enhanced narrative intelligence
-      enhancedTitle: unifiedAlert.headline,
-      enhancedMessage: unifiedAlert.enhancedMessage,
-      actionableRecommendation: unifiedAlert.action.primaryAction,
-      urgencyLevel: unifiedAlert.timing.urgencyLevel.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH',
-      contextualInsights: [
-        unifiedAlert.timing.whyNow,
-        unifiedAlert.prediction.nextCriticalMoment,
-        ...unifiedAlert.action.reasoning.slice(0, 1)
-      ].filter(Boolean),
-      
-      // Enhancement metadata
-      hasComposerEnhancement: true,
-      aiProcessingTime: unifiedAlert.enhancement.aiProcessingTime,
-      confidence: unifiedAlert.enhancement.confidenceScore,
-      enhancementSources: unifiedAlert.enhancement.enhancementSources
-    };
-  }
-
-  /**
    * Calculate weather severity from weather context
    */
   private calculateWeatherSeverity(weatherContext: WeatherChangeEvent): 'low' | 'moderate' | 'high' | 'extreme' {
@@ -1155,22 +1107,11 @@ export class UnifiedAlertGenerator {
           // Generate alerts using the sport engine
           const alertResults = await engine.generateLiveAlerts(gameState);
 
-          // 🚀 NEW: Single unified enhancement replacing fragmented AI systems
-          const enhancedAlerts = await Promise.all(
-            alertResults.map(async (alert) => {
-              try {
-                // Use Enhanced Alert Router for consolidated AI enhancement
-                const unifiedAlert = await enhancedAlertRouter.enhanceAlert(alert, gameState);
-                
-                // Convert unified format back to legacy format for compatibility
-                return this.convertUnifiedToLegacyFormat(unifiedAlert, alert);
-              } catch (error) {
-                console.warn(`⚠️ Enhancement failed for ${alert.type}, using fallback:`, error);
-                // Fallback to original alert with minimal gambling insights
-                return await this.enhanceAlertsWithGamblingInsights([alert], gameState, sport).then(alerts => alerts[0]);
-              }
-            })
-          );
+          // V3: Enhance alerts with weather context for live games
+          const weatherEnhancedAlerts = await this.enhanceAlertsWithWeatherContext(alertResults, gameState, sport);
+
+          // Enhance alerts with gambling insights after weather enhancement but before AI processing
+          const enhancedAlerts = await this.enhanceAlertsWithGamblingInsights(weatherEnhancedAlerts, gameState, sport);
 
           if (enhancedAlerts && enhancedAlerts.length > 0) {
             if (this.logLevel !== 'quiet') {

@@ -570,11 +570,11 @@ export class MLBEngine extends BaseSportEngine {
             originalContext: alert.context
           };
 
-        // 🚫 DISABLED: AI enhancement now handled by Enhanced Alert Router in UnifiedAlertGenerator
-        // unifiedAIProcessor.queueAlert(alert, aiContext, 'system').catch(error => {
-        //   console.warn(`⚠️ MLB AI Queue failed for ${alert.type}:`, error);
-        // });
-        console.log(`✅ MLB: Generated ${alert.type} - enhancement delegated to UnifiedAlertGenerator`);
+        // NON-BLOCKING: Queue for async AI enhancement and return base alert immediately
+        unifiedAIProcessor.queueAlert(alert, aiContext, 'system').catch(error => {
+          console.warn(`⚠️ MLB AI Queue failed for ${alert.type}:`, error);
+        });
+        console.log(`🚀 MLB Async AI: Queued ${alert.type} for background enhancement`);
 
         // Always return base alert immediately (async enhancement happens via WebSocket)
         enhancedAlerts.push(alert);
