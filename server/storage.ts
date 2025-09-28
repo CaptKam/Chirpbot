@@ -100,22 +100,23 @@ export const storage = {
       console.log(`💀 Force deleting user: ${username} (${userId})`);
 
       // Force delete from ALL possible tables that might reference the user
-      const deletionSteps = [
-        { table: 'user_alert_preferences', condition: `user_id = '${userId}'` },
-        { table: 'user_monitored_teams', condition: `user_id = '${userId}'` },
-        { table: 'user_monitored_games', condition: `user_id = '${userId}'` },
-        { table: 'audit_logs', condition: `user_id = '${userId}'` },
-        { table: 'user_sessions', condition: `user_id = '${userId}'` },
-        { table: 'user_preferences', condition: `user_id = '${userId}'` },
-        { table: 'user_settings', condition: `user_id = '${userId}'` },
+      // Using parameterized queries for security
+      const deletionOperations = [
+        { name: 'user_alert_preferences', query: sql`DELETE FROM user_alert_preferences WHERE user_id = ${userId}` },
+        { name: 'user_monitored_teams', query: sql`DELETE FROM user_monitored_teams WHERE user_id = ${userId}` },
+        { name: 'user_monitored_games', query: sql`DELETE FROM user_monitored_games WHERE user_id = ${userId}` },
+        { name: 'audit_logs', query: sql`DELETE FROM audit_logs WHERE user_id = ${userId}` },
+        { name: 'user_sessions', query: sql`DELETE FROM user_sessions WHERE user_id = ${userId}` },
+        { name: 'user_preferences', query: sql`DELETE FROM user_preferences WHERE user_id = ${userId}` },
+        { name: 'user_settings', query: sql`DELETE FROM user_settings WHERE user_id = ${userId}` },
       ];
 
-      for (const step of deletionSteps) {
+      for (const operation of deletionOperations) {
         try {
-          const result = await db.execute(sql.raw(`DELETE FROM ${step.table} WHERE ${step.condition}`));
-          console.log(`💀 Deleted from ${step.table}: ${result.rowCount || 0} rows`);
+          const result = await db.execute(operation.query);
+          console.log(`💀 Deleted from ${operation.name}: ${result.rowCount || 0} rows`);
         } catch (error) {
-          console.log(`📝 Table ${step.table} not found or no data - continuing`);
+          console.log(`📝 Table ${operation.name} not found or no data - continuing`);
         }
       }
 
