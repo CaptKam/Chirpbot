@@ -7,7 +7,7 @@ import bcrypt from "bcryptjs";
 import csrf from "csrf";
 import { storage } from "./storage";
 import { db } from "./db";
-import { sql } from "drizzle-orm";
+import { sql, count } from "drizzle-orm";
 import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
 import { z } from "zod";
 import { oddsApiService } from './services/odds-api-service';
@@ -17,7 +17,7 @@ import { unifiedDeduplicator } from "./services/unified-deduplicator";
 import { memoryManager } from "./middleware/memory-manager";
 import { registerHealthRoutes } from "./services/unified-health-monitor";
 import { unifiedSettings } from "./storage";
-import { alerts as alertsTable, alerts, settings } from "../shared/schema";
+import { alerts as alertsTable, alerts, settings, users, teams, userMonitoredTeams } from "../shared/schema";
 import { eq, desc, and, gte, inArray } from "drizzle-orm";
 // Migration Adapter replaces direct CalendarSyncService usage
 // import { getCalendarSyncService } from "./services/calendar-sync-service";
@@ -3196,16 +3196,23 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       dbStatus.connection = 'OK';
 
       // Check all tables
-      const tables = ['users', 'alerts', 'settings', 'teams', 'user_monitored_teams', 'master_alert_controls'];
-      for (const table of tables) {
+      const tableMapping = {
+        'users': users,
+        'alerts': alerts,
+        'settings': settings,
+        'teams': teams,
+        'user_monitored_teams': userMonitoredTeams
+      };
+      
+      for (const [tableName, tableSchema] of Object.entries(tableMapping)) {
         try {
-          const count = await db.execute(sql.raw(`SELECT COUNT(*) as count FROM ${table}`));
-          dbStatus.tables[table] = {
+          const result = await db.select({ count: count() }).from(tableSchema);
+          dbStatus.tables[tableName] = {
             status: 'OK',
-            count: parseInt(String(count.rows[0]?.count || '0'))
+            count: result[0]?.count || 0
           };
         } catch (error: any) {
-          dbStatus.tables[table] = { status: 'ERROR', error: error.message };
+          dbStatus.tables[tableName] = { status: 'ERROR', error: error.message };
         }
       }
 
