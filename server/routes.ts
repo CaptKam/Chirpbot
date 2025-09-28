@@ -3195,11 +3195,19 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       dbStatus.performance.connectionTime = `${Date.now() - start}ms`;
       dbStatus.connection = 'OK';
 
-      // Check all tables
-      const tables = ['users', 'alerts', 'settings', 'teams', 'user_monitored_teams', 'master_alert_controls'];
-      for (const table of tables) {
+      // Check all tables using safe whitelist approach
+      const tableQueries = {
+        users: sql`SELECT COUNT(*) as count FROM users`,
+        alerts: sql`SELECT COUNT(*) as count FROM alerts`, 
+        settings: sql`SELECT COUNT(*) as count FROM settings`,
+        teams: sql`SELECT COUNT(*) as count FROM teams`,
+        user_monitored_teams: sql`SELECT COUNT(*) as count FROM user_monitored_teams`,
+        master_alert_controls: sql`SELECT COUNT(*) as count FROM master_alert_controls`
+      };
+      
+      for (const [table, query] of Object.entries(tableQueries)) {
         try {
-          const count = await db.execute(sql.raw(`SELECT COUNT(*) as count FROM ${table}`));
+          const count = await db.execute(query);
           dbStatus.tables[table] = {
             status: 'OK',
             count: parseInt(String(count.rows[0]?.count || '0'))
