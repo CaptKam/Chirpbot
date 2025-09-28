@@ -1,0 +1,81 @@
+14The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.Understand this error
+14The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?Understand this error
+14The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.Understand this error
+Chirpbot:1 The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.Understand this error
+Chirpbot:1 The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?Understand this error
+Chirpbot:1 The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.Understand this error
+_app-375a95710be51723.js:34 
+      /////////////////////
+   ///////////////////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////        Curious and driven?
+  ///////////////@@@@@@@///////        Work with us!
+  ///////////////@@@@@@@///////
+  ///////////////@@@@@@@///////        https://join.replit.com/hack.with.us
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@#//////////////
+   ///////////////////////////
+      /////////////////////
+      
+_app-375a95710be51723.js:34 [LaunchDarkly] LaunchDarkly client initialized
+main.MWQ4YTc2MGFlMQ.js:1 Deprecated API for given entry type.
+(anonymous) @ main.MWQ4YTc2MGFlMQ.js:1Understand this warning
+Chirpbot:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A000260024700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.Understand this warning
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A0B0EE0424700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.Understand this warning
+6Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+framework-605db3469e2192fc.js:1 Unrecognized feature: 'ambient-light-sensor'.
+_ @ framework-605db3469e2192fc.js:1Understand this warning
+framework-605db3469e2192fc.js:1 Unrecognized feature: 'battery'.
+_ @ framework-605db3469e2192fc.js:1Understand this warning
+framework-605db3469e2192fc.js:1 Unrecognized feature: 'execution-while-not-rendered'.
+_ @ framework-605db3469e2192fc.js:1Understand this warning
+framework-605db3469e2192fc.js:1 Unrecognized feature: 'execution-while-out-of-viewport'.
+_ @ framework-605db3469e2192fc.js:1Understand this warning
+framework-605db3469e2192fc.js:1 Unrecognized feature: 'layout-animations'.
+_ @ framework-605db3469e2192fc.js:1Understand this warning
+framework-605db3469e2192fc.js:1 Unrecognized feature: 'legacy-image-formats'.
+_ @ framework-605db3469e2192fc.js:1Understand this warning
+framework-605db3469e2192fc.js:1 Unrecognized feature: 'navigation-override'.
+_ @ framework-605db3469e2192fc.js:1Understand this warning
+framework-605db3469e2192fc.js:1 Unrecognized feature: 'oversized-images'.
+_ @ framework-605db3469e2192fc.js:1Understand this warning
+framework-605db3469e2192fc.js:1 Unrecognized feature: 'publickey-credentials'.
+_ @ framework-605db3469e2192fc.js:1Understand this warning
+framework-605db3469e2192fc.js:1 Unrecognized feature: 'speaker-selection'.
+_ @ framework-605db3469e2192fc.js:1Understand this warning
+framework-605db3469e2192fc.js:1 Unrecognized feature: 'unoptimized-images'.
+_ @ framework-605db3469e2192fc.js:1Understand this warning
+framework-605db3469e2192fc.js:1 Unrecognized feature: 'unsized-media'.
+_ @ framework-605db3469e2192fc.js:1Understand this warning
+framework-605db3469e2192fc.js:1 Unrecognized feature: 'pointer-lock'.
+_ @ framework-605db3469e2192fc.js:1Understand this warning
+framework-605db3469e2192fc.js:1 Allow attribute will take precedence over 'allowfullscreen'.
+_ @ framework-605db3469e2192fc.js:1Understand this warning
+framework-605db3469e2192fc.js:1 Allow attribute will take precedence over 'allowpaymentrequest'.
+_ @ framework-605db3469e2192fc.js:1Understand this warning
+stallwart.build.js:1 stallwart: failed ping 1
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A060260024700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.Understand this warning
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A0E0EE0424700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.Understand this warning
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A000260024700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.Understand this warning
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A060260024700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.Understand this warning
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A010EF0424700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.Understand this warning
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A030DB0224700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.Understand this warning
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A000260024700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.Understand this warning
+Chirpbot:1 [GroupMarkerNotSet(crbug.com/242999)!:A000DB0224700000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Arig%3A:32 Unrecognized feature: 'ambient-light-sensor'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Arig%3A:32 Unrecognized feature: 'battery'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Arig%3A:32 Unrecognized feature: 'execution-while-not-rendered'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Arig%3A:32 Unrecognized feature: 'execution-while-out-of-viewport'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Arig%3A:32 Unrecognized feature: 'layout-animations'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Arig%3A:32 Unrecognized feature: 'legacy-image-formats'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Arig%3A:32 Unrecognized feature: 'navigation-override'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Arig%3A:32 Unrecognized feature: 'oversized-images'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Arig%3A:32 Unrecognized feature: 'publickey-credentials'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Arig%3A:32 Unrecognized feature: 'speaker-selection'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Arig%3A:32 Unrecognized feature: 'unoptimized-images'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Arig%3A:32 Unrecognized feature: 'unsized-media'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Arig%3A:32 Allow attribute will take precedence over 'allowfullscreen'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Arig%3A:32 Allow attribute will take precedence over 'allowpaymentrequest'.Understand this warning
