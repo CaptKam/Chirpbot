@@ -2611,28 +2611,36 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       const monitoredGameIds = monitoredGames.map((game: any) => game.gameId);
 
-      // Build parameterized query to prevent SQL injection
-      const gameIdsPlaceholder = monitoredGameIds.map(() => '?').join(',');
-      const params = [...monitoredGameIds];
-      let whereClause = `game_id IN (${gameIdsPlaceholder})`;
+      // Build query using Drizzle query builder to prevent SQL injection
+      let whereCondition = inArray(alerts.gameId, monitoredGameIds);
 
       if (sinceSeq) {
-        whereClause += ` AND sequence_number > ?`;
-        params.push(sinceSeq);
+        whereCondition = and(
+          inArray(alerts.gameId, monitoredGameIds),
+          gte(alerts.sequenceNumber, sinceSeq)
+        )!;
       } else if (since) {
-        whereClause += ` AND created_at > ?`;
-        params.push(since);
+        whereCondition = and(
+          inArray(alerts.gameId, monitoredGameIds),
+          gte(alerts.createdAt, new Date(since))
+        )!;
       }
 
-      const result = await db.execute(sql.raw(`
-        SELECT id, sequence_number, type, game_id, sport, score, payload, created_at
-        FROM alerts
-        WHERE ${whereClause}
-        ORDER BY sequence_number ASC
-        LIMIT 200
-      `));
+      const result = await db.select({
+        id: alerts.id,
+        sequence_number: alerts.sequenceNumber,
+        type: alerts.type,
+        game_id: alerts.gameId,
+        sport: alerts.sport,
+        score: alerts.score,
+        payload: alerts.payload,
+        created_at: alerts.createdAt
+      }).from(alerts)
+        .where(whereCondition)
+        .orderBy(alerts.sequenceNumber)
+        .limit(200);
 
-      const alerts = result.rows.map((row: any) => {
+      const alertsData = result.map((row: any) => {
         let payload: any = {};
         try {
           payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload || {};
@@ -2660,8 +2668,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         };
       });
 
-      console.log(`📸 Snapshot response: ${alerts.length} alerts since ${since || sinceSeq}`);
-      res.json(alerts);
+      console.log(`📸 Snapshot response: ${alertsData.length} alerts since ${since || sinceSeq}`);
+      res.json(alertsData);
     } catch (error) {
       console.error("Error fetching alert snapshot:", error);
       res.status(500).json({ message: "Failed to fetch alert snapshot" });
