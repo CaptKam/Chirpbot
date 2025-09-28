@@ -1008,10 +1008,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         message: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString()
       });
-        error: 'Diagnostic failed',
-        message: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString()
-      });
     }
   });
 
@@ -1954,10 +1950,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     return uuidRegex.test(userId);
   }
 
-  function validateSportName(sport: string): boolean {
-    const validSports = ['mlb', 'nfl', 'ncaaf', 'nba', 'wnba', 'cfl', 'nhl'];
-    return validSports.includes(sport.toLowerCase());
-  }
 
   // Admin API routes
   app.post('/api/admin/cleanup-alerts', requireAdminAuth, validateCSRF, async (req, res) => {
