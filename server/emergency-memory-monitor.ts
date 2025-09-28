@@ -22,6 +22,12 @@ export class EmergencyMemoryMonitor {
       const memUsage = process.memoryUsage();
       const heapStats = v8.getHeapStatistics();
       const memPercent = memUsage.heapUsed / heapStats.heap_size_limit;
+      
+      // Ensure we don't divide by zero
+      if (heapStats.heap_size_limit === 0) {
+        console.warn('⚠️ Heap size limit is 0, skipping memory check');
+        return;
+      }
 
       if (memPercent > 0.9 && Date.now() - this.lastCleanup > 5000) {
         console.log('🚨 EMERGENCY: Memory at', Math.round(memPercent * 100), '% - forcing cleanup');

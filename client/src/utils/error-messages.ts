@@ -28,9 +28,10 @@ export function parseApiError(error: any, context?: string): ParsedError {
   }
 
   // Parse status code from error message (format: "401: Error message")
-  const statusMatch = error.message?.match(/^(\d{3}):\s*(.*)/);
+  const errorMsg = error?.message || error?.toString() || '';
+  const statusMatch = errorMsg.match(/^(\d{3}):\s*(.*)/);
   const statusCode = statusMatch ? parseInt(statusMatch[1]) : null;
-  const errorMessage = statusMatch ? statusMatch[2] : error.message || 'Unknown error';
+  const errorMessage = statusMatch ? statusMatch[2] : errorMsg || 'Unknown error';
 
   if (statusCode) {
     switch (statusCode) {

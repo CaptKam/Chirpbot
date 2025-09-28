@@ -207,7 +207,7 @@ process.on('uncaughtException', (error: any) => {
   // The singleton lock ensures we never try to bind to a port that's already in use
 
   // For database errors, try to reconnect
-  if (error.message?.includes('database')) {
+  if (error.message && error.message.ie?.includes('database')) {
     console.log('🔄 Database error detected - continuing with degraded service');
     return;
   }

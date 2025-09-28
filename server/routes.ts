@@ -916,8 +916,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         diagnostics.database.connected = true;
 
         // Use Drizzle ORM for database queries
-        const { users, userAlertPreferences, userMonitoredTeams } = await import('../shared/schema');
-        const { count } = await import('drizzle-orm');
+        try {
+          const { users, userAlertPreferences, userMonitoredTeams } = await import('../shared/schema');
+          const { count } = await import('drizzle-orm');
 
         // Get user count
         const userCountResult = await db.select({ count: count() }).from(users);
@@ -934,6 +935,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         diagnostics.database.alertPreferences = alertPrefsResult[0].count;
 
         // Get monitored teams count
+        } catch (importError) {
+          console.error('Failed to import required modules:', importError);
+          throw new Error('Database schema import failed');
+        }
         const monitoredTeamsResult = await db.select({ count: count() }).from(userMonitoredTeams);
         diagnostics.database.monitoredTeams = monitoredTeamsResult[0].count;
 
@@ -997,7 +1002,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       res.json(diagnostics);
     } catch (error) {
+      console.error('Environment status error:', error);
       res.status(500).json({
+        error: 'Failed to get environment status',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
         error: 'Diagnostic failed',
         message: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString()
