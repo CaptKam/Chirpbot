@@ -13,6 +13,7 @@ import { db } from "./db";
 import { alertCleanupService } from './services/alert-cleanup';
 import { SingleInstanceLock } from "./utils/singleton-lock";
 import { EmergencyMemoryMonitor } from "./emergency-memory-monitor";
+import { jsonValidator, handleJsonParseError } from './middleware/json-validator';
 
 // 🔒 PERMANENT PORT CONFLICT SOLUTION - ACQUIRE SINGLE INSTANCE LOCK FIRST
 console.log('🔒 Checking for existing ChirpBot instances...');
@@ -72,12 +73,12 @@ if (!(globalThis as any).__v3_alert_system_bootstrapped__) {
         sports: ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL'],
         enableMetrics: true
       });
-      
+
       // Connect CalendarSyncService to GameStateManager (both directions)
       console.log("🔗 Connecting CalendarSyncService to GameStateManager");
       calendarSyncService.setGameStateManager(gameStateManager);
       gameStateManager.setCalendarSyncService(calendarSyncService);
-      
+
       console.log("🔍 DEBUG: Starting CalendarSyncService");
       await calendarSyncService.start();
       console.log("🔍 DEBUG: CalendarSyncService started");
@@ -93,7 +94,7 @@ if (!(globalThis as any).__v3_alert_system_bootstrapped__) {
       (global as any).gameStateManager = gameStateManager;
       (global as any).engineLifecycleManager = engineLifecycleManager;
       (global as any).migrationAdapter = migrationAdapter;
-      
+
       console.log("✅ V3 ALERT SYSTEM: COMPLETE PIPELINE ACTIVE");
       console.log("📋 V3: CalendarSyncService → GameStateManager → EngineLifecycleManager → Alert Generation ✅");
     } catch (e) {
@@ -356,6 +357,10 @@ app.use(cors({
 app.use(express.json({ limit: '200kb' }));
 app.use(express.urlencoded({ extended: false, limit: '200kb' }));
 
+// Apply JSON validation middleware
+app.use(jsonValidator);
+app.use(handleJsonParseError);
+
 // Session middleware removed from here - handled route-specifically in routes.ts
 // This prevents conflicts between user and admin sessions
 
@@ -422,20 +427,20 @@ async function startServer() {
       console.log('✅ Static SPA serving configured - frontend ready');
     } else {
       console.log('🔧 No built assets found - will use Vite dev middleware');
-      
+
       // Prevent duplicate setupVite calls
       if (!(globalThis as any).__VITE_ATTACHED__) {
         // Temporarily override PORT for Vite HMR to avoid conflict
         const originalPort = process.env.PORT;
         const hmrPort = String(parseInt(process.env.PORT || "5000", 10) + 1000);
         process.env.PORT = hmrPort;
-        
+
         await setupVite(app, server);
-        
+
         // Restore original PORT for Express server
         process.env.PORT = originalPort;
         (globalThis as any).__VITE_ATTACHED__ = true;
-        
+
         console.log(`✅ Vite dev server configured - HMR on port ${hmrPort}, frontend ready`);
       } else {
         console.log('✅ Vite dev server already attached - skipping duplicate setup');
