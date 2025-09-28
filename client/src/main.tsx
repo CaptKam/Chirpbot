@@ -17,7 +17,9 @@ window.addEventListener('unhandledrejection', (event) => {
     'NetworkError',
     'Failed to fetch',
     'AbortError',
-    'The user aborted a request'
+    'The user aborted a request',
+    'Loading chunk',
+    'Loading CSS chunk'
   ];
   
   if (ignorableErrors.some(err => reason.includes(err))) {
@@ -39,4 +41,47 @@ window.addEventListener('error', (event) => {
   });
 });
 
-createRoot(document.getElementById("root")!).render(<App />);
+// Add error boundary wrapper
+const ErrorFallback = ({ error }: { error: Error }) => (
+  <div style={{ 
+    padding: '20px', 
+    textAlign: 'center', 
+    backgroundColor: '#0B1220', 
+    color: 'white', 
+    minHeight: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center'
+  }}>
+    <h1>ChirpBot Loading Error</h1>
+    <p>Something went wrong loading the app.</p>
+    <details style={{ marginTop: '10px', textAlign: 'left' }}>
+      <summary>Error Details</summary>
+      <pre style={{ fontSize: '12px', overflow: 'auto' }}>{error.message}</pre>
+    </details>
+    <button 
+      onClick={() => window.location.reload()} 
+      style={{ 
+        marginTop: '20px', 
+        padding: '10px 20px', 
+        backgroundColor: '#2387F4', 
+        color: 'white', 
+        border: 'none', 
+        borderRadius: '5px',
+        cursor: 'pointer'
+      }}
+    >
+      Reload App
+    </button>
+  </div>
+);
+
+try {
+  createRoot(document.getElementById("root")!).render(<App />);
+} catch (error) {
+  console.error('Critical app initialization error:', error);
+  createRoot(document.getElementById("root")!).render(
+    <ErrorFallback error={error as Error} />
+  );
+}

@@ -79,7 +79,7 @@ function RegularAppContent() {
         <Route path="/calendar" component={() => <ProtectedRoute component={Calendar} />} />
         <Route path="/alerts" component={() => <ProtectedRoute component={Alerts} />} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
-        <Route component={NotFound} />
+        <Route path="*" component={NotFound} />
       </Switch>
       {isAuthenticated && <BottomNavigation />}
     </div>
