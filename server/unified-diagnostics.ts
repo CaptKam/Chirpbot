@@ -231,9 +231,9 @@ export async function getBasicDbStats(): Promise<BasicStats> {
     `);
 
     for (const table of tablesQuery.rows) {
-      const tableName = table.table_name;
+      const tableName = String(table.table_name);
       try {
-        const count = await db.execute(sql.raw(`SELECT COUNT(*) as count FROM ${tableName}`));
+        const count = await db.execute(sql`SELECT COUNT(*) as count FROM ${sql.identifier(tableName)}`);
         result.tables.push({
           name: tableName,
           count: parseInt(count.rows[0]?.count || '0'),
