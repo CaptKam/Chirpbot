@@ -445,25 +445,50 @@ export class CalendarSyncService implements ICalendarSyncService {
       if (!gameId) continue;
 
       const existingGame = sportState.games.get(gameId);
+      // For live games in football sports, fetch enhanced data to get game situation (down, distance, field position)
+      let enhancedGameData = gameData;
+      const footballSports = ['NFL', 'NCAAF', 'CFL'];
+      if (gameData.isLive && footballSports.includes(sport)) {
+        try {
+          const apiService = this.apiServices.get(sport);
+          if (apiService && typeof apiService.fetchEnhancedGameData === 'function') {
+            const enhanced = await apiService.fetchEnhancedGameData(gameId);
+            // Merge enhanced data with base game data
+            enhancedGameData = {
+              ...gameData,
+              ...enhanced,
+              // Preserve base game data that shouldn't be overwritten
+              id: gameData.id,
+              sport: gameData.sport,
+              isLive: gameData.isLive
+            };
+            console.log(`📊 Calendar Sync: Fetched enhanced data for live ${sport} game ${gameId}`);
+          }
+        } catch (error) {
+          console.warn(`⚠️ Calendar Sync: Failed to fetch enhanced data for ${sport} game ${gameId}:`, error);
+          // Continue with base game data if enhanced fetch fails
+        }
+      }
+
       const newCalendarGame: CalendarGameData = {
         gameId,
         sport,
         homeTeam: {
-          name: gameData.homeTeam.name,
-          abbreviation: gameData.homeTeam.abbreviation,
-          score: gameData.homeTeam.score || 0
+          name: enhancedGameData.homeTeam.name,
+          abbreviation: enhancedGameData.homeTeam.abbreviation,
+          score: enhancedGameData.homeTeam.score || 0
         },
         awayTeam: {
-          name: gameData.awayTeam.name,
-          abbreviation: gameData.awayTeam.abbreviation,
-          score: gameData.awayTeam.score || 0
+          name: enhancedGameData.awayTeam.name,
+          abbreviation: enhancedGameData.awayTeam.abbreviation,
+          score: enhancedGameData.awayTeam.score || 0
         },
-        startTime: gameData.startTime,
-        status: this.mapToCalendarStatus(gameData.status),
-        venue: gameData.venue,
+        startTime: enhancedGameData.startTime,
+        status: this.mapToCalendarStatus(enhancedGameData.status),
+        venue: enhancedGameData.venue,
         lastUpdated: new Date(),
-        nextPollTime: new Date(Date.now() + this.calculateGamePollInterval(gameData)),
-        pollInterval: this.calculateGamePollInterval(gameData),
+        nextPollTime: new Date(Date.now() + this.calculateGamePollInterval(enhancedGameData)),
+        pollInterval: this.calculateGamePollInterval(enhancedGameData),
         isUserMonitored: false // TODO: Check with user monitoring system
       };
 
@@ -511,8 +536,8 @@ export class CalendarSyncService implements ICalendarSyncService {
             createdAt: new Date(),
             lastUpdated: new Date(),
             
-            // Raw game data
-            rawGameData: gameData
+            // Raw game data (use enhanced data if available)
+            rawGameData: enhancedGameData
           };
           
           try {
@@ -522,13 +547,13 @@ export class CalendarSyncService implements ICalendarSyncService {
             // Check if game exists in GameStateManager
             const existingGameState = this.gameStateManager.getGameState(gameId);
             if (existingGameState) {
-              // Game exists - force evaluate to process the state change
-              console.log(`🔄 Force evaluating GameStateManager for game ${gameId} (using cached data)`);
-              await this.gameStateManager.forceEvaluate(gameId, gameData.sport, gameData);
+              // Game exists - force evaluate to process the state change (use enhanced data)
+              console.log(`🔄 Force evaluating GameStateManager for game ${gameId} (using enhanced data)`);
+              await this.gameStateManager.forceEvaluate(gameId, enhancedGameData.sport, enhancedGameData);
             } else {
-              // Add new game to GameStateManager for monitoring
+              // Add new game to GameStateManager for monitoring (use enhanced data)
               console.log(`➕ Adding game ${gameId} to GameStateManager`);
-              await this.gameStateManager.addGame(gameData, []);
+              await this.gameStateManager.addGame(enhancedGameData, []);
             }
           } catch (error) {
             console.error(`📅 Calendar Sync: Error notifying GameStateManager:`, error);
@@ -554,13 +579,13 @@ export class CalendarSyncService implements ICalendarSyncService {
         try {
           const existingGameState = this.gameStateManager.getGameState(gameId);
           if (!existingGameState) {
-            // Add live game that wasn't tracked before
+            // Add live game that wasn't tracked before (use enhanced data)
             console.log(`📅 Calendar Sync: Adopting existing live game ${gameId}`);
-            await this.gameStateManager.addGame(gameData, []);
-            await this.gameStateManager.forceEvaluate(gameId, gameData.sport, gameData);
+            await this.gameStateManager.addGame(enhancedGameData, []);
+            await this.gameStateManager.forceEvaluate(gameId, enhancedGameData.sport, enhancedGameData);
           } else {
-            // Force evaluate existing live game to ensure engines are running
-            await this.gameStateManager.forceEvaluate(gameId, gameData.sport, gameData);
+            // Force evaluate existing live game to ensure engines are running (use enhanced data)
+            await this.gameStateManager.forceEvaluate(gameId, enhancedGameData.sport, enhancedGameData);
           }
         } catch (error) {
           console.error(`📅 Calendar Sync: Error handling live game ${gameId}:`, error);
