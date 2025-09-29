@@ -1,0 +1,59 @@
+import express from "express";
+import path from "path";
+import fs from "fs";
+
+const app = express();
+const PORT = Number(process.env.PORT) || 5173;
+
+// 1) Hard log what we're actually binding to
+console.log("[SAFE] PORT =", PORT);
+
+// 2) Disable any SW/caching via headers
+app.use((_, res, next) => {
+  res.setHeader("Cache-Control", "no-store, max-age=0");
+  res.setHeader("Service-Worker-Allowed", "/");
+  next();
+});
+
+// 3) Serve static if exists (works for Vite build or CRA/dist)
+const candidates = ["dist", "build", "public"];
+let staticRoot = "";
+for (const c of candidates) {
+  const p = path.join(process.cwd(), c);
+  if (fs.existsSync(p)) { staticRoot = p; break; }
+}
+if (staticRoot) {
+  console.log("[SAFE] Static root:", staticRoot);
+  app.use(express.static(staticRoot));
+}
+
+// 4) Single-page fallback (prevents router 404 white screens)
+app.get("*", (_req, res) => {
+  const indexCandidates = [
+    path.join(staticRoot, "index.html"),
+    path.join(process.cwd(), "index.html"),
+  ];
+  for (const p of indexCandidates) {
+    if (p && fs.existsSync(p)) return res.sendFile(p);
+  }
+  // Last resort: inline HTML with error surface
+  res.type("html").send(`<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Safe Preview</title><base href="/"></head>
+<body>
+<div id="root">SAFE PREVIEW BOOT</div>
+<script>
+  // Force-show JS errors to the page so you don't get a blank screen
+  window.onerror = (m, s, l, c, e) => {
+    document.body.innerHTML = "<pre style='white-space:pre-wrap;font:14px/1.4 monospace'>" + (e?.stack || m) + "</pre>";
+  };
+  // Kill any rogue service worker that might be blanking pages
+  if (navigator.serviceWorker) {
+    navigator.serviceWorker.getRegistrations().then(rs => { for (const r of rs) r.unregister(); });
+    if (window.caches?.keys) caches.keys().then(ks => ks.forEach(k => caches.delete(k)));
+  }
+</script>
+</body></html>`);
+});
+
+app.listen(PORT, "0.0.0.0", () => console.log("[SAFE] up on 0.0.0.0:" + PORT));
