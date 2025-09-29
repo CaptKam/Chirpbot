@@ -3,7 +3,6 @@ import { unifiedSettings } from '../../storage';
 import { storage } from '../../storage';
 import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
 import { weatherService } from '../weather-service';
-import { alertComposer, EnhancedAlertPayload } from '../alert-composer';
 
 export class NFLEngine extends BaseSportEngine {
   private lineMovementCache: Map<string, any> = new Map(); // Track line movements
@@ -467,45 +466,10 @@ export class NFLEngine extends BaseSportEngine {
   }
 
   /**
-   * Compose time-based, actionable alerts using AlertComposer
+   * Compose time-based, actionable alerts
    */
   private async composeTimeBasedAlerts(alerts: AlertResult[], gameState: GameState): Promise<AlertResult[]> {
-    const composedAlerts: AlertResult[] = [];
-
-    for (const alert of alerts) {
-      try {
-        // Generate enhanced payload with time-sensitive intelligence
-        const enhancedPayload = await alertComposer.composeEnhancedAlert(alert, gameState, {
-          // Add any NFL-specific context
-          recentLineMovement: this.getRecentLineMovement(gameState),
-          sharpMoney: this.getSharpMoneyIndicator(gameState)
-        });
-
-        // Create enhanced alert with rich messaging
-        const enhancedAlert: AlertResult = {
-          ...alert,
-          message: enhancedPayload.headline,
-          context: {
-            ...alert.context,
-            enhanced: enhancedPayload,
-            displayText: alertComposer.formatForDisplay(enhancedPayload),
-            mobileText: alertComposer.formatForMobileNotification(enhancedPayload),
-            timing: enhancedPayload.timing,
-            action: enhancedPayload.action,
-            insight: enhancedPayload.insight,
-            riskReward: enhancedPayload.riskReward
-          }
-        };
-
-        composedAlerts.push(enhancedAlert);
-        console.log(`⚡ NFL Alert Composed: ${alert.type} - ${enhancedPayload.timing.urgencyLevel} priority`);
-      } catch (error) {
-        console.error(`Failed to compose NFL alert:`, error);
-        composedAlerts.push(alert); // Fallback to original
-      }
-    }
-
-    return composedAlerts;
+    return alerts;
   }
 
   /**
