@@ -87,9 +87,14 @@ export class GameMonitoringCleanup {
       for (const monitoredGame of monitoredGames) {
         const gameStatus = this.getGameStatusFromCalendar(monitoredGame.gameId, monitoredGame.sport);
         
-        // If game is final, remove it from all monitoring
-        if (gameStatus === 'final') {
-          console.log(`🎯 Game Monitoring Cleanup: Game ${monitoredGame.gameId} (${monitoredGame.sport}) is FINAL - removing from monitoring`);
+        // Remove if:
+        // 1. Game status is 'final' (explicitly finished)
+        // 2. Game status is null (not tracked anymore, likely from previous days)
+        const shouldRemove = gameStatus === 'final' || gameStatus === null;
+        
+        if (shouldRemove) {
+          const reason = gameStatus === 'final' ? 'FINAL' : 'NOT_TRACKED (old game from previous day)';
+          console.log(`🎯 Game Monitoring Cleanup: Game ${monitoredGame.gameId} (${monitoredGame.sport}) is ${reason} - removing from monitoring`);
           
           const removedCount = await storage.removeGameFromAllMonitoring(monitoredGame.gameId);
           
