@@ -283,7 +283,7 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
         )}
 
           {/* Game Context - Compact and Scannable */}
-          {showEnhancements && alert.context && (
+          {alert.context && (
             <div className="mb-5">
               {/* MLB Context */}
               {alert.sport === 'MLB' && (
