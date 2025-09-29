@@ -238,10 +238,12 @@ export class NFLEngine extends BaseSportEngine {
             ...gameState,
             quarter: enhancedData.quarter || gameState.quarter || 1,
             timeRemaining: enhancedData.timeRemaining || gameState.timeRemaining || '',
-            down: enhancedData.down || gameState.down || 1,
-            yardsToGo: enhancedData.yardsToGo || gameState.yardsToGo || 10,
-            fieldPosition: enhancedData.fieldPosition || gameState.fieldPosition || 50,
-            possession: enhancedData.possession || gameState.possession || gameState.homeTeam,
+            // CRITICAL FIX: Use nullish coalescing (??) instead of || to preserve explicit null values from ESPN
+            // This prevents generating fake alerts when ESPN has no situation data (kickoff, between plays, etc)
+            down: enhancedData.down ?? gameState.down ?? null,
+            yardsToGo: enhancedData.yardsToGo ?? gameState.yardsToGo ?? null,
+            fieldPosition: enhancedData.fieldPosition ?? gameState.fieldPosition ?? null,
+            possession: enhancedData.possession ?? gameState.possession ?? null,
             homeScore: enhancedData.homeScore || gameState.homeScore,
             awayScore: enhancedData.awayScore || gameState.awayScore,
             weatherContext,
@@ -249,7 +251,11 @@ export class NFLEngine extends BaseSportEngine {
             // Respect original game status - only force false for finished games, preserve original live state
             isLive: gameState.status === 'final' ? false : gameState.isLive
           };
-          console.log(`🚀 NFL Enhancement: Game ${gameState.gameId} enhanced - isLive=${enhancedGameState.isLive}, Q${enhancedGameState.quarter}, ${enhancedGameState.down}&${enhancedGameState.yardsToGo} at ${enhancedGameState.fieldPosition}yd line`);
+          // Update log message to show when situation data is missing
+          const situationDesc = enhancedGameState.down && enhancedGameState.yardsToGo && enhancedGameState.fieldPosition 
+            ? `${enhancedGameState.down}&${enhancedGameState.yardsToGo} at ${enhancedGameState.fieldPosition}yd line`
+            : 'no situation data';
+          console.log(`🚀 NFL Enhancement: Game ${gameState.gameId} enhanced - isLive=${enhancedGameState.isLive}, Q${enhancedGameState.quarter}, ${situationDesc}`);
           return enhancedGameState;
         } else {
           this.performanceMetrics.cacheMisses++;

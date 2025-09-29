@@ -83,6 +83,9 @@ export class NFLApiService extends BaseSportApi {
     const competitions = data.header?.competitions?.[0] || {};
     const situation = competitions.situation || {};
     
+    // DEBUG: Log the raw situation object from ESPN
+    console.log(`🔍 DEBUG ESPN situation object for game ${gameId}:`, JSON.stringify(situation, null, 2));
+    
     // Extract game situation details
     const down = situation.down || null;
     const yardsToGo = situation.distance || null;
