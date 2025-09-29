@@ -99,7 +99,20 @@ export interface UnifiedAIResponse {
   analysis?: string;
 }
 
-// 🛡️ SECURITY: Strict schema validation for AI responses
+// 🛡️ SECURITY: Strict schema validation for AI JSON responses
+const AIJSONResponseSchema = z.object({
+  situation: z.string().min(3).max(140),
+  context: z.string().min(3).max(200),
+  bet: z.object({
+    type: z.string().max(30),
+    lean: z.enum(['over', 'under', 'prop', 'none']).optional(),
+    note: z.string().max(120).optional()
+  }),
+  window: z.string().max(40),
+  safety: z.string().max(120).optional()
+});
+
+// Legacy schema for backward compatibility
 const AIResponseSchema = z.object({
   sport: z.string().max(10),
   enhancedTitle: z.string().max(200),
@@ -326,7 +339,7 @@ export class UnifiedAIProcessor {
 
       // Check cache first for AI-enhanced version
       const cacheKey = this.generateCacheKey(context);
-      const cached = this.getCachedResponse(cacheKey);
+      const cached = this.getCachedResponse(cacheKey, context);
       if (cached) {
         // Double-check cached response is valid before using it
         if (cached.enhancedMessage && 
@@ -595,8 +608,8 @@ export class UnifiedAIProcessor {
         return this.getFallbackResponse(context, startTime);
       }
 
-      // Parse and structure the AI response
-      const enhancement = this.parseAIResponse(aiResponse, context, startTime);
+      // Convert JSON response to unified format
+      const enhancement = this.convertJSONToUnifiedResponse(aiResponse, context, startTime);
 
       const processingTime = Date.now() - startTime;
       this.performanceMetrics.avgProcessingTime.push(processingTime);
@@ -686,22 +699,52 @@ export class UnifiedAIProcessor {
   }
 
   private generateCacheKey(context: CrossSportContext): string {
+    // Richer cache key with sport-specific buckets for better reuse
+    const scoreBucket = Math.min(5, Math.floor(Math.abs((context.homeScore - context.awayScore)) / 2));
+    const windBucket = Math.round((context.weather?.windSpeed ?? 0) / 5) * 5;
+    
+    // Add team signature to prevent cross-game content contamination
+    const teamSig = this.getTeamSignature(context.homeTeam, context.awayTeam);
+    
     const keyParts = [
       context.sport,
-      context.gameId,
+      teamSig, // Bind cached content to specific teams
       context.alertType,
-      context.inning || context.quarter || context.period || 0,
-      context.outs || 0,
-      context.awayScore,
-      context.homeScore,
-      'v3.0' // Version marker to prevent cache contamination
+      context.inning ?? context.quarter ?? context.period ?? 0,
+      context.outs ?? 0,
+      this.getRunnersSignature(context.baseRunners),
+      context.balls !== undefined && context.strikes !== undefined ? `${context.balls}-${context.strikes}` : '-',
+      scoreBucket,
+      windBucket,
+      'v3.1' // Version marker
     ];
     return keyParts.join(':');
   }
+  
+  private getTeamSignature(homeTeam: string, awayTeam: string): string {
+    // Create a short hash of team names to bind cache to specific matchup
+    const combined = `${homeTeam}-${awayTeam}`.toLowerCase();
+    let hash = 0;
+    for (let i = 0; i < combined.length; i++) {
+      hash = ((hash << 5) - hash) + combined.charCodeAt(i);
+      hash |= 0; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36).slice(0, 6); // 6-char base-36 hash
+  }
+  
+  private getRunnersSignature(runners?: { first: boolean; second: boolean; third: boolean }): string {
+    if (!runners) return '-';
+    const sig = [];
+    if (runners.first) sig.push('1');
+    if (runners.second) sig.push('2');
+    if (runners.third) sig.push('3');
+    return sig.length > 0 ? sig.join('-') : 'empty';
+  }
 
-  private getCachedResponse(key: string): UnifiedAIResponse | null {
+  private getCachedResponse(key: string, context: CrossSportContext): UnifiedAIResponse | null {
     const cached = this.cache.get(key);
-    if (cached && (Date.now() - cached.timestamp) < this.CACHE_TTL) {
+    const adaptiveTTL = this.getAdaptiveTTL(context);
+    if (cached && (Date.now() - cached.timestamp) < adaptiveTTL) {
       // Relaxed validation - accept any non-empty enhanced message
       if (cached.response.enhancedMessage && 
           cached.response.enhancedMessage.trim().length > 10 &&
@@ -714,6 +757,50 @@ export class UnifiedAIProcessor {
       }
     }
     return null;
+  }
+  
+  private getAdaptiveTTL(context: CrossSportContext): number {
+    // Adaptive TTL based on game tempo
+    const isHighTempo = this.isHighTempoSituation(context);
+    const isNormalTempo = this.isNormalTempoSituation(context);
+    
+    if (isHighTempo) {
+      return 7000; // 7 seconds for high-tempo (2-min warning, late innings)
+    } else if (isNormalTempo) {
+      return 30000; // 30 seconds for normal tempo
+    } else {
+      return 90000; // 90 seconds for low-tempo (early game, blowouts)
+    }
+  }
+  
+  private isHighTempoSituation(context: CrossSportContext): boolean {
+    // MLB: Late innings with close score
+    if (context.sport === 'MLB') {
+      const isLateInning = (context.inning ?? 0) >= 7;
+      const isClose = Math.abs(context.homeScore - context.awayScore) <= 2;
+      return isLateInning && isClose;
+    }
+    
+    // Football: 2-minute warning or final quarter
+    if (['NFL', 'NCAAF', 'CFL'].includes(context.sport)) {
+      const isFinalQuarter = (context.quarter ?? 0) === 4;
+      const twoMinWarning = context.alertType.includes('TWO_MINUTE');
+      return isFinalQuarter || twoMinWarning;
+    }
+    
+    // Basketball: Final 2 minutes
+    if (['NBA', 'WNBA'].includes(context.sport)) {
+      const timeLeft = context.timeLeft ?? '';
+      return timeLeft.includes('0:') || timeLeft.includes('1:');
+    }
+    
+    return false;
+  }
+  
+  private isNormalTempoSituation(context: CrossSportContext): boolean {
+    // Check if not high tempo and not blowout
+    const scoreDiff = Math.abs(context.homeScore - context.awayScore);
+    return scoreDiff <= 10; // Within 10 points/runs is normal tempo
   }
 
   private cacheResponse(key: string, response: UnifiedAIResponse, isFallback: boolean = false): void {
@@ -988,148 +1075,211 @@ export class UnifiedAIProcessor {
 
   // === PLACEHOLDER METHODS (to be implemented) ===
   
-  private async callOpenAI(prompt: string): Promise<string | null> {
+  private async callOpenAI(payload: { system: string; user: string }): Promise<any | null> {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      console.warn('⚠️ Unified AI: OPENAI_API_KEY not configured');
+      return null;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2800); // under 3s race
+
     try {
-      const apiKey = process.env.OPENAI_API_KEY;
-      if (!apiKey) {
-        console.warn('⚠️ Unified AI: OPENAI_API_KEY not configured');
-        return null;
-      }
+      const body = {
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: this.sanitizeInput(payload.system).slice(0, 1200) },
+          { role: 'user', content: this.sanitizeInput(payload.user).slice(0, 8000) }
+        ],
+        max_tokens: 180,
+        temperature: 0.5,
+        response_format: { type: 'json_object' as const }
+      };
 
-      // 🛡️ SECURITY: Validate and sanitize prompt input
-      const sanitizedPrompt = this.sanitizeInput(prompt);
-      if (!sanitizedPrompt || sanitizedPrompt.length > 2000) {
-        console.error('🚨 Security: Invalid or oversized prompt rejected');
-        return null;
-      }
+      console.log('🤖 Unified AI: Making OpenAI API call (JSON mode)');
 
-      console.log("🤖 Unified AI: Making OpenAI API call");
-      
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: sanitizedPrompt },
-            { 
-              role: 'user', 
-              content: 'Provide a concise, contextual analysis (2-3 sentences max) with betting insights and key factors to watch. Focus on actionable information.' 
+      // Simple bounded retry for 429/5xx
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(body),
+            signal: controller.signal
+          });
+
+          if (resp.ok) {
+            const data = await resp.json();
+            const text = data.choices?.[0]?.message?.content || '';
+            
+            if (!text || text.trim().length === 0) {
+              console.warn('⚠️ Unified AI: Empty response from OpenAI');
+              return null;
             }
-          ],
-          max_tokens: 150,
-          temperature: 0.7
-        })
-      });
 
-      if (!response.ok) {
-        const error = await response.text();
-        console.error('❌ Unified AI: OpenAI API error:', error);
-        return null;
-      }
+            // Parse and validate JSON
+            const parsed = JSON.parse(text);
+            const validated = AIJSONResponseSchema.parse(parsed);
+            
+            console.log('✅ Unified AI: Successfully got and validated AI response');
+            return validated;
+          }
 
-      const data = await response.json();
-      const aiResponse = data.choices?.[0]?.message?.content;
-      
-      if (aiResponse && aiResponse.trim().length > 0) {
-        // 🛡️ SECURITY: Sanitize AI response before processing
-        const sanitizedResponse = this.sanitizeAIResponse(aiResponse);
-        console.log('✅ Unified AI: Successfully got AI response');
-        return sanitizedResponse;
+          // Retry only on 429/5xx
+          if (resp.status === 429 || (resp.status >= 500 && resp.status < 600)) {
+            console.warn(`⚠️ OpenAI ${resp.status}, retrying (attempt ${attempt + 1})`);
+            await new Promise(r => setTimeout(r, 200 + Math.random() * 250));
+            continue;
+          }
+
+          console.error('❌ Unified AI: OpenAI error:', await resp.text());
+          return null;
+        } catch (fetchError: any) {
+          if (fetchError?.name === 'AbortError') {
+            throw fetchError; // Re-throw abort to outer catch
+          }
+          if (attempt === 1) throw fetchError; // Last attempt, throw
+          console.warn(`⚠️ Fetch error, retrying:`, fetchError.message);
+          await new Promise(r => setTimeout(r, 200 + Math.random() * 250));
+        }
       }
-      
-      console.warn('⚠️ Unified AI: Empty response from OpenAI');
       return null;
-      
-    } catch (error: any) {
-      console.error('❌ Unified AI: Error calling OpenAI:', error.message);
+    } catch (e: any) {
+      if (e?.name === 'AbortError') {
+        console.warn('⌛️ OpenAI aborted at 2.8s');
+      } else {
+        console.error('❌ Unified AI: Error calling OpenAI:', e?.message);
+      }
       return null;
+    } finally {
+      clearTimeout(timer);
     }
   }
 
-  private buildSportSpecificPrompt(context: CrossSportContext): string {
-    const basePrompt = `You are a premium sports betting intelligence AI providing actionable insights for quick betting decisions.
+  private buildSportSpecificPrompt(context: CrossSportContext): { system: string; user: string } {
+    const system = `You are a terse sports betting assistant.
+- Never fabricate player names or odds.
+- If odds not provided, use "value leaning" or "prop available" without numbers.
+- Output JSON with keys: situation, context, bet, window, safety.
+- Max 2 sentences per field.
+- Use emoji markers: 🔥 for situation, ⚡ for context, 💰 for bet.
+`;
 
-FORMAT REQUIREMENT: Respond with exactly this structure for quick scanning:
-
-Line 1: 🔥 [SITUATION] • [KEY PLAYER]
-Line 2: ⚡ [CONTEXT/FATIGUE] • [ENVIRONMENTAL FACTOR]
-Line 3: 💰 [SPECIFIC BET] • [PROP VALUE] • [TIME WINDOW]
-
-GAME CONTEXT:
+    const baseContext = `GAME CONTEXT:
 - ${context.awayTeam} @ ${context.homeTeam} (${context.awayScore}-${context.homeScore})
 - Alert: ${context.alertType} (${context.probability}% confidence)
 - Original: ${context.originalMessage}
 ${context.playoffImplications ? '- PLAYOFF IMPLICATIONS: High stakes game' : ''}
 ${context.championshipContext ? `- CHAMPIONSHIP CONTEXT: ${context.championshipContext}` : ''}
-${context.weather ? `- WEATHER: ${context.weather.temperature}°F, ${context.weather.condition}` : ''}
+- Weather: ${context.weather?.temperature ?? 'NA'}°F, ${context.weather?.condition ?? 'Indoor'}, wind ${context.weather?.windSpeed ?? 'NA'} mph
 `;
 
     // Add sport-specific context based on sport type
     switch (context.sport) {
-      case 'MLB':
-        return `${basePrompt}BASEBALL SITUATION:
-- ${context.inning}${this.getOrdinal(context.inning || 1)} inning, ${context.outs || 0} outs
-- Count: ${context.balls || 0}-${context.strikes || 0}
+      case 'MLB': {
+        const ordInning = this.getOrdinal(context.inning ?? 1);
+        const user = `${baseContext}MLB SITUATION:
+- ${ordInning} inning, ${context.outs ?? 0} outs
+- Count: ${context.balls ?? 0}-${context.strikes ?? 0}
 - Runners: ${this.describeBaseRunners(context.baseRunners)}
+- Current Batter: ${context.originalContext?.currentBatter ?? 'Unknown'}
+- Pitcher: ${context.originalContext?.currentPitcher ?? 'Unknown'}
+- Pitch Count: ${context.originalContext?.pitchCount ?? 'Unknown'}
+- Wind: ${context.weather?.windSpeed ?? context.originalContext?.weatherContext?.windSpeed ?? 'NA'}mph ${context.originalContext?.weatherContext?.windDirection ?? ''}
 
-DATA AVAILABLE (use in your response):
-- Current Batter: ${context.originalContext?.currentBatter || 'Available'}
-- Pitcher: ${context.originalContext?.currentPitcher || 'Available'}
-- Pitch Count: ${context.originalContext?.pitchCount || 'Available'}
-- Wind: ${context.weather?.windSpeed || context.originalContext?.weatherContext?.windSpeed || 'Available'}mph ${context.originalContext?.weatherContext?.windDirection || ''}
-- On Deck: ${context.originalContext?.onDeckBatter || 'Available'}
-
-BETTING FOCUS:
-1. Name specific players in the situation
-2. Include environmental factors (wind speed/direction, pitcher fatigue)
-3. Suggest specific props (RBI, strikeout, team totals) with approximate odds
-4. Provide timing window (30sec, this at-bat, next 5min)
-5. Use quick-scan format with key info in top line
-
-EXAMPLE:
-🔥 BASES LOADED • José Altuve UP (.340 w/ RISP)
-⚡ Morton (97 pitches, tired) • Wind OUT 12mph
-💰 RBI +125 • Team O7.5 • 30sec window`;
+Return JSON:
+{
+  "situation": "🔥 [key moment] • [player]",
+  "context": "⚡ [fatigue/momentum] • [environmental factor]",
+  "bet": {"type": "[RBI/strikeout/total]", "lean": "over/under/prop", "note": "no fabricated odds"},
+  "window": "this at-bat / next 5min",
+  "safety": "[risk/caveat if any]"
+}`;
+        return { system, user };
+      }
 
       case 'NFL':
       case 'NCAAF':
-      case 'CFL':
-        return `${basePrompt}FOOTBALL SITUATION:
-- Q${context.quarter || 1}, ${context.timeRemaining || 'Unknown'} remaining
-${context.down && context.yardsToGo ? `- ${this.getOrdinal(context.down)} & ${context.yardsToGo}` : ''}
+      case 'CFL': {
+        const ordDown = context.down ? this.getOrdinal(context.down) : '';
+        const user = `${baseContext}FOOTBALL SITUATION:
+- Q${context.quarter ?? 1}, ${context.timeRemaining ?? 'Unknown'} remaining
+${context.down && context.yardsToGo ? `- ${ordDown} & ${context.yardsToGo}` : ''}
 ${context.redZone ? '- RED ZONE: High scoring probability' : ''}
+- Field Position: ${context.originalContext?.fieldPosition ?? 'Unknown'} yard line
+- Time Pressure: ${context.timeRemaining ?? 'Unknown'}
 
-DATA AVAILABLE:
-- Weather: ${context.weather?.windSpeed || 'Available'}mph winds, ${context.weather?.temperature || 'Available'}°F
-- Field Position: ${context.originalContext?.fieldPosition || 'Available'} yard line
-- Time Pressure: ${context.timeRemaining || 'Available'}
-
-BETTING FOCUS:
-1. Name key players (QB, RB, kicker) for situation
-2. Include weather impact on passing/kicking
-3. Suggest specific props (TD, FG, rushing yards)
-4. Provide urgency window
-
-EXAMPLE:
-🔥 4TH & 3 • Josh Allen (.75 4th down)
-⚡ 20mph winds • FG range (42yd)
-💰 TD +180 • Under 42.5 • 40sec window`;
+Return JSON:
+{
+  "situation": "🔥 [down & distance] • [QB/player]",
+  "context": "⚡ [wind/weather] • [field position impact]",
+  "bet": {"type": "[TD/FG/yards]", "lean": "over/under/prop", "note": "no fabricated odds"},
+  "window": "this drive / next 2min",
+  "safety": "[risk if any]"
+}`;
+        return { system, user };
+      }
 
       case 'NBA':
-      case 'WNBA':
-        return `${basePrompt}BASKETBALL SITUATION:
-- ${context.timeLeft || 'Unknown'} remaining
-- Shot clock: ${context.shotClock || 'Unknown'}
+      case 'WNBA': {
+        const user = `${baseContext}BASKETBALL SITUATION:
+- ${context.timeLeft ?? 'Unknown'} remaining
+- Shot clock: ${context.shotClock ?? 'Unknown'}
 ${context.fouls ? `- Team fouls: ${context.fouls.home}-${context.fouls.away}` : ''}
-Focus on: Time management, shooting efficiency, foul situation.`;
 
-      default:
-        return basePrompt;
+Return JSON:
+{
+  "situation": "🔥 [time/score situation] • [key player]",
+  "context": "⚡ [pace/foul situation] • [momentum]",
+  "bet": {"type": "[points/total]", "lean": "over/under", "note": "no fabricated odds"},
+  "window": "this possession / next 2min",
+  "safety": "[risk if any]"
+}`;
+        return { system, user };
+      }
+
+      default: {
+        const user = `${baseContext}
+Provide analysis in JSON format.`;
+        return { system, user };
+      }
     }
+  }
+
+  // Convert JSON response from OpenAI to unified format
+  private convertJSONToUnifiedResponse(jsonResponse: any, context: CrossSportContext, startTime: number): UnifiedAIResponse {
+    // Build enhanced message from JSON fields
+    const enhancedMessage = `${jsonResponse.situation}\n${jsonResponse.context}\n💰 ${jsonResponse.bet.type} ${jsonResponse.bet.note ? '• ' + jsonResponse.bet.note : ''} • ${jsonResponse.window}`;
+    
+    return {
+      sport: context.sport,
+      enhancedTitle: `${context.sport} Alert`,
+      enhancedMessage,
+      contextualInsights: [
+        jsonResponse.situation,
+        jsonResponse.context,
+        jsonResponse.bet.note || 'Betting opportunity identified'
+      ],
+      actionableRecommendation: jsonResponse.window,
+      urgencyLevel: context.priority >= 80 ? 'HIGH' : 'MEDIUM',
+      bettingContext: {
+        recommendation: jsonResponse.bet.note || 'Evaluate opportunity',
+        confidence: 80,
+        reasoning: [jsonResponse.bet.type, jsonResponse.bet.lean || 'prop']
+      },
+      gameProjection: {
+        winProbability: { home: 50, away: 50 },
+        keyFactors: [jsonResponse.safety || 'Standard risk'],
+        nextCriticalMoment: jsonResponse.window
+      },
+      aiProcessingTime: Date.now() - startTime,
+      confidence: 85,
+      sportSpecificData: context
+    };
   }
 
   private parseAIResponse(aiResponse: string, context: CrossSportContext, startTime: number): UnifiedAIResponse {

@@ -1,0 +1,226 @@
+1) OpenAI call: correctness, latency, and cost
+
+Issues
+
+You pass the entire dynamic prompt as system, then a generic user message. That can dilute the instructions/context.
+
+No request timeout/abort: fetch can hang after your 3s race fires → socket leak.
+
+Length check is chars, not tokens (2,000 chars ≠ 2,000 tokens).
+
+No retry/backoff for 429/5xx.
+
+Free-text output is harder to validate than JSON.
+
+Fixes
+
+Put stable guardrails in system, put context in user, and ask for JSON.
+
+Add AbortController tied to your 3s timeout.
+
+Add bounded retries with jitter for 429/500.
+
+Validate token length earlier (approx w/ 4 chars/token or count words).
+
+private async callOpenAI(payload: {
+  system: string; // short, stable rules
+  user: string;   // built by buildSportSpecificPrompt()
+}): Promise<any | null> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) { console.warn('⚠️ OPENAI_API_KEY missing'); return null; }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2800); // under 3s race
+
+  try {
+    const body = {
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: this.sanitizeInput(payload.system).slice(0, 1200) },
+        { role: "user", content: this.sanitizeInput(payload.user).slice(0, 8000) }
+      ],
+      max_tokens: 180,
+      temperature: 0.5,
+      response_format: { type: "json_object" }
+    };
+
+    // simple bounded retry
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        const text = data.choices?.[0]?.message?.content || "";
+        const sanitized = this.sanitizeAIResponse(text);
+        // parse + zod-validate JSON here
+        return JSON.parse(sanitized);
+      }
+
+      // retry only on 429/5xx
+      if (resp.status === 429 || (resp.status >= 500 && resp.status < 600)) {
+        await new Promise(r => setTimeout(r, 200 + Math.random()*250));
+        continue;
+      }
+
+      console.error('❌ OpenAI error:', await resp.text());
+      return null;
+    }
+    return null;
+  } catch (e:any) {
+    if (e?.name === 'AbortError') console.warn('⏱️ OpenAI aborted at 2.8s');
+    else console.error('❌ OpenAI call failed:', e?.message);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+2) Prompt builder: small correctness bugs + structure
+
+Issues
+
+MLB line: ${context.inning}${this.getOrdinal(context.inning || 1)} inning → will render like “5 5th inning”.
+Use only the ordinal (this.getOrdinal(inning)).
+
+You ask model to suggest approx odds—risk of hallucination. If you don’t pass real odds, instruct “do not fabricate odds; use range words”.
+
+Weather/players may be undefined; ensure defensive defaults.
+
+Fixes (pattern)
+
+const ordInning = this.getOrdinal(context.inning ?? 1); // "5th"
+...
+`- ${ordInning} inning, ${context.outs ?? 0} outs`
+
+
+Better structure
+Keep system stable and move the big sport-specific block to user:
+
+const system = `
+You are a terse sports betting assistant. 
+- Never fabricate player names or odds.
+- If odds not provided, say "value leaning" without numbers.
+- Output JSON with keys: situation, context, bet, window, safety.
+- Max 2 sentences per field.
+`;
+
+const user = `
+GAME CONTEXT:
+- ${context.awayTeam} @ ${context.homeTeam} (${context.awayScore}-${context.homeScore})
+- Alert: ${context.alertType} (${context.probability}%)
+- Weather: ${context.weather?.temperature ?? 'NA'}F, wind ${context.weather?.windSpeed ?? 'NA'} mph
+MLB:
+- ${this.getOrdinal(context.inning ?? 1)} inning, ${context.outs ?? 0} outs
+- Count: ${context.balls ?? 0}-${context.strikes ?? 0}
+- Runners: ${this.describeBaseRunners(context.baseRunners)}
+- Batter: ${context.originalContext?.currentBatter ?? 'Unknown'}
+- Pitcher: ${context.originalContext?.currentPitcher ?? 'Unknown'}
+
+Return:
+{
+ "situation":"🔥 ...",
+ "context":"⚡ ...",
+ "bet":{"type":"...", "lean":"over/under/prop", "note":"no fabricated odds"},
+ "window":"e.g., this at-bat / next drive",
+ "safety":"any risk/caveat"
+}
+`;
+
+3) Async pipeline & timeout race
+
+Issues
+
+Promise.race rejects at 3s, but the inner fetch keeps running (fixed with AbortController above).
+
+You set wasActuallyEnhanced: true unconditionally after race; ensure the response is valid.
+
+You don’t guard against empty/invalid enhancementResponse before sending.
+
+Fixes
+
+const enhancement = await Promise.race([ this.applyUnifiedEnhancement(...), timeoutPromise ]);
+const valid = this.isValidEnhanced(enhancement); // zod or shape check
+const enhancedAlert = valid ? this.buildEnhancedAlert(...) : job.originalAlert;
+this.results.set(jobId, { ..., wasActuallyEnhanced: !!valid });
+if (valid && this.onEnhancedAlert) await this.onEnhancedAlert(enhancedAlert, ...);
+
+4) Cache key & TTL
+
+Issues
+
+Key = {sport, gameId, alertType, inning/quarter, outs, away, home} is too coarse (MLB) and too game-specific (low reuse across games).
+
+Fixed 30s TTL isn’t tempo-aware.
+
+Type mismatch: elsewhere you mention caching a structured UnifiedAIResponse, but callOpenAI returns a string → cached.response.enhancedMessage may be undefined.
+
+Fixes
+
+Unify type: always cache a structured object {enhancedMessage, context, bet, window}.
+
+Richer key (per sport):
+
+MLB: add count, runners signature (e.g., 1-3), scoreDiff bucket, wind bucket.
+
+NFL: add down&distance, yardline bucket, scoreDiff, clock bucket, redZone flag.
+
+Adaptive TTL: 5–10s in high-tempo (late innings/2-min), 20–40s normal, 60–120s low-tempo.
+
+private generateCacheKey(ctx: CrossSportContext): string {
+  const tempoClock = Math.floor((ctx.clockSec ?? 0)/15);
+  const scoreBucket = Math.min(5, Math.floor(Math.abs((ctx.homeScore-ctx.awayScore))/2));
+  const runnersSig = this.runnersSignature(ctx.baseRunners); // e.g. "1-3"
+  const windBucket = Math.round((ctx.weather?.windSpeed ?? 0)/5)*5;
+
+  return [
+    ctx.sport, ctx.alertType,
+    ctx.inning ?? ctx.quarter ?? 0,
+    ctx.outs ?? 0, runnersSig ?? '-',
+    ctx.count ? `${ctx.balls}-${ctx.strikes}` : '-',
+    scoreBucket, tempoClock, windBucket,
+    'v3.1'
+  ].join(':');
+}
+
+5) Sanitization & validation
+
+Issues
+
+“Double sanitize” is good, but unspecified. You need allowlists:
+
+Strip HTML/URLs, cap unicode ranges, emoji allowlist.
+
+Enforce length by fields (not just whole text).
+
+Validate model output with Zod before composing UI.
+
+Fix
+
+const EnhancedSchema = z.object({
+  situation: z.string().min(3).max(140),
+  context: z.string().min(3).max(200),
+  bet: z.object({
+    type: z.string().max(30),
+    lean: z.enum(['over','under','prop','none']).optional(),
+    note: z.string().max(120).optional()
+  }),
+  window: z.string().max(40),
+  safety: z.string().max(120).optional()
+});
+
+6) Messaging format vs JSON
+
+If you truly want the 3-line emoji format for the UI, derive it from JSON (safer, more testable):
+
+const msg = `${emoji.situation} ${obj.situation}\n${emoji.context} ${obj.context}\n${emoji.bet} ${toBetLine(obj.bet)} • ${obj.window}`;
+
+7) Logging & PII
+
+Don’t log full prompts or responses in prod; log hashes + timings.
+
+Redact player names if policy requires; at minimum strip user IDs, token
