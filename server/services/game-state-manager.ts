@@ -14,7 +14,6 @@ import type { AlertResult as EngineAlertResult, GameState } from './engines/base
 import type { AlertResult } from '../../shared/schema';
 import type { WeatherChangeEvent } from './weather-on-live-service';
 import { unifiedAIProcessor, CrossSportContext } from './unified-ai-processor';
-import { generativeSportsAI } from './generative-sports-ai';
 
 // === CORE INTERFACES ===
 
@@ -713,8 +712,8 @@ export class GameStateManager {
             if (alerts && alerts.length > 0) {
               console.log(`🔗 GameStateManager: Sending ${alerts.length} alerts through unified enhancement pipeline`);
 
-              // UNIFIED FIX: Use UnifiedAIProcessor as the single enhancement pipeline
-              // This eliminates competing enhancement systems (weather, gambling, AI) and ensures consistent contexts
+              // Use UnifiedAIProcessor as the single enhancement pipeline
+              // This eliminates duplicate AI processing and ensures consistent contexts
               try {
                 // Send each raw alert through unified enhancement pipeline
                 for (const rawAlert of alerts) {
@@ -734,44 +733,10 @@ export class GameStateManager {
                       originalContext: rawAlert.context || {}
                     };
 
-                    // Apply Generative AI enhancement (new advanced layer)
-                    if (gameState.isLive && rawAlert.priority >= 7) {
-                      console.log(`🤖 Applying Generative AI enhancement for ${sport} ${rawAlert.type}`);
-                      const genAIResult = await generativeSportsAI.enhanceWithGenerativeAI(
-                        rawAlert, 
-                        gameState, 
-                        sport, 
-                        'system'
-                      );
-
-                      // Use the enhanced alert from GenerativeAI
-                      const enhancedAlert = genAIResult.enhancedAlert;
-
-                      // Store additional AI insights in context
-                      enhancedAlert.context = {
-                        ...enhancedAlert.context,
-                        generativeAI: {
-                          predictiveInsights: genAIResult.predictiveInsights,
-                          narrativeContext: genAIResult.narrativeContext,
-                          bettingIntelligence: genAIResult.bettingIntelligence,
-                          fanEngagement: genAIResult.fanEngagement,
-                          aiGeneratedContent: genAIResult.aiGeneratedContent
-                        }
-                      };
-
-                       // Queue enhanced alert for unified enhancement pipeline (AI + gambling + weather)
-                      console.log(`🔗 GameStateManager: Sending ${alerts.length} alerts through unified enhancement pipeline`);
-                      unifiedAIProcessor.queueAlert(enhancedAlert, context, 'system').catch(error => {
-                        console.warn(`⚠️ Failed to queue alert ${rawAlert.type} for unified enhancement:`, error);
-                      });
-
-                    } else {
-                      // Queue raw alert for unified enhancement pipeline (AI + gambling + weather)
-                      console.log(`🔗 GameStateManager: Sending ${alerts.length} alerts through unified enhancement pipeline`);
-                      unifiedAIProcessor.queueAlert(rawAlert, context, 'system').catch(error => {
-                        console.warn(`⚠️ Failed to queue alert ${rawAlert.type} for unified enhancement:`, error);
-                      });
-                    }
+                    // Queue raw alert for unified enhancement pipeline (AI + gambling + weather)
+                    unifiedAIProcessor.queueAlert(rawAlert, context, 'system').catch(error => {
+                      console.warn(`⚠️ Failed to queue alert ${rawAlert.type} for unified enhancement:`, error);
+                    });
                   }
 
                   console.log(`💾 Queued ${alerts.length} alerts for unified enhancement pipeline`);

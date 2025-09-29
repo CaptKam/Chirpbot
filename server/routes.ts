@@ -22,7 +22,6 @@ import { eq, desc, and, gte, inArray } from "drizzle-orm";
 // Migration Adapter replaces direct CalendarSyncService usage
 // import { getCalendarSyncService } from "./services/calendar-sync-service";
 import { unifiedAIProcessor } from './services/unified-ai-processor';
-import { generativeSportsAI } from './services/generative-sports-ai';
 
 // Extend session data interface
 declare module 'express-session' {
@@ -5038,18 +5037,18 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // Generative AI metrics endpoint
+  // AI metrics endpoint - using UnifiedAIProcessor only
   app.get('/api/ai/generative/metrics', async (req, res) => {
     try {
-      const metrics = generativeSportsAI.getPerformanceMetrics();
+      const metrics = unifiedAIProcessor.getPerformanceMetrics();
       res.json({
         success: true,
         data: metrics,
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error fetching generative AI metrics:', error);
-      res.status(500).json({ error: 'Failed to fetch generative AI metrics' });
+      console.error('Error fetching AI metrics:', error);
+      res.status(500).json({ error: 'Failed to fetch AI metrics' });
     }
   });
 
