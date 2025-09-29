@@ -1,10 +1,9 @@
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Clock, MapPin, TrendingUp, Users, Zap, Target, AlertTriangle, Wind, Cloud, Thermometer, Timer, Hash, Navigation, DollarSign, TrendingDown, Star } from 'lucide-react';
+import { Clock, MapPin, TrendingUp, Users, Zap, Target, AlertTriangle, Wind, Cloud, Thermometer, Timer, Hash, Navigation, DollarSign, TrendingDown, Star, Smartphone, Bot, Flame, Tv } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
-import { getSportTabColors } from '@shared/season-manager';
 // Removed getDisplayContent import - using simplified consistent rendering
 
 interface UniversalAlertProps {
@@ -130,7 +129,7 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
 
     return sportConfigs[sport as keyof typeof sportConfigs] || {
       iconColor: 'text-slate-400 border-slate-500/30 bg-slate-500/10',
-      icon: '🎯',
+      icon: <Target className="w-5 h-5" />,
       label: sport
     };
   };
@@ -240,7 +239,7 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
         {showEnhancements && alert.context?.generativeAI && (
           <div className="mt-3 p-3 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-purple-600 dark:text-purple-400">🤖</span>
+              <Bot className="w-4 h-4 text-purple-600 dark:text-purple-400" />
               <span className="font-medium text-purple-700 dark:text-purple-300">AI Generated Insights</span>
             </div>
 
@@ -270,11 +269,11 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
             {alert.context.generativeAI.fanEngagement && (
               <div className="flex items-center gap-4 text-xs">
                 <div className="flex items-center gap-1">
-                  <span>🔥</span>
+                  <Flame className="w-4 h-4" />
                   <span>Excitement: {alert.context.generativeAI.fanEngagement.excitementLevel}/10</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span>📺</span>
+                  <Tv className="w-4 h-4" />
                   <span>Watchability: {alert.context.generativeAI.fanEngagement.watchabilityScore}%</span>
                 </div>
               </div>
@@ -325,7 +324,9 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
                       )}
                     </div>
                     {alert.context.redZone && (
-                      <span className="text-red-300 font-medium text-sm">🎯 Red Zone</span>
+                      <span className="text-red-300 font-medium text-sm flex items-center gap-1">
+                        <Target className="w-4 h-4" /> Red Zone
+                      </span>
                     )}
                   </div>
                 </div>
@@ -336,7 +337,9 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
                 <div className="bg-slate-800/40 rounded-lg p-2.5">
                   <div className="flex items-center gap-3 text-sm">
                     {alert.context.clutchTime && (
-                      <span className="text-yellow-300 font-medium">⚡ Clutch Time</span>
+                      <span className="text-yellow-300 font-medium flex items-center gap-1">
+                        <Zap className="w-4 h-4" /> Clutch Time
+                      </span>
                     )}
                     {alert.context.run && (
                       <span className="text-purple-300 font-medium">{alert.context.run} run</span>
@@ -349,12 +352,14 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
               {alert.sport === 'NHL' && (
                 <div className="bg-slate-800/40 rounded-lg p-2.5">
                   {alert.context.powerPlay && (
-                    <div className="text-blue-300 font-medium text-sm">
-                      ⚡ Power Play {alert.context.powerPlayTime && `(${alert.context.powerPlayTime})`}
+                    <div className="text-blue-300 font-medium text-sm flex items-center gap-1">
+                      <Zap className="w-4 h-4" /> Power Play {alert.context.powerPlayTime && `(${alert.context.powerPlayTime})`}
                     </div>
                   )}
                   {alert.context.penalty && (
-                    <div className="text-red-300 text-sm">⚠️ {alert.context.penalty}</div>
+                    <div className="text-red-300 text-sm flex items-center gap-1">
+                      <AlertTriangle className="w-4 h-4" /> {alert.context.penalty}
+                    </div>
                   )}
                 </div>
               )}
@@ -381,7 +386,7 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
                   ))}
                 </ul>
               )}
-              {alert.gamblingInsights.confidence && (
+              {alert.gamblingInsights.confidence != null && (
                 <div className="mt-2 text-xs text-slate-400">
                   Confidence: {Math.round(alert.gamblingInsights.confidence * 100)}%
                 </div>
@@ -413,7 +418,7 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
                 </span>
               )}
               {alert.sentToTelegram && (
-                <span className="text-blue-300">📱</span>
+                <Smartphone className="w-4 h-4 text-blue-300" />
               )}
               {showEnhancements && alert.weather?.temperature && (
                 <span className="text-slate-400">{alert.weather.temperature}°F</span>
