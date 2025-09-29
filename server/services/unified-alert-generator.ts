@@ -80,8 +80,7 @@ interface WeatherEnhancedAlert extends EngineAlertResult {
   weatherContext?: WeatherChangeEvent;
   isWeatherTriggered?: boolean;
   weatherSeverity?: 'low' | 'moderate' | 'high' | 'extreme';
-  gamblingInsights?: any; // Add gambling insights field
-  hasComposerEnhancement?: boolean;
+  gamblingInsights?: any;
 }
 
 // Sport Engine Status for dynamic access
@@ -124,12 +123,7 @@ export class UnifiedAlertGenerator {
   // adaptivePollingManagers removed - using CalendarSyncService only
   private engineFailures: Map<string, EngineFailureRecord> = new Map();
 
-  // Backward compatibility API services (used for fallback only)
-  private mlbApi?: MLBApiService;
-  private ncaafApi?: NCAAFApiService;
-  private wnbaApi?: WNBAApiService;
-  private nflApi?: NFLApiService;
-  private cflApi?: CFLApiService;
+  // Removed backward compatibility API services to prevent conflicts
 
   // Error recovery tracking (production only) - DISABLED to prevent duplicates
   private readonly retryConfig: RetryConfig = {
@@ -197,15 +191,7 @@ export class UnifiedAlertGenerator {
 
       console.log('🔗 GameStateManager connected to EngineLifecycleManager - engines will start when games go LIVE');
 
-      // DISABLED: Backward compatibility API services to prevent duplicate calls
-      // These were causing duplicate NBA/WNBA API calls
-      // this.mlbApi = new MLBApiService();
-      // this.ncaafApi = new NCAAFApiService();
-      // this.nflApi = new NFLApiService();
-      // this.wnbaApi = new WNBAApiService();
-      // this.cflApi = new CFLApiService();
-      
-      console.log('🚫 Backward compatibility API services disabled to prevent duplicates');
+      console.log('✅ Using only CalendarSyncService for data ingestion - no API conflicts');
 
       console.log('✅ V3 Weather-on-Live architecture initialized successfully');
 

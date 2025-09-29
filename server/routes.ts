@@ -1945,21 +1945,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   function validateSportName(sport: string): boolean {
     const validSports = ['mlb', 'nfl', 'ncaaf', 'nba', 'wnba', 'cfl', 'nhl'];
-    return validSports.includes(sport.toLowerCase());
-  }
-
-  // Admin API routes
+    return validSports.includes(sport.// Admin cleanup endpoints
   app.post('/api/admin/cleanup-alerts', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
       const { alertCleanupService } = await import('./services/alert-cleanup');
-
-      // Get stats before cleanup
       const statsBefore = await alertCleanupService.getCleanupStats();
-
-      // Perform cleanup
       const deletedCount = await alertCleanupService.cleanupNow();
-
-      // Get stats after cleanup
       const statsAfter = await alertCleanupService.getCleanupStats();
 
       res.json({
@@ -1979,11 +1970,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       const { alertCleanupService } = await import('./services/alert-cleanup');
       const stats = await alertCleanupService.getCleanupStats();
-
-      res.json({
-        success: true,
-        stats,
-        message: `${stats.old} alerts are older than 24 hours and will be cleaned up`
+      res.json({ success: true, stats });
+    } catch (error) {
+      console.error('Error getting cleanup stats:', error);
+      res.status(500).json({ error: 'Failed to get cleanup stats' });
+    }
+  });.old} alerts are older than 24 hours and will be cleaned up`
       });
     } catch (error) {
       console.error('Error getting cleanup stats:', error);
@@ -2513,35 +2505,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         }
       };
 
-      // Get sample alert data to compare structures
-      let sampleAlert = null;
-      if (currentUserId) {
-        try {
-          const monitoredGames = await storage.getUserMonitoredTeams(currentUserId);
-          if (monitoredGames.length > 0) {
-            const sampleResult = await db.select()
-              .from(alerts)
-              .where(and(
-                inArray(alerts.gameId, monitoredGames.map(g => g.gameId)),
-                eq(alerts.userId, currentUserId)
-              ))
-              .orderBy(desc(alerts.createdAt))
-              .limit(1);
-              
-            if (sampleResult.length > 0) {
-              const alert = sampleResult[0];
-              const payload = alert.payload as any;
-              
-              sampleAlert = {
-                id: alert.id,
-                type: alert.type,
-                sport: alert.sport,
-                hasContext: !!payload.context,
-                hasGamblingInsights: !!payload.gamblingInsights,
-                hasComposerEnhancement: !!payload.hasComposerEnhancement,
-                hasBetbookData: !!payload.betbookData,
-                hasGameInfo: !!payload.gameInfo,
-                hasDisplayMessage: !!payload.displayMessage,
+      res.json({
+        success: true,
+        environment: diagnostics.environment,
+        database: diagnostics.database,
+        session: sessionInfo,
+        timestamp: new Date().toISOString()
+      });
                 messageLength: payload.message ? payload.message.length : 0,
                 payloadKeys: Object.keys(payload),
                 contextKeys: payload.context ? Object.keys(payload.context) : []

@@ -40,69 +40,44 @@ const instanceLock = new SingleInstanceLock();
   process.exit(1);
 });
 
-// 🔄 V3 ALERT GENERATION SYSTEM: COMPLETE PIPELINE
-console.log("🔍 DEBUG: Starting V3 Alert Generation System");
+// 🔄 V3 ALERT GENERATION SYSTEM: SINGLE PIPELINE
+console.log("🚀 V3 Alert System: Starting unified pipeline");
 if (!(globalThis as any).__v3_alert_system_bootstrapped__) {
-  console.log("🔍 DEBUG: __v3_alert_system_bootstrapped__ is false, starting bootstrap");
   (globalThis as any).__v3_alert_system_bootstrapped__ = true;
-  console.log("📋 V3 ALERT SYSTEM: BOOTSTRAP FIRING (complete pipeline)");
+  
   void (async () => {
     try {
-      console.log("🔍 DEBUG: Importing V3 alert system components");
       const { CalendarSyncService } = await import('./services/calendar-sync-service');
       const { GameStateManager } = await import('./services/game-state-manager');
       const { EngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
-      console.log("🔍 DEBUG: All imports successful");
 
-      // Initialize EngineLifecycleManager first
-      console.log("🚀 Initializing EngineLifecycleManager");
       const engineLifecycleManager = new EngineLifecycleManager();
-      console.log("✅ EngineLifecycleManager started");
-
-      // Initialize GameStateManager with EngineLifecycleManager
-      console.log("🎮 Initializing GameStateManager with EngineLifecycleManager");
       const gameStateManager = new GameStateManager();
       gameStateManager.setEngineLifecycleManager(engineLifecycleManager);
       await gameStateManager.start();
-      console.log("✅ GameStateManager started with alert generation enabled");
 
-      // Initialize CalendarSyncService 
-      console.log("📅 Initializing CalendarSyncService");
       const calendarSyncService = CalendarSyncService.getInstance({
         sports: ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL'],
         enableMetrics: true
       });
       
-      // Connect CalendarSyncService to GameStateManager (both directions)
-      console.log("🔗 Connecting CalendarSyncService to GameStateManager");
       calendarSyncService.setGameStateManager(gameStateManager);
       gameStateManager.setCalendarSyncService(calendarSyncService);
-      
-      console.log("🔍 DEBUG: Starting CalendarSyncService");
       await calendarSyncService.start();
-      console.log("🔍 DEBUG: CalendarSyncService started");
 
-      // Initialize MigrationAdapter to connect user-selected games to polling
-      console.log("📋 Initializing MigrationAdapter for user game monitoring");
       const { migrationAdapter } = await import('./services/migration-adapter');
       migrationAdapter.initialize(calendarSyncService, gameStateManager);
-      console.log("✅ MigrationAdapter connected - user-selected games will now be polled");
 
-      // Store global references
       (global as any).calendarSyncService = calendarSyncService;
       (global as any).gameStateManager = gameStateManager;
       (global as any).engineLifecycleManager = engineLifecycleManager;
       (global as any).migrationAdapter = migrationAdapter;
       
-      console.log("✅ V3 ALERT SYSTEM: COMPLETE PIPELINE ACTIVE");
-      console.log("📋 V3: CalendarSyncService → GameStateManager → EngineLifecycleManager → Alert Generation ✅");
+      console.log("✅ V3 Alert System: Unified pipeline active");
     } catch (e) {
-      console.error("❌ V3 ALERT SYSTEM: FAILED", e);
-      console.error("❌ V3 ALERT SYSTEM: ERROR STACK:", e instanceof Error ? e.stack : 'No stack trace available');
+      console.error("❌ V3 Alert System: Failed to initialize", e);
     }
   })();
-} else {
-  console.log("🔍 DEBUG: __v3_alert_system_bootstrapped__ is true, skipping bootstrap");
 }
 
 // Startup guard to prevent double initialization within same process
@@ -522,11 +497,7 @@ async function startServer() {
             console.log('⏭️ Skipping database seeding in production');
           }
 
-          // Initialize alert generator and AI system
-          // ✅ V3: No longer using legacy V2 AlertGenerator - UnifiedAlertGenerator handles this
-
-          // AI system now unified through AsyncAIProcessor → CrossSportAIEnhancement
-          console.log('✅ AI Services: Unified pipeline active (AsyncAI → CrossSport)');
+          console.log('✅ Alert generation handled by V3 pipeline');
 
           // Frontend serving is now handled before server.listen (moved earlier for immediate mounting)
           // Fallback: setup Vite dev middleware if static assets weren't detected
@@ -556,9 +527,7 @@ async function startServer() {
             }
           }
 
-          // Alert generation is already handled by the earlier UnifiedAlertGenerator setup
-          // (lines 332-345) - no need for duplicate initialization
-          console.log('✅ ALERT GENERATION ALREADY ACTIVE - MONITORING ALL GAMES');
+          console.log('✅ Alert generation integrated into V3 pipeline');
 
           // Start cleanup service immediately
           console.log('🧹 Starting alert cleanup service...');
