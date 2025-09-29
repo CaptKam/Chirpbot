@@ -35,8 +35,13 @@ export class GameMonitoringCleanup {
     this.isRunning = true;
     console.log('🧹 Game Monitoring Cleanup: Starting periodic cleanup service...');
 
-    // Run cleanup immediately on start
-    await this.performCleanup();
+    // Delay first cleanup by 20 seconds to allow calendar sync to complete initial polling
+    setTimeout(async () => {
+      if (this.isRunning) {
+        console.log('🧹 Game Monitoring Cleanup: Running initial cleanup after calendar sync warm-up...');
+        await this.performCleanup();
+      }
+    }, 20 * 1000); // 20 seconds
 
     // Schedule periodic cleanup every 10 minutes
     const interval = setInterval(async () => {
@@ -47,7 +52,7 @@ export class GameMonitoringCleanup {
       }
     }, 10 * 60 * 1000); // 10 minutes
 
-    console.log('✅ Game Monitoring Cleanup: Service started - checking every 10 minutes');
+    console.log('✅ Game Monitoring Cleanup: Service started - first cleanup in 20s, then every 10 minutes');
   }
 
   /**
@@ -87,14 +92,12 @@ export class GameMonitoringCleanup {
       for (const monitoredGame of monitoredGames) {
         const gameStatus = this.getGameStatusFromCalendar(monitoredGame.gameId, monitoredGame.sport);
         
-        // Remove if:
-        // 1. Game status is 'final' (explicitly finished)
-        // 2. Game status is null (not tracked anymore, likely from previous days)
-        const shouldRemove = gameStatus === 'final' || gameStatus === null;
+        // Only remove games with explicit "final" status
+        // Don't remove games with null status - they might just not be loaded yet
+        const shouldRemove = gameStatus === 'final';
         
         if (shouldRemove) {
-          const reason = gameStatus === 'final' ? 'FINAL' : 'NOT_TRACKED (old game from previous day)';
-          console.log(`🎯 Game Monitoring Cleanup: Game ${monitoredGame.gameId} (${monitoredGame.sport}) is ${reason} - removing from monitoring`);
+          console.log(`🎯 Game Monitoring Cleanup: Game ${monitoredGame.gameId} (${monitoredGame.sport}) is FINAL - removing from monitoring`);
           
           const removedCount = await storage.removeGameFromAllMonitoring(monitoredGame.gameId);
           
