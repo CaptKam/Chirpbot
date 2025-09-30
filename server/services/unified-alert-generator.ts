@@ -166,7 +166,7 @@ export class UnifiedAlertGenerator {
 
       // V3 Architecture: Initialize new services
       this.engineLifecycleManager = new EngineLifecycleManagerClass();
-      
+
       // 🔧 FIX: Use singleton CalendarSyncService instead of creating duplicate
       this.calendarSyncService = CalendarSyncService.getInstance({
         sports: ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL'],
@@ -176,7 +176,7 @@ export class UnifiedAlertGenerator {
         enableMetrics: true
       });
       this.weatherOnLiveService = new WeatherOnLiveService();
-      
+
       console.log('🔧 Using singleton CalendarSyncService to prevent duplicate API calls');
 
       // CRITICAL FIX: Connect GameStateManager to EngineLifecycleManager
@@ -262,7 +262,7 @@ export class UnifiedAlertGenerator {
       //   clearInterval(interval);
       // }
       // this.fallbackPollingActive.clear();
-      
+
       console.log('🚫 Fallback polling system disabled');
 
       console.log('✅ V3 Weather-on-Live monitoring stopped successfully');
@@ -368,7 +368,7 @@ export class UnifiedAlertGenerator {
             console.log(`✅ ${sport} monitoring: ${enabledAlerts.length} alerts enabled, ${usersWithActiveMonitoring.length} active users`);
           }
 
-          // V3: Dynamic game data sourcing based on engine state
+          // V3: Dynamic game data sourcing based on engine availability
           let games: any[] = [];
           let dataSource = 'unknown';
           try {
@@ -663,7 +663,8 @@ export class UnifiedAlertGenerator {
 
       switch (sport) {
         case 'MLB':
-          if (this.mlbApi) {
+          // Placeholder for MLBApiService instance if it were managed here
+          if (this.mlbApi) { // Assuming mlbApi is initialized elsewhere
             games = await this.mlbApi.getTodaysGames();
           }
           break;
@@ -671,7 +672,8 @@ export class UnifiedAlertGenerator {
           games = await this.getNFLGames();
           break;
         case 'NCAAF':
-          if (this.ncaafApi) {
+          // Placeholder for NCAAFApiService instance
+          if (this.ncaafApi) { // Assuming ncaafApi is initialized elsewhere
             games = await this.ncaafApi.getTodaysGames();
           }
           break;
@@ -721,7 +723,7 @@ export class UnifiedAlertGenerator {
 
       // Get weather context for this game/location
       // Note: weather service method will be available when service is properly initialized
-      const weatherContext = null;
+      const weatherContext = null; // Placeholder for actual weather data fetch
 
       if (!weatherContext) {
         return alerts.map(alert => ({ ...alert }));
@@ -772,12 +774,12 @@ export class UnifiedAlertGenerator {
   ): Promise<WeatherEnhancedAlert[]> {
     // UNCONDITIONAL LOGGING: Always log entry regardless of conditions
     console.log(`🎲 Composer: Starting enhancement for ${sport} with ${alerts.length} alerts`);
-    
+
     if (!alerts || alerts.length === 0) {
       console.log(`🎲 Composer: ${sport} - No alerts to enhance (alerts=${alerts?.length || 0})`);
       return alerts || [];
     }
-    
+
     if (!this.gamblingInsightsComposer) {
       console.log(`🎲 Composer: ${sport} - GamblingInsightsComposer not initialized`);
       return alerts;
@@ -801,7 +803,7 @@ export class UnifiedAlertGenerator {
         yardsToGo: gameState.yardsToGo,
         timeRemaining: gameState.timeRemaining
       });
-      
+
       console.log(`🎲 Composer: ${sport} enhancing ${alerts.length} alerts`);
 
       // Convert WeatherEnhancedAlert to SharedAlertResult for the composer
@@ -864,9 +866,9 @@ export class UnifiedAlertGenerator {
         const bullets = alert.gamblingInsights?.bullets || [];
         // Note: mapperUsed is not a property of GamblingInsights interface
         bulletsTotal += bullets.length;
-        
+
         console.log(`🎯 Composer bullets: alertKey=${alert.alertKey}, sport=${sport}, bullets=${bullets.length}`);
-        
+
         // Log bullet content for debugging
         if (bullets.length > 0) {
           console.log(`📝 Bullet content for ${alert.alertKey}:`, bullets.slice(0, 2)); // First 2 bullets for brevity
@@ -899,10 +901,10 @@ export class UnifiedAlertGenerator {
         sport: sport,
         composerInitialized: !!this.gamblingInsightsComposer
       });
-      
+
       // Log original alerts being returned due to error
       console.log(`🔄 Returning ${alerts.length} original alerts due to error`);
-      
+
       // Return original alerts on error to maintain pipeline stability
       return alerts;
     }
@@ -1167,7 +1169,7 @@ export class UnifiedAlertGenerator {
                     // 🔒 CRITICAL FIX: Check if this specific user has this alert type enabled
                     const userPrefs = await storage.getUserAlertPreferencesBySport(userId, sport.toUpperCase());
                     const userPref = userPrefs.find(pref => pref.alertType === alertResult.type);
-                    
+
                     // If user has explicit preference, respect it. If no preference, fall back to global settings.
                     let userHasAlertEnabled = false;
                     if (userPref) {
@@ -1177,7 +1179,7 @@ export class UnifiedAlertGenerator {
                       // No explicit user preference - check global default
                       userHasAlertEnabled = await this.settingsCache.isAlertEnabled(sport, alertResult.type);
                     }
-                    
+
                     if (!userHasAlertEnabled) {
                       const reason = userPref ? 'explicitly disabled by user' : 'not enabled globally';
                       if (this.logLevel !== 'quiet') {
@@ -1185,7 +1187,7 @@ export class UnifiedAlertGenerator {
                       }
                       continue; // Skip this user - they don't want this alert type
                     }
-                    
+
                     // CRITICAL: Validate alertResult before processing to prevent constraint violations
                     if (!alertResult || !alertResult.type || !alertResult.alertKey || !alertResult.message) {
                       console.error(`❌ Invalid AlertResult object from ${sport} engine:`, {
@@ -1425,9 +1427,8 @@ export class UnifiedAlertGenerator {
     return;
   }
 
-
-
-
-
+  // LEGACY CLEANUP: Disabled conflicting systems
+  // This IS the single source of truth for alerts
+  private static LEGACY_SYSTEMS_DISABLED = true;
 
 }

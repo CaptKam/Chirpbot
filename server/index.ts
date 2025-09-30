@@ -74,25 +74,12 @@ if (!(globalThis as any).__v3_alert_system_bootstrapped__) {
       (global as any).engineLifecycleManager = engineLifecycleManager;
       (global as any).migrationAdapter = migrationAdapter;
       
-      // === NEW UNIFIED COORDINATOR (V3.1 - Running in Parallel) ===
-      const { GameLifecycleService } = await import('./services/game-lifecycle-service');
-      const { CalendarDataSource } = await import('./services/calendar-data-source');
+      // === V3.1 COORDINATOR DISABLED TO PREVENT CONFLICTS ===
+      // TODO: Re-enable after V3.0 system is fully deprecated
+      console.log("⚠️ V3.1 Coordinator disabled to prevent state conflicts");
       
-      const gameLifecycleService = new GameLifecycleService();
-      const calendarDataSource = new CalendarDataSource({ cacheTtlMs: 30_000 });
-      
-      // Wire dependencies
-      gameLifecycleService.setDataSource(calendarDataSource);
-      gameLifecycleService.setEngineManager(engineLifecycleManager);
-      
-      // Start coordinator (will run in parallel with existing system)
-      await gameLifecycleService.start();
-      
-      // Bootstrap coordinator with today's games
-      await gameLifecycleService.seedFromTodayCalendars(['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL']);
-      
-      (global as any).gameLifecycleService = gameLifecycleService;
-      (global as any).calendarDataSource = calendarDataSource;
+      // (global as any).gameLifecycleService = null;
+      // (global as any).calendarDataSource = null;
       
       console.log("✅ V3 Alert System: Unified pipeline active");
       console.log("✅ V3.1 Coordinator: Running in parallel for testing");

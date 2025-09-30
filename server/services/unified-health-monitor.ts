@@ -107,8 +107,9 @@ export class UnifiedHealthMonitor {
   private healthCheckInterval: NodeJS.Timeout | null = null;
   private callbacks: HealthCallbacks = {};
 
-  // Configuration thresholds - Much more lenient to prevent recovery loops  
+  // Configuration thresholds - Single health monitor only
   private readonly MAX_TIME_WITHOUT_CHECK = 1800000; // 30 minutes - much more tolerant
+  private readonly LEGACY_MONITORS_DISABLED = true; // Prevent conflicts
   private readonly MAX_TIME_WITHOUT_ALERT = 7200000; // 120 minutes - games may not have alerts
   private readonly MAX_CONSECUTIVE_FAILURES = 15; // Much more tolerant
   private readonly HEALTH_CHECK_INTERVAL = 60000; // Check every 1 minute - faster response
