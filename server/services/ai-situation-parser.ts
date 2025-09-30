@@ -5,6 +5,8 @@
  * from play-by-play text when ESPN's structured data is unavailable.
  */
 
+import { openaiApiCircuit, protectedFetch } from '../middleware/circuit-breaker';
+
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 export interface ParsedSituation {
@@ -20,6 +22,7 @@ export class AISituationParser {
   private static instance: AISituationParser;
   private parseCache = new Map<string, { data: ParsedSituation; timestamp: number }>();
   private readonly CACHE_TTL = 30000; // 30 second cache
+  private apiKeyWarningShown = false;
 
   private constructor() {
     console.log('🤖 AI Situation Parser: Initialized');
@@ -41,6 +44,22 @@ export class AISituationParser {
     homeTeamAbbrev: string,
     awayTeamAbbrev: string
   ): Promise<ParsedSituation> {
+    // Check if OpenAI API key is configured
+    if (!OPENAI_API_KEY) {
+      if (!this.apiKeyWarningShown) {
+        console.warn('⚠️ AI Parser: OPENAI_API_KEY not configured, AI parsing disabled');
+        this.apiKeyWarningShown = true;
+      }
+      return {
+        down: null,
+        yardsToGo: null,
+        fieldPosition: null,
+        possession: null,
+        confidence: 0,
+        parsedFrom: 'ai'
+      };
+    }
+    
     // Check cache first
     const cacheKey = `${gameId}_${playText}`;
     const cached = this.parseCache.get(cacheKey);
@@ -78,29 +97,33 @@ Return ONLY a JSON object with these exact fields:
   "confidence": number 0-1
 }`;
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an NFL data extraction expert. Extract structured game situation data from play-by-play text. Return only valid JSON.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          response_format: { type: 'json_object' },
-          temperature: 0.1,
-          max_tokens: 150
-        })
-      });
+      const response = await protectedFetch(
+        openaiApiCircuit,
+        'https://api.openai.com/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${OPENAI_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              {
+                role: 'system',
+                content: 'You are an NFL data extraction expert. Extract structured game situation data from play-by-play text. Return only valid JSON.'
+              },
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            response_format: { type: 'json_object' },
+            temperature: 0.1,
+            max_tokens: 150
+          })
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);

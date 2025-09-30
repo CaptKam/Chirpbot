@@ -72,7 +72,7 @@ export class NBAApiService extends BaseSportApi {
     return `${this.config.baseUrl}/summary?event=${gameId}`;
   }
 
-  protected parseEnhancedGameResponse(data: any, gameId: string): any {
+  protected async parseEnhancedGameResponse(data: any, gameId: string): Promise<any> {
     // Extract game information similar to WNBA pattern but for NBA
     const competition = data.header?.competitions?.[0];
     const boxscore = data.boxscore?.teams || [];

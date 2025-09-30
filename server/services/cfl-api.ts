@@ -72,7 +72,7 @@ export class CFLApiService extends BaseSportApi {
     return `${this.config.baseUrl}/summary?event=${gameId}`;
   }
 
-  protected parseEnhancedGameResponse(data: any, gameId: string): any {
+  protected async parseEnhancedGameResponse(data: any, gameId: string): Promise<any> {
     // CFL enhanced data - basic structure for Canadian Football League
     const competition = data.header?.competitions?.[0];
     

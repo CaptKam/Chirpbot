@@ -91,7 +91,7 @@ export abstract class BaseSportApi {
   protected abstract buildTodaysGamesUrl(targetDate: string): string;
   protected abstract parseGamesResponse(data: any): BaseGameData[];
   protected abstract buildEnhancedGameUrl(gameId: string): string;
-  protected abstract parseEnhancedGameResponse(data: any, gameId: string): any;
+  protected abstract parseEnhancedGameResponse(data: any, gameId: string): Promise<any>;
 
   // Shared rate limiting logic
   protected canMakeCall(endpoint: string, gameState: string = 'default'): boolean {
@@ -340,7 +340,7 @@ export abstract class BaseSportApi {
       const url = this.buildEnhancedGameUrl(gameId);
       const data = await this.requestJson(url);
 
-      const enhancedData = this.parseEnhancedGameResponse(data, gameId);
+      const enhancedData = await this.parseEnhancedGameResponse(data, gameId);
 
       // Cache the result with state-specific TTL
       this.setCache(cacheKey, enhancedData, gameState);

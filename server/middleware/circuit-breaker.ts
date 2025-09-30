@@ -166,6 +166,12 @@ export const weatherApiCircuit = new CircuitBreaker('WEATHER_API', {
   requestTimeout: 3000
 });
 
+export const openaiApiCircuit = new CircuitBreaker('OPENAI_API', {
+  failureThreshold: 3,  // Conservative for AI calls
+  recoveryTimeout: 60000, // 1 minute recovery
+  requestTimeout: 10000   // 10 seconds for AI responses
+});
+
 // Helper function to wrap fetch with circuit breaker
 export async function protectedFetch(
   circuit: CircuitBreaker,

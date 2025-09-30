@@ -77,7 +77,7 @@ export class NCAAFApiService extends BaseSportApi {
     return `${this.config.baseUrl}/summary?event=${gameId}`;
   }
 
-  protected parseEnhancedGameResponse(data: any, gameId: string): any {
+  protected async parseEnhancedGameResponse(data: any, gameId: string): Promise<any> {
     const competitions = data.header?.competitions?.[0] || {};
     const situation = competitions.situation || {};
     

@@ -1,6 +1,7 @@
 import { getPacificDate } from '../utils/timezone';
 import { espnApiCircuit, protectedFetch } from '../middleware/circuit-breaker';
 import { BaseSportApi, type BaseGameData } from './base-sport-api';
+import { aiSituationParser } from './ai-situation-parser';
 
 export class NFLApiService extends BaseSportApi {
   constructor() {
@@ -78,7 +79,7 @@ export class NFLApiService extends BaseSportApi {
     return `${this.config.baseUrl}/summary?event=${gameId}`;
   }
 
-  protected parseEnhancedGameResponse(data: any, gameId: string): any {
+  protected async parseEnhancedGameResponse(data: any, gameId: string): Promise<any> {
     const header = data.header || {};
     const competitions = data.header?.competitions?.[0] || {};
     const situation = competitions.situation || {};
@@ -136,8 +137,14 @@ export class NFLApiService extends BaseSportApi {
     
     // Strategy 1: Extract from plays data if available
     const drives = data.drives?.current || data.drives?.previous?.[0];
+    let lastPlayText: string | null = null;
+    
     if (drives?.plays?.length > 0) {
       const lastPlay = drives.plays[drives.plays.length - 1];
+      
+      // Extract play text for AI parsing
+      lastPlayText = lastPlay.text || null;
+      
       if (lastPlay.participants?.length > 0) {
         const primaryParticipant = lastPlay.participants[0];
         currentPlayer = primaryParticipant.athlete?.displayName || primaryParticipant.athlete?.fullName;
@@ -226,20 +233,113 @@ export class NFLApiService extends BaseSportApi {
       }
     }
 
+    // AI FALLBACK: Use AI to parse situation from play text if structured data is missing
+    let aiParsedDown = down;
+    let aiParsedYardsToGo = yardsToGo;
+    let aiParsedFieldPosition = fieldPosition;
+    let aiParsedPossession = possession;
+    let aiParsedPossessionSide = possessionSide;
+    let aiParsedPossessionTeamAbbrev = possessionTeamAbbrev;
+    let usedAIParsing = false;
+    
+    // Only use AI if we're missing critical situation data AND we have play text
+    // Use nullish checks to avoid false positives (e.g., fieldPosition=0 is valid)
+    const hasMissingSituationData = down == null || yardsToGo == null || fieldPosition == null || possession == null;
+    
+    if (hasMissingSituationData && lastPlayText && homeCompetitor && awayCompetitor) {
+      console.log(`🤖 NFL: ESPN situation incomplete for game ${gameId}, attempting AI parsing...`);
+      console.log(`🤖 NFL: Play text: "${lastPlayText}"`);
+      
+      try {
+        const aiResult = await aiSituationParser.parseSituationFromText(
+          lastPlayText,
+          gameId,
+          homeCompetitor.team.abbreviation,
+          awayCompetitor.team.abbreviation
+        );
+        
+        console.log(`🤖 NFL: AI parsing result:`, aiResult);
+        
+        // Only use AI results if they have reasonable confidence (>0.5)
+        if (aiResult.confidence > 0.5) {
+          // Use AI results for missing fields only (nullish checks to avoid false negatives)
+          if (down == null && aiResult.down != null) {
+            aiParsedDown = aiResult.down;
+            console.log(`✅ NFL: AI provided down=${aiResult.down}`);
+          }
+          if (yardsToGo == null && aiResult.yardsToGo != null) {
+            aiParsedYardsToGo = aiResult.yardsToGo;
+            console.log(`✅ NFL: AI provided yardsToGo=${aiResult.yardsToGo}`);
+          }
+          if (fieldPosition == null && aiResult.fieldPosition != null) {
+            aiParsedFieldPosition = aiResult.fieldPosition;
+            console.log(`✅ NFL: AI provided fieldPosition=${aiResult.fieldPosition}`);
+          }
+          if (possession == null && aiResult.possession) {
+            // Normalize AI possession for comparison (trim, uppercase)
+            const normalizedAI = aiResult.possession.trim().toUpperCase();
+            const homeAbbrev = homeCompetitor.team.abbreviation.toUpperCase();
+            const awayAbbrev = awayCompetitor.team.abbreviation.toUpperCase();
+            
+            // Map AI possession abbreviation to team ID
+            if (normalizedAI === homeAbbrev) {
+              aiParsedPossession = homeCompetitor.team.id.toString();
+              aiParsedPossessionSide = 'home';
+              aiParsedPossessionTeamAbbrev = homeCompetitor.team.abbreviation;
+              possessionTeamId = homeCompetitor.team.id.toString();
+              console.log(`✅ NFL: AI provided possession=home (${aiResult.possession})`);
+            } else if (normalizedAI === awayAbbrev) {
+              aiParsedPossession = awayCompetitor.team.id.toString();
+              aiParsedPossessionSide = 'away';
+              aiParsedPossessionTeamAbbrev = awayCompetitor.team.abbreviation;
+              possessionTeamId = awayCompetitor.team.id.toString();
+              console.log(`✅ NFL: AI provided possession=away (${aiResult.possession})`);
+            }
+            
+            // Re-run roster lookup if AI provided possession and we don't have a QB yet
+            if (possessionTeamId && !currentQuarterback && data.rosters) {
+              const possessingTeamRoster = data.rosters.find((r: any) => 
+                r.team?.id?.toString() === possessionTeamId
+              );
+              if (possessingTeamRoster?.roster?.length > 0) {
+                const qb = possessingTeamRoster.roster.find((p: any) => 
+                  p.position?.abbreviation === 'QB' || p.position?.displayName?.includes('Quarter')
+                );
+                if (qb) {
+                  currentQuarterback = qb.athlete?.displayName || qb.athlete?.fullName;
+                  if (!currentPlayer) currentPlayer = currentQuarterback;
+                  console.log(`✅ NFL: Roster lookup after AI - found QB: ${currentQuarterback}`);
+                }
+              }
+            }
+          }
+          
+          usedAIParsing = true;
+        } else {
+          console.log(`⚠️ NFL: AI confidence too low (${aiResult.confidence}), ignoring results`);
+        }
+      } catch (error) {
+        console.error(`❌ NFL: AI parsing failed for game ${gameId}:`, error);
+      }
+    }
+
     console.log(`🔍 NFL enhanced data for game ${gameId}:`, {
-      quarter, timeRemaining, down, yardsToGo, fieldPosition, possession, 
-      homeScore, awayScore, currentPlayer, currentQuarterback
+      quarter, timeRemaining, 
+      down: aiParsedDown, yardsToGo: aiParsedYardsToGo, fieldPosition: aiParsedFieldPosition, 
+      possession: aiParsedPossession, 
+      homeScore, awayScore, currentPlayer, currentQuarterback,
+      usedAIParsing
     });
 
     return {
       quarter,
       timeRemaining,
-      down,
-      yardsToGo,
-      fieldPosition,
-      possession,
-      possessionSide,
-      possessionTeamAbbrev,
+      down: aiParsedDown,
+      yardsToGo: aiParsedYardsToGo,
+      fieldPosition: aiParsedFieldPosition,
+      possession: aiParsedPossession,
+      possessionSide: aiParsedPossessionSide,
+      possessionTeamAbbrev: aiParsedPossessionTeamAbbrev,
       homeScore: parseInt(homeScore) || 0,
       awayScore: parseInt(awayScore) || 0,
       gameState: competitions.status?.type?.state || 'unknown',
@@ -247,11 +347,13 @@ export class NFLApiService extends BaseSportApi {
       currentQuarterback: currentQuarterback || currentPlayer,
       preGameHomeQB,
       preGameAwayQB,
-      // Add NFL-specific contextual info
-      redZone: fieldPosition ? parseInt(fieldPosition) <= 20 : false,
-      goalLine: fieldPosition ? parseInt(fieldPosition) <= 10 : false,
-      fourthDown: down === 4,
-      twoMinuteWarning: timeRemaining && timeRemaining.includes('2:') && (quarter === 2 || quarter === 4)
+      // Add NFL-specific contextual info (using AI-parsed data if available)
+      // Use != null to avoid false negatives at field position 0 (goal line)
+      redZone: aiParsedFieldPosition != null ? parseInt(aiParsedFieldPosition.toString()) <= 20 : false,
+      goalLine: aiParsedFieldPosition != null ? parseInt(aiParsedFieldPosition.toString()) <= 10 : false,
+      fourthDown: aiParsedDown === 4,
+      twoMinuteWarning: timeRemaining && timeRemaining.includes('2:') && (quarter === 2 || quarter === 4),
+      usedAIParsing
     };
   }
 

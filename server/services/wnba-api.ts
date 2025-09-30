@@ -82,7 +82,7 @@ export class WNBAApiService extends BaseSportApi {
     return `${this.config.baseUrl}/summary?event=${gameId}`;
   }
 
-  protected parseEnhancedGameResponse(data: any, gameId: string): any {
+  protected async parseEnhancedGameResponse(data: any, gameId: string): Promise<any> {
     const game = data.boxscore?.teams || [];
     const homeTeam = game.find((t: any) => t.homeAway === 'home');
     const awayTeam = game.find((t: any) => t.homeAway === 'away');

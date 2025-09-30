@@ -71,7 +71,7 @@ export class MLBApiService extends BaseSportApi {
     return `https://statsapi.mlb.com/api/v1.1/game/${gameId}/feed/live`;
   }
 
-  protected parseEnhancedGameResponse(data: any, gameId: string): any {
+  protected async parseEnhancedGameResponse(data: any, gameId: string): Promise<any> {
     const liveData = data.liveData || {};
     const gameData = data.gameData || {};
     const linescore = liveData.linescore || {};
