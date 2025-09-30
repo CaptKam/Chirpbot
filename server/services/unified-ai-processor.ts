@@ -586,6 +586,16 @@ export class UnifiedAIProcessor {
     }
   }
 
+  // Validate if game state has complete data for AI enhancement
+  private hasCompleteGameState(context: CrossSportContext, sport: string): boolean {
+    if (sport === 'NFL' || sport === 'NCAAF' || sport === 'CFL') {
+      // For football, require down, distance, and field position for AI enhancement
+      return !!(context.down && context.yardsToGo && context.fieldPosition);
+    }
+    // Add validation for other sports as needed
+    return true; // Default to allowing AI enhancement
+  }
+
   // Main AI enhancement method (unified from CrossSportAIEnhancement)
   async enhanceAlert(context: CrossSportContext): Promise<UnifiedAIResponse> {
     const startTime = Date.now();
@@ -596,6 +606,12 @@ export class UnifiedAIProcessor {
       // Check if AI is configured
       if (!this.configured) {
         console.log(`🚫 Unified AI: DISABLED for ${context.sport} - OpenAI not configured`);
+        return this.getFallbackResponse(context, startTime);
+      }
+
+      // Skip AI enhancement if critical game state data is missing
+      if (!this.hasCompleteGameState(context, context.sport)) {
+        console.log(`⚠️ Skipping AI enhancement for ${context.sport} - insufficient game state data`);
         return this.getFallbackResponse(context, startTime);
       }
 
@@ -1207,11 +1223,11 @@ Return JSON:
       case 'CFL': {
         const ordDown = context.down ? this.getOrdinal(context.down) : '';
         const user = `${baseContext}FOOTBALL SITUATION:
-- Q${context.quarter ?? 1}, ${context.timeRemaining ?? 'Unknown'} remaining
+- Q${context.quarter ?? 1}${context.timeRemaining ? `, ${context.timeRemaining} remaining` : ''}
 ${context.down && context.yardsToGo ? `- ${ordDown} & ${context.yardsToGo}` : ''}
 ${context.redZone ? '- RED ZONE: High scoring probability' : ''}
-- Field Position: ${context.originalContext?.fieldPosition ?? 'Unknown'} yard line
-- Time Pressure: ${context.timeRemaining ?? 'Unknown'}
+${context.fieldPosition ? `- Field Position: ${context.fieldPosition} yard line` : ''}
+${context.timeRemaining ? `- Time Pressure: ${context.timeRemaining}` : ''}
 
 Return JSON:
 {
