@@ -234,13 +234,14 @@ export class GameLifecycleService {
     
     this.isRunning = true;
     
-    // Start polling scheduler
-    this.startPollingScheduler();
+    // DISABLED: Coordinator polling disabled - V3.0 CalendarSyncService handles polling
+    // The coordinator now works passively, only managing state transitions based on events
+    // this.startPollingScheduler();
     
     // Start cleanup routine
     this.startCleanupRoutine();
     
-    console.log('✅ GameLifecycleService: Started successfully');
+    console.log('✅ GameLifecycleService: Started successfully (passive mode - polling handled by V3.0 system)');
   }
   
   async stop(): Promise<void> {
@@ -337,16 +338,16 @@ export class GameLifecycleService {
       // Update game descriptor
       const previousStatus = game.descriptor.status;
       game.descriptor = {
-        gameId: gameData.gameId,
+        gameId: gameData.id,
         sport: gameData.sport,
         homeTeam: typeof gameData.homeTeam === 'string' ? gameData.homeTeam : gameData.homeTeam.name,
         awayTeam: typeof gameData.awayTeam === 'string' ? gameData.awayTeam : gameData.awayTeam.name,
-        homeScore: gameData.homeScore,
-        awayScore: gameData.awayScore,
-        startTime: gameData.scheduledStartTime,
-        status: this.mapApiStatusToDescriptorStatus(gameData.gameStatus),
+        homeScore: gameData.homeTeam.score,
+        awayScore: gameData.awayTeam.score,
+        startTime: gameData.startTime,
+        status: this.mapApiStatusToDescriptorStatus(gameData.status),
         venue: gameData.venue,
-        timezone: gameData.timezone,
+        timezone: (gameData as any).timezone || 'America/New_York',
       };
       
       game.lastPolled = new Date();
@@ -372,7 +373,10 @@ export class GameLifecycleService {
     }
   }
   
-  private mapApiStatusToDescriptorStatus(apiStatus: string): GameDescriptor['status'] {
+  private mapApiStatusToDescriptorStatus(apiStatus: string | undefined): GameDescriptor['status'] {
+    if (!apiStatus) {
+      return 'scheduled';
+    }
     const status = apiStatus.toLowerCase();
     if (status.includes('live') || status.includes('in progress') || status.includes('active')) {
       return 'live';
@@ -571,7 +575,7 @@ export class GameLifecycleService {
   // === PUBLIC API ===
   
   async registerGame(gameData: BaseGameData): Promise<void> {
-    const gameId = gameData.gameId;
+    const gameId = gameData.id;
     
     if (this.games.has(gameId)) {
       console.log(`Game ${gameId} already registered, updating...`);
@@ -583,16 +587,16 @@ export class GameLifecycleService {
     
     const game: GameStateInfo = {
       descriptor: {
-        gameId: gameData.gameId,
+        gameId: gameData.id,
         sport: gameData.sport,
         homeTeam: typeof gameData.homeTeam === 'string' ? gameData.homeTeam : gameData.homeTeam.name,
         awayTeam: typeof gameData.awayTeam === 'string' ? gameData.awayTeam : gameData.awayTeam.name,
-        homeScore: gameData.homeScore,
-        awayScore: gameData.awayScore,
-        startTime: gameData.scheduledStartTime,
-        status: this.mapApiStatusToDescriptorStatus(gameData.gameStatus),
+        homeScore: gameData.homeTeam.score,
+        awayScore: gameData.awayTeam.score,
+        startTime: gameData.startTime,
+        status: this.mapApiStatusToDescriptorStatus(gameData.status),
         venue: gameData.venue,
-        timezone: gameData.timezone,
+        timezone: (gameData as any).timezone || 'America/New_York',
       },
       currentState: GameState.SCHEDULED,
       previousState: GameState.SCHEDULED,

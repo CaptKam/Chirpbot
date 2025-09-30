@@ -120,7 +120,7 @@ export class CalendarDataSource implements ICalendarDataSource {
     }
     
     try {
-      const gameData = await apiService.fetchGameById(gameId);
+      const gameData = await apiService.getGameById(gameId);
       
       // Cache the result
       this.setCache(gameId, sport, gameData);
@@ -160,7 +160,7 @@ export class CalendarDataSource implements ICalendarDataSource {
         if (apiService.fetchBatchGames) {
           const batchData = await apiService.fetchBatchGames(uncachedIds);
           for (const gameData of batchData) {
-            this.setCache(gameData.gameId, sport, gameData);
+            this.setCache(gameData.id, sport, gameData);
             results.push(gameData);
           }
         } else {
@@ -191,11 +191,11 @@ export class CalendarDataSource implements ICalendarDataSource {
     }
     
     try {
-      const games = await apiService.fetchTodayGames();
+      const games = await apiService.getTodaysGames();
       
       // Cache all games
       for (const game of games) {
-        this.setCache(game.gameId, sport, game);
+        this.setCache(game.id, sport, game);
       }
       
       return games;
