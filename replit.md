@@ -4,6 +4,18 @@ ChirpBot V3 is an advanced multi-sport intelligence platform providing real-time
 
 # Recent Changes
 
+## September 30, 2025 - PHASE 1 RELIABILITY IMPROVEMENTS COMPLETED ✅
+- **PRODUCTION-SAFE MUTEX SYSTEM:** Implemented correct queue-based per-game and per-sport mutex locks using tail-chain pattern
+- **IDEMPOTENT TRANSITIONS:** Added early-return checks in transitionEngine to prevent "Invalid transition: ACTIVE → ACTIVE" crashes
+- **RACE CONDITION ELIMINATION:** Per-game locks wrap startEngines, stopEngines, warmupEngines, pauseEngines, terminateEngines
+- **COOLDOWN TIMER FIX:** stopEngines now clears existing cooldown timer before setting new one, preventing duplicate INACTIVE transitions
+- **STATE SERIALIZATION:** Per-sport locks ensure all state transitions for a given sport are fully serialized, no concurrent mutations
+- **ACCURATE TELEMETRY:** Error path in transitionEngine captures previousState before mutation for correct observability
+- **VERIFIED STABLE:** System running with "6 healthy, 0 errors" status after all fixes applied
+- **ARCHITECT APPROVED:** Received PASS verdict - implementation is production-safe with proper lock ordering and no deadlock potential
+- **MUTEX PATTERN:** `tail = locks.get(key) || Promise.resolve(); release; next = tail.then(() => new Promise(r => (release = r))); locks.set(key, next); await tail; return () => release();`
+- **NEXT PHASE:** Ready for safe simplification approach (merge CalendarSync/GameState/EngineLifecycle services) to reduce architectural complexity
+
 ## September 30, 2025 - NFL AI SITUATION PARSER IMPLEMENTED ✅
 - **AI FALLBACK SYSTEM:** Created OpenAI-powered situation parser to extract down/distance/field position from play text when ESPN data is missing
 - **INTELLIGENT DETECTION:** Uses nullish checks (== null) to correctly identify missing data without false positives at fieldPosition=0 (goal line)

@@ -126,6 +126,12 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
   // Per-game mutex locks to prevent race conditions
   private gameLocks: Map<string, Promise<any>> = new Map();
   
+  // Per-sport mutex locks to serialize state transitions
+  private sportLocks: Map<string, Promise<any>> = new Map();
+  
+  // Cooldown timers per sport (to cancel pending deactivations)
+  private cooldownTimers: Map<string, NodeJS.Timeout> = new Map();
+  
   constructor() {
     this.initializeAllEngines();
     this.startMonitoring();
@@ -193,26 +199,41 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
     console.log('📊 Engine monitoring started');
   }
   
-  // === PER-GAME MUTEX LOCK SYSTEM ===
+  // === MUTEX LOCK SYSTEM ===
   
   private async acquireGameLock(gameId: string): Promise<() => void> {
-    // Wait for any existing lock to release
-    while (this.gameLocks.has(gameId)) {
-      await this.gameLocks.get(gameId);
-    }
+    // Queue-based mutex: wait for tail of queue, then become the new tail
+    const tail = this.gameLocks.get(gameId) || Promise.resolve();
+    let release: () => void;
+    const next = tail.then(() => new Promise<void>(r => (release = r)));
+    this.gameLocks.set(gameId, next);
+    await tail;
     
-    // Create new lock
-    let releaseLock: () => void;
-    const lockPromise = new Promise<void>(resolve => {
-      releaseLock = resolve;
-    });
-    
-    this.gameLocks.set(gameId, lockPromise);
-    
-    // Return the release function
+    // Return release function that resolves the promise for next waiter
     return () => {
-      this.gameLocks.delete(gameId);
-      releaseLock!();
+      release!();
+      // Clean up if this was the last in queue
+      if (this.gameLocks.get(gameId) === next) {
+        this.gameLocks.delete(gameId);
+      }
+    };
+  }
+  
+  private async acquireSportLock(sport: string): Promise<() => void> {
+    // Queue-based mutex: wait for tail of queue, then become the new tail
+    const tail = this.sportLocks.get(sport) || Promise.resolve();
+    let release: () => void;
+    const next = tail.then(() => new Promise<void>(r => (release = r)));
+    this.sportLocks.set(sport, next);
+    await tail;
+    
+    // Return release function that resolves the promise for next waiter
+    return () => {
+      release!();
+      // Clean up if this was the last in queue
+      if (this.sportLocks.get(sport) === next) {
+        this.sportLocks.delete(sport);
+      }
     };
   }
   
@@ -232,6 +253,14 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
       }
       
       console.log(`🚀 Starting ${sport} engine for game ${gameInfo.gameId}`);
+      
+      // Cancel any pending cooldown timer
+      const cooldownTimer = this.cooldownTimers.get(sport);
+      if (cooldownTimer) {
+        clearTimeout(cooldownTimer);
+        this.cooldownTimers.delete(sport);
+        console.log(`⏱️ Cancelled pending cooldown for ${sport} engine`);
+      }
       
       // Add to active games
       engine.activeGames.add(gameInfo.gameId);
@@ -280,11 +309,29 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
         const result = await this.transitionEngine(sport, EngineState.COOLDOWN);
         
         if (result.success) {
-          // After cooldown, transition to inactive
-          setTimeout(async () => {
-            await this.transitionEngine(sport, EngineState.INACTIVE);
-            engine.cooldownGames.clear();
+          // Clear any existing cooldown timer first
+          const existingTimer = this.cooldownTimers.get(sport);
+          if (existingTimer) {
+            clearTimeout(existingTimer);
+            console.log(`⏱️ Cleared existing cooldown timer for ${sport}`);
+          }
+          
+          // After cooldown, transition to inactive (with race condition check)
+          const timer = setTimeout(async () => {
+            // Re-check that no games became active during cooldown
+            const currentEngine = this.engines.get(sport);
+            if (currentEngine && currentEngine.activeGames.size === 0 && currentEngine.state === EngineState.COOLDOWN) {
+              await this.transitionEngine(sport, EngineState.INACTIVE);
+              currentEngine.cooldownGames.clear();
+              this.cooldownTimers.delete(sport);
+              console.log(`✅ ${sport} engine fully deactivated after cooldown`);
+            } else {
+              console.log(`⚠️ ${sport} engine cooldown cancelled - games reactivated`);
+              this.cooldownTimers.delete(sport);
+            }
           }, this.config.shutdownTimeoutMs);
+          
+          this.cooldownTimers.set(sport, timer);
           
           console.log(`✅ ${sport} engine stopped successfully`);
           this.totalEnginesStopped++;
@@ -343,14 +390,17 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
   }
   
   async pauseEngines(gameInfo: GameStateInfo): Promise<boolean> {
-    const sport = gameInfo.sport.toUpperCase();
-    const engine = this.engines.get(sport);
-    
-    if (!engine || !engine.instance) {
-      return false;
-    }
+    // Acquire per-game lock to prevent race conditions
+    const releaseLock = await this.acquireGameLock(gameInfo.gameId);
     
     try {
+      const sport = gameInfo.sport.toUpperCase();
+      const engine = this.engines.get(sport);
+      
+      if (!engine || !engine.instance) {
+        return false;
+      }
+      
       console.log(`⏸️ Pausing ${sport} engine for game ${gameInfo.gameId}`);
       
       // Engine pausing handled by direct state management
@@ -358,21 +408,34 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
       
       return true;
     } catch (error) {
-      console.error(`❌ Error pausing ${sport} engine:`, error);
+      console.error(`❌ Error pausing ${gameInfo.sport.toUpperCase()} engine:`, error);
       return false;
+    } finally {
+      releaseLock();
     }
   }
   
   async terminateEngines(gameInfo: GameStateInfo): Promise<boolean> {
-    const sport = gameInfo.sport.toUpperCase();
-    const engine = this.engines.get(sport);
-    
-    if (!engine) {
-      return false;
-    }
+    // Acquire per-game lock to prevent race conditions
+    const releaseLock = await this.acquireGameLock(gameInfo.gameId);
     
     try {
+      const sport = gameInfo.sport.toUpperCase();
+      const engine = this.engines.get(sport);
+      
+      if (!engine) {
+        return false;
+      }
+      
       console.log(`🔚 Terminating ${sport} engine for game ${gameInfo.gameId}`);
+      
+      // Cancel any pending cooldown timer
+      const cooldownTimer = this.cooldownTimers.get(sport);
+      if (cooldownTimer) {
+        clearTimeout(cooldownTimer);
+        this.cooldownTimers.delete(sport);
+        console.log(`⏱️ Cancelled pending cooldown for ${sport} engine`);
+      }
       
       // Remove from all game sets
       engine.activeGames.delete(gameInfo.gameId);
@@ -387,29 +450,34 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
       
       return true;
     } catch (error) {
-      console.error(`❌ Error terminating ${sport} engine:`, error);
+      console.error(`❌ Error terminating ${gameInfo.sport.toUpperCase()} engine:`, error);
       return false;
+    } finally {
+      releaseLock();
     }
   }
   
   // === ENGINE STATE TRANSITIONS ===
   
   private async transitionEngine(sport: string, targetState: EngineState): Promise<EngineTransitionResult> {
-    const engine = this.engines.get(sport);
-    if (!engine) {
-      return {
-        success: false,
-        previousState: EngineState.INACTIVE,
-        newState: EngineState.INACTIVE,
-        sport,
-        error: `Engine not found for sport: ${sport}`,
-      };
-    }
-    
-    const previousState = engine.state;
-    const startTime = Date.now();
+    // Acquire per-sport lock to serialize transitions
+    const releaseSportLock = await this.acquireSportLock(sport);
     
     try {
+      const engine = this.engines.get(sport);
+      if (!engine) {
+        return {
+          success: false,
+          previousState: EngineState.INACTIVE,
+          newState: EngineState.INACTIVE,
+          sport,
+          error: `Engine not found for sport: ${sport}`,
+        };
+      }
+      
+      const previousState = engine.state;
+      const startTime = Date.now();
+      
       // IDEMPOTENCY: If already in target state, return success (no-op)
       if (previousState === targetState) {
         console.log(`✅ ${sport}: Already in ${targetState} state (idempotent transition)`);
@@ -477,16 +545,22 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
       console.error(`❌ ${sport}: Transition failed:`, error);
       this.recordEngineError(sport, error);
       
-      engine.state = EngineState.ERROR;
-      engine.lastErrorAt = new Date();
+      const engine = this.engines.get(sport);
+      const capturedPreviousState = engine?.state || EngineState.INACTIVE;
+      if (engine) {
+        engine.state = EngineState.ERROR;
+        engine.lastErrorAt = new Date();
+      }
       
       return {
         success: false,
-        previousState,
+        previousState: capturedPreviousState,
         newState: EngineState.ERROR,
         sport,
         error: error instanceof Error ? error.message : String(error),
       };
+    } finally {
+      releaseSportLock();
     }
   }
   
