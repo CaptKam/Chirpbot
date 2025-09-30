@@ -590,7 +590,16 @@ export class UnifiedAIProcessor {
   private hasCompleteGameState(context: CrossSportContext, sport: string): boolean {
     if (sport === 'NFL' || sport === 'NCAAF' || sport === 'CFL') {
       // For football, require down, distance, and field position for AI enhancement
-      return !!(context.down && context.yardsToGo && context.fieldPosition);
+      // Use explicit null/undefined checks to allow 0 values (goal line, QB kneel situations)
+      if (context.down == null || context.yardsToGo == null || context.fieldPosition == null) {
+        console.log(`⚠️ Missing game state for ${sport}:`, {
+          down: context.down,
+          yardsToGo: context.yardsToGo,
+          fieldPosition: context.fieldPosition
+        });
+        return false;
+      }
+      return true;
     }
     // Add validation for other sports as needed
     return true; // Default to allowing AI enhancement
