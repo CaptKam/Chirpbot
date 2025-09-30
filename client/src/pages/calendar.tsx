@@ -247,8 +247,10 @@ export default function Calendar() {
     enabled: !!userId, // Only run query if user is authenticated
   });
 
-  // Filter monitored games by active sport on the frontend
-  const monitoredGames = allMonitoredGames?.filter((game: any) => game.sport === activeSport) || [];
+  // Filter monitored games by active sport on the frontend (case-insensitive)
+  const monitoredGames = allMonitoredGames?.filter((game: any) => 
+    (game.sport || '').toUpperCase() === activeSport.toUpperCase()
+  ) || [];
 
   // Sync selected games with persisted monitored games
   useEffect(() => {
@@ -296,10 +298,10 @@ export default function Calendar() {
       removeMonitoringMutation.mutate(gameId);
     } else {
       newSelected.add(gameId);
-      // Add to database
+      // Add to database (normalize sport to uppercase)
       addMonitoringMutation.mutate({
         gameId,
-        sport: activeSport,
+        sport: activeSport.toUpperCase(),
         homeTeamName: game.homeTeam.name,
         awayTeamName: game.awayTeam.name
       });
