@@ -87,11 +87,11 @@ export class NFLApiService extends BaseSportApi {
     // DEBUG: Log the raw situation object from ESPN
     console.log(`🔍 DEBUG ESPN situation object for game ${gameId}:`, JSON.stringify(situation, null, 2));
     
-    // Extract game situation details
-    const down = situation.down || null;
-    const yardsToGo = situation.distance || null;
-    const fieldPosition = situation.yardLine || null;
-    const possession = situation.possession || null;
+    // Extract game situation details (use ?? to preserve 0 values)
+    const down = situation.down != null ? Number(situation.down) : null;
+    const yardsToGo = situation.distance != null ? Number(situation.distance) : null;
+    const fieldPosition = situation.yardLine != null ? Number(situation.yardLine) : null;
+    const possession = situation.possession ?? null;
     const quarter = competitions.status?.period || 0;
     const timeRemaining = competitions.status?.displayClock || '';
     
@@ -138,12 +138,23 @@ export class NFLApiService extends BaseSportApi {
     // Strategy 1: Extract from plays data if available
     const drives = data.drives?.current || data.drives?.previous?.[0];
     let lastPlayText: string | null = null;
+    let playDown: number | null = null;
+    let playYardsToGo: number | null = null;
     
     if (drives?.plays?.length > 0) {
       const lastPlay = drives.plays[drives.plays.length - 1];
       
       // Extract play text for AI parsing
       lastPlayText = lastPlay.text || null;
+      
+      // Extract down and distance from play metadata (use ?? to preserve 0 values)
+      if (lastPlay.start) {
+        playDown = lastPlay.start.down != null ? Number(lastPlay.start.down) : null;
+        playYardsToGo = lastPlay.start.distance != null ? Number(lastPlay.start.distance) : null;
+        if (playDown != null || playYardsToGo != null) {
+          console.log(`✅ NFL extracted from play metadata: down=${playDown}, yardsToGo=${playYardsToGo}`);
+        }
+      }
       
       if (lastPlay.participants?.length > 0) {
         const primaryParticipant = lastPlay.participants[0];
@@ -234,17 +245,25 @@ export class NFLApiService extends BaseSportApi {
     }
 
     // AI FALLBACK: Use AI to parse situation from play text if structured data is missing
-    let aiParsedDown = down;
-    let aiParsedYardsToGo = yardsToGo;
+    // First, use play metadata if available
+    let aiParsedDown = down ?? playDown;
+    let aiParsedYardsToGo = yardsToGo ?? playYardsToGo;
     let aiParsedFieldPosition = fieldPosition;
     let aiParsedPossession = possession;
     let aiParsedPossessionSide = possessionSide;
     let aiParsedPossessionTeamAbbrev = possessionTeamAbbrev;
     let usedAIParsing = false;
+    let usedPlayMetadata = false;
     
-    // Only use AI if we're missing critical situation data AND we have play text
+    // Track if we used play metadata
+    if ((down == null && playDown != null) || (yardsToGo == null && playYardsToGo != null)) {
+      usedPlayMetadata = true;
+      console.log(`✅ NFL: Using play metadata for missing situation data`);
+    }
+    
+    // Only use AI if we're STILL missing critical situation data AND we have play text
     // Use nullish checks to avoid false positives (e.g., fieldPosition=0 is valid)
-    const hasMissingSituationData = down == null || yardsToGo == null || fieldPosition == null || possession == null;
+    const hasMissingSituationData = aiParsedDown == null || aiParsedYardsToGo == null || fieldPosition == null || possession == null;
     
     if (hasMissingSituationData && lastPlayText && homeCompetitor && awayCompetitor) {
       console.log(`🤖 NFL: ESPN situation incomplete for game ${gameId}, attempting AI parsing...`);
@@ -328,7 +347,7 @@ export class NFLApiService extends BaseSportApi {
       down: aiParsedDown, yardsToGo: aiParsedYardsToGo, fieldPosition: aiParsedFieldPosition, 
       possession: aiParsedPossession, 
       homeScore, awayScore, currentPlayer, currentQuarterback,
-      usedAIParsing
+      usedPlayMetadata, usedAIParsing
     });
 
     return {
@@ -353,6 +372,7 @@ export class NFLApiService extends BaseSportApi {
       goalLine: aiParsedFieldPosition != null ? parseInt(aiParsedFieldPosition.toString()) <= 10 : false,
       fourthDown: aiParsedDown === 4,
       twoMinuteWarning: timeRemaining && timeRemaining.includes('2:') && (quarter === 2 || quarter === 4),
+      usedPlayMetadata,
       usedAIParsing
     };
   }
