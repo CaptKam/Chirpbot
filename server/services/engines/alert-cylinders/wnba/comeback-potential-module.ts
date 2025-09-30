@@ -34,11 +34,7 @@ export default class ComebackPotentialModule extends BaseAlertModule {
 
   // Anti-spam: require condition to persist this long before (re)firing
   private readonly PERSISTENCE_SEC = 20;
-  // Anti-spam: cooldown per game/scenario key
-  private readonly COOLDOWN_MS = 120_000;
 
-  // Track last time we fired per (gameId + scenarioKey)
-  private readonly lastFire = new Map<string, number>();
   // Track when scenario condition first became true to enforce persistence
   private readonly firstSeenTrue = new Map<string, number>();
 
@@ -123,14 +119,9 @@ export default class ComebackPotentialModule extends BaseAlertModule {
 
     if (seenSince < this.PERSISTENCE_SEC) return false;
 
-    // Cooldown
-    const last = this.lastFire.get(key) || 0;
-    if (now - last < this.COOLDOWN_MS) return false;
-
     // Optional: In very late Q4, tighten minimal deficit to avoid garbage time noise
     if (q === 4 && tQ < 90 && deficit < 4) return false;
 
-    this.lastFire.set(key, now);
     return true;
   }
 

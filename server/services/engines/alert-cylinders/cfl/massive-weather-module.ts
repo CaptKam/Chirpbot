@@ -10,13 +10,11 @@ export default class MassiveWeatherModule extends BaseAlertModule {
       condition: string;
       precipitation: boolean;
       severity: number;
-      lastAlertTime: number;
       lastMeasurement: number;
     } 
   } = {};
 
   // Alert thresholds for severe weather
-  private readonly ALERT_COOLDOWN = 15 * 60 * 1000; // 15 minutes between weather alerts
   private readonly MEASUREMENT_INTERVAL = 3 * 60 * 1000; // Check every 3 minutes
   private readonly SEVERE_WEATHER_CONDITIONS = [
     'thunderstorm', 'heavy rain', 'storm', 'severe', 'tornado',
@@ -44,7 +42,6 @@ export default class MassiveWeatherModule extends BaseAlertModule {
         condition: currentCondition,
         precipitation: this.hasPrecipitation(currentCondition),
         severity: currentSeverity,
-        lastAlertTime: 0,
         lastMeasurement: now
       };
       
@@ -54,15 +51,6 @@ export default class MassiveWeatherModule extends BaseAlertModule {
 
     // Check if enough time has passed since last measurement
     if (now - previous.lastMeasurement < this.MEASUREMENT_INTERVAL) {
-      return false;
-    }
-
-    // Check cooldown
-    if (now - previous.lastAlertTime < this.ALERT_COOLDOWN) {
-      // Update measurement but don't alert
-      this.previousWeatherData[gameId].condition = currentCondition;
-      this.previousWeatherData[gameId].severity = currentSeverity;
-      this.previousWeatherData[gameId].lastMeasurement = now;
       return false;
     }
 
@@ -77,7 +65,6 @@ export default class MassiveWeatherModule extends BaseAlertModule {
         condition: currentCondition,
         precipitation: this.hasPrecipitation(currentCondition),
         severity: currentSeverity,
-        lastAlertTime: now,
         lastMeasurement: now
       };
       return true;

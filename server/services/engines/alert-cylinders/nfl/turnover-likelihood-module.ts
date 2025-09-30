@@ -9,12 +9,10 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
   // Tunables
   private readonly MIN_RISK_TO_TRIGGER = 34;     // gate to emit
   private readonly HYSTERESIS = 6;               // drop below (34-6) to re-arm
-  private readonly COOLDOWN_MS = 120_000;        // per-signature cooloff
   private readonly MAX_RISK = 75;                // clamp
 
   // State
   private lastRiskByGame = new Map<string, number>();         // gameId -> last risk
-  private lastSentAtByKey = new Map<string, number>();        // alertKey -> ts
 
   // Down & distance base table (capped at 10 yards)
   private readonly DOWN_DISTANCE_RISK: Record<number, number[]> = {
@@ -56,12 +54,6 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
 
     const signature = this.buildSignature(gs); // stable key segments
     const alertKey = `${gs.gameId}:${this.alertType}:${signature}`;
-
-    // simple per-signature cooldown (extra safety beyond global dedupe)
-    const now = Date.now();
-    const lastAt = this.lastSentAtByKey.get(alertKey);
-    if (lastAt && now - lastAt < this.COOLDOWN_MS) return null;
-    this.lastSentAtByKey.set(alertKey, now);
 
     const message = this.composeMessage(gs, risk, riskLevel, factors[0]);
 
