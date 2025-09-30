@@ -29,6 +29,17 @@ export default class ScoringOpportunityModule extends BaseAlertModule {
       return false;
     }
     
+    // Enhanced triggering logic - also consider late innings and close games
+    const isLateInning = (gameState.inning || 1) >= 6;
+    const scoreDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
+    const isCloseGame = scoreDiff <= 3;
+    
+    // Trigger for high-leverage situations even with only one runner
+    if (isLateInning && isCloseGame && gameState.outs <= 1) {
+      console.log(`🎯 MLB HIGH-LEVERAGE SCORING OPPORTUNITY! Late inning + close game`);
+      return true;
+    }
+    
     console.log(`🎯 MLB SCORING OPPORTUNITY TRIGGERED! Runners: 2nd=${hasRunnerSecond}, 3rd=${hasRunnerThird}`);
     return true;
   }

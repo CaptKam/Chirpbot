@@ -34,7 +34,9 @@ const ALERT_TYPE_CONFIG: Record<string, any[]> = {
     { key: 'MLB_BASES_LOADED_NO_OUTS', label: 'Bases Loaded, 0 Outs', description: '86% scoring probability situation' },
     { key: 'MLB_RUNNER_ON_THIRD_ONE_OUT', label: 'Runner on 3rd, 1 Out', description: '66% scoring probability situation' },
     { key: 'MLB_SECOND_AND_THIRD_ONE_OUT', label: '2nd & 3rd, 1 Out', description: '68% scoring probability situation' },
-    { key: 'MLB_BASES_LOADED_ONE_OUT', label: 'Bases Loaded, 1 Out', description: '66% scoring probability situation' }
+    { key: 'MLB_BASES_LOADED_ONE_OUT', label: 'Bases Loaded, 1 Out', description: '66% scoring probability situation' },
+    { key: 'MLB_MOMENTUM_SHIFT', label: 'Momentum Shift', description: 'Multi-run innings and comeback scenarios' },
+    { key: 'MLB_CLUTCH_SITUATION', label: 'Clutch Situation', description: 'High-pressure late-inning moments' }
   ],
   NCAAF: [
     { key: 'NCAAF_GAME_START', label: 'Game Start', description: 'Alert when NCAAF game begins' },

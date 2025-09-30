@@ -480,6 +480,8 @@ export const storage = {
           'MLB_LATE_INNING_CLOSE': true,
           'MLB_SCORING_OPPORTUNITY': true,
           'MLB_PITCHING_CHANGE': true,
+          'MLB_MOMENTUM_SHIFT': true,
+          'MLB_CLUTCH_SITUATION': true,
           // AI Enhancement alerts (available for MLB)
           'AI_ENHANCED_MESSAGES': true,
           'AI_PREDICTIVE_AT_BAT': true,

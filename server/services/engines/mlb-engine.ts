@@ -35,14 +35,14 @@ export class MLBEngine extends BaseSportEngine {
       const gameId = gameState.gameId;
       const inning = gameState.inning || 1;
       const outs = gameState.outs || 0;
-      
+
       // Track batter performance if we have current batter info
       if (gameState.currentBatter && gameState.lastPlay?.description) {
         const outcome = this.parsePlayOutcome(gameState.lastPlay.description);
         if (outcome) {
           // Check for RISP (runners on 2nd or 3rd, NOT 1st)
           const runnersInScoringPosition = gameState.hasSecond || gameState.hasThird;
-          
+
           mlbPerformanceTracker.updateBatterPerformance(
             gameId,
             gameState.currentBatterId || `batter_${gameState.currentBatter.replace(/\s+/g, '_')}`,
@@ -61,7 +61,7 @@ export class MLBEngine extends BaseSportEngine {
           );
         }
       }
-      
+
       // Track pitcher performance with proper stats
       if (gameState.currentPitcher && gameState.lastPitch?.call) {
         const pitchOutcome = this.parsePitchOutcome(gameState.lastPitch.call);
@@ -84,15 +84,15 @@ export class MLBEngine extends BaseSportEngine {
           );
         }
       }
-      
+
       // Track team momentum for various events
       const scoringTeam = gameState.isTopInning ? gameState.awayTeam : gameState.homeTeam;
       const teamId = gameState.isTopInning ? 'away' : 'home';
-      
+
       // Parse last play for various team events
       if (gameState.lastPlay?.description) {
         const play = gameState.lastPlay.description.toLowerCase();
-        
+
         // Check for different event types
         if (play.includes('scores') || play.includes('run')) {
           const runs = this.extractRBIs(play) || 1;
@@ -153,7 +153,7 @@ export class MLBEngine extends BaseSportEngine {
           );
         }
       }
-      
+
       // Check for inning end (3 outs)
       if (outs === 3 || gameState.inningJustEnded) {
         mlbPerformanceTracker.updateTeamMomentum(
@@ -167,24 +167,24 @@ export class MLBEngine extends BaseSportEngine {
           }
         );
       }
-      
+
       // Clean up old games periodically
       mlbPerformanceTracker.cleanupOldGames();
-      
+
     } catch (error) {
       console.error('❌ MLB Performance tracking error:', error);
       // Don't let tracking errors stop alert generation
     }
   }
-  
+
   /**
    * Parse play outcome from play description
    */
   private parsePlayOutcome(playDescription: string): { type: 'hit' | 'walk' | 'strikeout' | 'out' | 'homerun' | 'double' | 'triple'; rbis?: number } | null {
     if (!playDescription) return null;
-    
+
     const play = playDescription.toLowerCase();
-    
+
     if (play.includes('home run') || play.includes('homer')) {
       const rbis = this.extractRBIs(play);
       return { type: 'homerun', rbis };
@@ -195,22 +195,22 @@ export class MLBEngine extends BaseSportEngine {
     if (play.includes('walk') || play.includes('bb')) return { type: 'walk' };
     if (play.includes('strikes out') || play.includes('struck out')) return { type: 'strikeout' };
     if (play.includes('grounds out') || play.includes('flies out') || play.includes('lines out')) return { type: 'out' };
-    
+
     return null;
   }
-  
+
   /**
    * Parse pitch outcome from pitch description
    */
   private parsePitchOutcome(pitchDescription: string): { type: 'strike' | 'ball' | 'foul' | 'hit' | 'homerun'; velocity?: number } | null {
     if (!pitchDescription) return null;
-    
+
     const pitch = pitchDescription.toLowerCase();
-    
+
     // Extract velocity if present
     const velocityMatch = pitch.match(/(\d+)\s*mph/);
     const velocity = velocityMatch ? parseInt(velocityMatch[1]) : undefined;
-    
+
     if (pitch.includes('strike')) return { type: 'strike', velocity };
     if (pitch.includes('ball')) return { type: 'ball', velocity };
     if (pitch.includes('foul')) return { type: 'foul', velocity };
@@ -218,17 +218,17 @@ export class MLBEngine extends BaseSportEngine {
     if (pitch.includes('hit') || pitch.includes('single') || pitch.includes('double') || pitch.includes('triple')) {
       return { type: 'hit', velocity };
     }
-    
+
     return null;
   }
-  
+
   /**
    * Extract RBI count from play description
    */
   private extractRBIs(playDescription: string): number {
     const rbiMatch = playDescription.match(/(\d+)\s*rbi/i);
     if (rbiMatch) return parseInt(rbiMatch[1]);
-    
+
     // Check for specific RBI indicators
     if (playDescription.includes('grand slam')) return 4;
     if (playDescription.includes('scores') || playDescription.includes('driven in')) {
@@ -236,10 +236,10 @@ export class MLBEngine extends BaseSportEngine {
       const scoreMatches = playDescription.match(/scores/gi);
       return scoreMatches ? scoreMatches.length : 1;
     }
-    
+
     return 0;
   }
-  
+
 
 
 
@@ -270,7 +270,9 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_PITCHING_CHANGE',
         'MLB_BASES_LOADED_TWO_OUTS',
         'MLB_HIGH_SCORING_SITUATION',
-        'MLB_STRIKEOUT'
+        'MLB_STRIKEOUT',
+        'MLB_MOMENTUM_SHIFT',
+        'MLB_CLUTCH_SITUATION'
       ];
 
       if (!validMLBAlerts.includes(alertType)) {
@@ -362,11 +364,11 @@ export class MLBEngine extends BaseSportEngine {
 
       // Update performance tracking before generating alerts
       this.updatePerformanceTracking(enhancedGameState);
-      
+
       // Get performance context for enriching alerts
       const performanceSummary = mlbPerformanceTracker.getGamePerformanceSummary(enhancedGameState.gameId);
       const unusualPatterns = performanceSummary ? performanceSummary.unusualPatterns : [];
-      
+
       if (unusualPatterns.length > 0) {
         console.log(`🎯 MLB Unusual patterns detected for game ${enhancedGameState.gameId}:`, unusualPatterns);
       }
@@ -387,7 +389,7 @@ export class MLBEngine extends BaseSportEngine {
               alert.context.batterPerformance = batterSummary;
             }
           }
-          
+
           // Add pitcher performance if relevant
           if (enhancedGameState.currentPitcher && performanceSummary.pitchers.size > 0) {
             const pitcherSummary = mlbPerformanceTracker.getPitcherSummary(
@@ -398,7 +400,7 @@ export class MLBEngine extends BaseSportEngine {
               alert.context.pitcherPerformance = pitcherSummary;
             }
           }
-          
+
           // Add team momentum if significant
           const teamId = enhancedGameState.isTopInning ? 'away' : 'home';
           const momentumSummary = mlbPerformanceTracker.getTeamMomentumSummary(
@@ -408,7 +410,7 @@ export class MLBEngine extends BaseSportEngine {
           if (momentumSummary) {
             alert.context.teamMomentum = momentumSummary;
           }
-          
+
           // Add unusual patterns if any
           if (unusualPatterns.length > 0) {
             alert.context.unusualPatterns = unusualPatterns;
@@ -592,7 +594,7 @@ export class MLBEngine extends BaseSportEngine {
     return enhancedAlerts;
   }
 
-  // Initialize alert modules based on user's enabled preferences
+  // Initialize alert cylinder modules for specific alert type
   async initializeForUser(userId: string): Promise<void> {
     try {
       // Get user's enabled alert types - use uppercase 'MLB' to match database
@@ -628,7 +630,9 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_PITCHING_CHANGE',
         'MLB_BASES_LOADED_TWO_OUTS',
         'MLB_HIGH_SCORING_SITUATION',
-        'MLB_STRIKEOUT'
+        'MLB_STRIKEOUT',
+        'MLB_MOMENTUM_SHIFT',
+        'MLB_CLUTCH_SITUATION'
       ];
 
       const mlbEnabledTypes = enabledTypes.filter(alertType =>
@@ -682,7 +686,9 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_PITCHING_CHANGE': './alert-cylinders/mlb/pitching-change-module.ts',
         'MLB_BASES_LOADED_TWO_OUTS': './alert-cylinders/mlb/bases-loaded-two-outs-module.ts',
         'MLB_HIGH_SCORING_SITUATION': './alert-cylinders/mlb/high-scoring-situation-module.ts',
-        'MLB_STRIKEOUT': './alert-cylinders/mlb/strikeout-module.ts'
+        'MLB_STRIKEOUT': './alert-cylinders/mlb/strikeout-module.ts',
+        'MLB_MOMENTUM_SHIFT': './alert-cylinders/mlb/momentum-shift-module.ts',
+        'MLB_CLUTCH_SITUATION': './alert-cylinders/mlb/clutch-situation-module.ts'
       };
 
       const modulePath = moduleMap[alertType];
@@ -817,7 +823,9 @@ export class MLBEngine extends BaseSportEngine {
       'MLB_PITCHING_CHANGE',
       'MLB_BASES_LOADED_TWO_OUTS',
       'MLB_HIGH_SCORING_SITUATION',
-      'MLB_STRIKEOUT'
+      'MLB_STRIKEOUT',
+      'MLB_MOMENTUM_SHIFT',
+      'MLB_CLUTCH_SITUATION'
     ];
   }
 
