@@ -234,12 +234,11 @@ export default function Calendar() {
 
   // Load persisted monitored games - require proper authentication
   const userId = user?.id;
-  const { data: monitoredGames, isLoading: isLoadingMonitored } = useQuery({
-    queryKey: [`/api/user/${userId}/monitored-games`, { sport: activeSport }],
+  const { data: allMonitoredGames, isLoading: isLoadingMonitored } = useQuery({
+    queryKey: [`/api/user/${userId}/monitored-games`],
     queryFn: async ({ queryKey }) => {
-      const [url, params] = queryKey;
-      const searchParams = new URLSearchParams(params as Record<string, string>);
-      const response = await fetch(`${url}?${searchParams}`, {
+      const [url] = queryKey;
+      const response = await fetch(url, {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch monitored games");
@@ -248,13 +247,16 @@ export default function Calendar() {
     enabled: !!userId, // Only run query if user is authenticated
   });
 
+  // Filter monitored games by active sport on the frontend
+  const monitoredGames = allMonitoredGames?.filter((game: any) => game.sport === activeSport) || [];
+
   // Sync selected games with persisted monitored games
   useEffect(() => {
-    if (monitoredGames) {
+    if (monitoredGames && monitoredGames.length >= 0) {
       const persistedGameIds = new Set<string>(monitoredGames.map((game: any) => game.gameId));
       setSelectedGames(persistedGameIds);
     }
-  }, [monitoredGames, activeSport]);
+  }, [monitoredGames]);
 
   // Add game monitoring
   const addMonitoringMutation = useMutation({
