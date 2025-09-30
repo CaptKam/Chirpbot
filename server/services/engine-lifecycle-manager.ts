@@ -123,6 +123,9 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
   private totalEnginesStopped: number = 0;
   private totalTransitions: number = 0;
   
+  // Per-game mutex locks to prevent race conditions
+  private gameLocks: Map<string, Promise<any>> = new Map();
+  
   constructor() {
     this.initializeAllEngines();
     this.startMonitoring();
@@ -190,18 +193,44 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
     console.log('📊 Engine monitoring started');
   }
   
+  // === PER-GAME MUTEX LOCK SYSTEM ===
+  
+  private async acquireGameLock(gameId: string): Promise<() => void> {
+    // Wait for any existing lock to release
+    while (this.gameLocks.has(gameId)) {
+      await this.gameLocks.get(gameId);
+    }
+    
+    // Create new lock
+    let releaseLock: () => void;
+    const lockPromise = new Promise<void>(resolve => {
+      releaseLock = resolve;
+    });
+    
+    this.gameLocks.set(gameId, lockPromise);
+    
+    // Return the release function
+    return () => {
+      this.gameLocks.delete(gameId);
+      releaseLock!();
+    };
+  }
+  
   // === INTERFACE IMPLEMENTATION (IEngineLifecycleManager) ===
   
   async startEngines(gameInfo: GameStateInfo): Promise<boolean> {
-    const sport = gameInfo.sport.toUpperCase();
-    const engine = this.engines.get(sport);
-    
-    if (!engine) {
-      console.error(`❌ Unknown sport: ${sport}`);
-      return false;
-    }
+    // Acquire per-game lock to prevent race conditions
+    const releaseLock = await this.acquireGameLock(gameInfo.gameId);
     
     try {
+      const sport = gameInfo.sport.toUpperCase();
+      const engine = this.engines.get(sport);
+      
+      if (!engine) {
+        console.error(`❌ Unknown sport: ${sport}`);
+        return false;
+      }
+      
       console.log(`🚀 Starting ${sport} engine for game ${gameInfo.gameId}`);
       
       // Add to active games
@@ -219,22 +248,27 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
         return false;
       }
     } catch (error) {
-      console.error(`❌ Error starting ${sport} engine:`, error);
-      this.recordEngineError(sport, error);
+      console.error(`❌ Error starting ${gameInfo.sport.toUpperCase()} engine:`, error);
+      this.recordEngineError(gameInfo.sport.toUpperCase(), error);
       return false;
+    } finally {
+      releaseLock();
     }
   }
   
   async stopEngines(gameInfo: GameStateInfo): Promise<boolean> {
-    const sport = gameInfo.sport.toUpperCase();
-    const engine = this.engines.get(sport);
-    
-    if (!engine) {
-      console.error(`❌ Unknown sport: ${sport}`);
-      return false;
-    }
+    // Acquire per-game lock to prevent race conditions
+    const releaseLock = await this.acquireGameLock(gameInfo.gameId);
     
     try {
+      const sport = gameInfo.sport.toUpperCase();
+      const engine = this.engines.get(sport);
+      
+      if (!engine) {
+        console.error(`❌ Unknown sport: ${sport}`);
+        return false;
+      }
+      
       console.log(`🛑 Stopping ${sport} engine for game ${gameInfo.gameId}`);
       
       // Remove from active games
@@ -264,22 +298,27 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
         return true;
       }
     } catch (error) {
-      console.error(`❌ Error stopping ${sport} engine:`, error);
-      this.recordEngineError(sport, error);
+      console.error(`❌ Error stopping ${gameInfo.sport.toUpperCase()} engine:`, error);
+      this.recordEngineError(gameInfo.sport.toUpperCase(), error);
       return false;
+    } finally {
+      releaseLock();
     }
   }
   
   async warmupEngines(gameInfo: GameStateInfo): Promise<boolean> {
-    const sport = gameInfo.sport.toUpperCase();
-    const engine = this.engines.get(sport);
-    
-    if (!engine) {
-      console.error(`❌ Unknown sport: ${sport}`);
-      return false;
-    }
+    // Acquire per-game lock to prevent race conditions
+    const releaseLock = await this.acquireGameLock(gameInfo.gameId);
     
     try {
+      const sport = gameInfo.sport.toUpperCase();
+      const engine = this.engines.get(sport);
+      
+      if (!engine) {
+        console.error(`❌ Unknown sport: ${sport}`);
+        return false;
+      }
+      
       console.log(`🔥 Pre-warming ${sport} engine for game ${gameInfo.gameId}`);
       
       // Add to pre-warm games
@@ -295,9 +334,11 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
         return false;
       }
     } catch (error) {
-      console.error(`❌ Error pre-warming ${sport} engine:`, error);
-      this.recordEngineError(sport, error);
+      console.error(`❌ Error pre-warming ${gameInfo.sport.toUpperCase()} engine:`, error);
+      this.recordEngineError(gameInfo.sport.toUpperCase(), error);
       return false;
+    } finally {
+      releaseLock();
     }
   }
   
@@ -369,6 +410,21 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
     const startTime = Date.now();
     
     try {
+      // IDEMPOTENCY: If already in target state, return success (no-op)
+      if (previousState === targetState) {
+        console.log(`✅ ${sport}: Already in ${targetState} state (idempotent transition)`);
+        return {
+          success: true,
+          previousState,
+          newState: targetState,
+          sport,
+          resourcesAllocated: {
+            memoryMB: engine.resourceUsage.memoryMB,
+            cpuPercent: engine.resourceUsage.cpuPercent,
+          },
+        };
+      }
+      
       console.log(`🔄 ${sport}: ${previousState} → ${targetState}`);
       
       // Validate transition
