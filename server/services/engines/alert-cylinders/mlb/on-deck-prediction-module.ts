@@ -4,10 +4,6 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
   alertType = 'MLB_ON_DECK_PREDICTION';
   sport = 'MLB';
 
-  // Cache to prevent alert spam
-  private lastAlertedBatter: { [gameId: string]: { batter: string; situation: string; timestamp: number } } = {};
-  private readonly ALERT_COOLDOWN = 5 * 60 * 1000; // 5 minutes between alerts for same batter
-
   // Scoring probability matrix for different situations
   private readonly SITUATION_PROBABILITIES = {
     bases_loaded: 90,
@@ -45,19 +41,9 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    // isTriggered() already called by engine - removed duplicate check
     const gameId = gameState.gameId;
     const onDeckBatter = gameState.onDeckBatter || 'Unknown';
     const situationKey = this.getSituationKey(gameState);
-    
-    // Check cooldown to prevent spam
-    const lastAlert = this.lastAlertedBatter[gameId];
-    if (lastAlert && 
-        lastAlert.batter === onDeckBatter && 
-        lastAlert.situation === situationKey &&
-        Date.now() - lastAlert.timestamp < this.ALERT_COOLDOWN) {
-      return null;
-    }
 
     // Calculate detailed probabilities
     const baseProbability = this.calculateBaseSituationProbability(gameState);
@@ -71,13 +57,6 @@ export default class OnDeckPredictionModule extends BaseAlertModule {
       gameState,
       totalProbability
     );
-
-    // Update cache
-    this.lastAlertedBatter[gameId] = {
-      batter: onDeckBatter,
-      situation: situationKey,
-      timestamp: Date.now()
-    };
 
     const alertKey = `${gameId}_on_deck_${onDeckBatter.replace(/\s+/g, '_')}_${situationKey}_${gameState.inning}_${gameState.outs}`;
 

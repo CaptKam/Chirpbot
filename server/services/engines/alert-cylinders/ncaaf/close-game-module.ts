@@ -4,10 +4,6 @@ import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 export default class CloseGameModule extends BaseAlertModule {
   alertType = 'NCAAF_CLOSE_GAME';
   sport = 'NCAAF';
-  
-  // Track last alert to avoid spam
-  private lastAlerts: Map<string, number> = new Map();
-  private readonly COOLDOWN_MS = 180000; // 3 minutes between alerts
 
   isTriggered(gameState: GameState): boolean {
     console.log(`🔍 NCAAF Close Game check for ${gameState.gameId}: status=${gameState.status}, Q${gameState.quarter}, scores=${gameState.homeScore}-${gameState.awayScore}`);
@@ -31,16 +27,7 @@ export default class CloseGameModule extends BaseAlertModule {
       return false;
     }
     
-    // Check cooldown
-    const alertKey = `${gameState.gameId}_close_game_q${gameState.quarter}`;
-    const lastAlert = this.lastAlerts.get(alertKey);
-    if (lastAlert && (Date.now() - lastAlert) < this.COOLDOWN_MS) {
-      console.log(`❌ Close Game: Cooldown active (${Math.round((Date.now() - lastAlert) / 1000)}s ago)`);
-      return false;
-    }
-    
     console.log(`🎯 NCAAF CLOSE GAME TRIGGERED for ${gameState.gameId}: ${scoreDiff} point game in Q${gameState.quarter}`);
-    this.lastAlerts.set(alertKey, Date.now());
     return true;
   }
 

@@ -34,16 +34,6 @@ function chunkMessage(txt: string, max = TG_MAX_LEN): string[] {
   return parts;
 }
 
-// Simple in-memory dedupe for N seconds
-const sentCache = new Map<string, number>();
-function shouldSend(dedupKey: string, ttlMs = 30_000): boolean {
-  const now = Date.now();
-  const last = sentCache.get(dedupKey) ?? 0;
-  if (now - last < ttlMs) return false;
-  sentCache.set(dedupKey, now);
-  return true;
-}
-
 // --- Message builder (MarkdownV2) ---
 function formatUniversalTelegramMessage(alert: AlertPayload): { text: string; replyMarkup?: any } {
   const gameInfo = alert.context ?? alert.gameInfo ?? {};
@@ -178,11 +168,6 @@ function getOrdinalSuffix(num: number): string {
 export async function sendTelegramAlert(config: TelegramConfig, alert: AlertPayload, dedupKey?: string): Promise<boolean> {
   if (!config.botToken || !config.chatId) {
     console.log('⚠️ Telegram config missing; skipping alert');
-    return false;
-  }
-  const key = dedupKey ?? `${alert.type}:${alert.context?.gameId ?? alert.gameInfo?.gameId ?? ''}`;
-  if (!shouldSend(key)) {
-    console.log('🧹 Dedupe: skipping duplicate Telegram alert', key);
     return false;
   }
 

@@ -8,16 +8,12 @@ export default class WindChangeModule extends BaseAlertModule {
   private previousWindData: { 
     [gameId: string]: { 
       speed: number; 
-      direction: string; 
-      lastAlertTime: number;
-      lastMeasurement: number;
+      direction: string;
     } 
   } = {};
 
   // Minimum changes to trigger alert
   private readonly MIN_SPEED_CHANGE = 5; // mph (research: 5mph adds ~19 feet of carry)
-  private readonly ALERT_COOLDOWN = 10 * 60 * 1000; // 10 minutes between wind alerts
-  private readonly MEASUREMENT_INTERVAL = 2 * 60 * 1000; // Check every 2 minutes
 
   isTriggered(gameState: GameState): boolean {
     if (!gameState.isLive) return false;
@@ -30,31 +26,14 @@ export default class WindChangeModule extends BaseAlertModule {
     if (!currentWind.windSpeed || !currentWind.windDirection) return false;
 
     const previous = this.previousWindData[gameId];
-    const now = Date.now();
 
     // First measurement for this game
     if (!previous) {
       this.previousWindData[gameId] = {
         speed: currentWind.windSpeed,
-        direction: currentWind.windDirection,
-        lastAlertTime: 0,
-        lastMeasurement: now
+        direction: currentWind.windDirection
       };
       // Don't alert on first measurement
-      return false;
-    }
-
-    // Check if enough time has passed since last measurement
-    if (now - previous.lastMeasurement < this.MEASUREMENT_INTERVAL) {
-      return false;
-    }
-
-    // Check cooldown
-    if (now - previous.lastAlertTime < this.ALERT_COOLDOWN) {
-      // Update measurement but don't alert
-      this.previousWindData[gameId].speed = currentWind.windSpeed;
-      this.previousWindData[gameId].direction = currentWind.windDirection;
-      this.previousWindData[gameId].lastMeasurement = now;
       return false;
     }
 
@@ -70,15 +49,11 @@ export default class WindChangeModule extends BaseAlertModule {
       // Update data
       this.previousWindData[gameId] = {
         speed: currentWind.windSpeed,
-        direction: currentWind.windDirection,
-        lastAlertTime: now,
-        lastMeasurement: now
+        direction: currentWind.windDirection
       };
       return true;
     }
 
-    // Update measurement time even if no alert
-    this.previousWindData[gameId].lastMeasurement = now;
     return false;
   }
 

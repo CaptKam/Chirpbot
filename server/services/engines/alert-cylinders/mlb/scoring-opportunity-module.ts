@@ -4,10 +4,6 @@ import { mlbPerformanceTracker } from '../../mlb-performance-tracker';
 export default class ScoringOpportunityModule extends BaseAlertModule {
   alertType = 'MLB_SCORING_OPPORTUNITY';
   sport = 'MLB';
-  
-  // Track last alert to avoid spam
-  private lastAlerts: Map<string, number> = new Map();
-  private readonly COOLDOWN_MS = 120000; // 2 minutes between alerts
 
   isTriggered(gameState: GameState): boolean {
     console.log(`🔍 MLB Scoring Opportunity check for ${gameState.gameId}: hasSecond=${gameState.hasSecond}, hasThird=${gameState.hasThird}, outs=${gameState.outs}`);
@@ -33,18 +29,7 @@ export default class ScoringOpportunityModule extends BaseAlertModule {
       return false;
     }
     
-    // Generate unique key for this situation
-    const situationKey = `${gameState.gameId}_${gameState.inning}_${gameState.isTopInning ? 'T' : 'B'}_${hasRunnerSecond ? '2' : ''}${hasRunnerThird ? '3' : ''}_${gameState.outs}out`;
-    
-    // Check cooldown
-    const lastAlert = this.lastAlerts.get(situationKey);
-    if (lastAlert && (Date.now() - lastAlert) < this.COOLDOWN_MS) {
-      console.log(`❌ Scoring Opportunity: Cooldown active for ${situationKey}`);
-      return false;
-    }
-    
     console.log(`🎯 MLB SCORING OPPORTUNITY TRIGGERED! Runners: 2nd=${hasRunnerSecond}, 3rd=${hasRunnerThird}`);
-    this.lastAlerts.set(situationKey, Date.now());
     return true;
   }
 
