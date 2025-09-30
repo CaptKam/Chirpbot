@@ -4,7 +4,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Clock, MapPin, TrendingUp, Users, Zap, Target, AlertTriangle, Wind, Cloud, Thermometer, Timer, Hash, Navigation, DollarSign, TrendingDown, Star, Smartphone, Bot, Flame, Tv } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
-// Removed getDisplayContent import - using simplified consistent rendering
 
 interface UniversalAlertProps {
   id: string;
@@ -35,7 +34,6 @@ interface UniversalAlertProps {
 }
 
 export function UniversalAlertCard({ alert, showEnhancements = false }: { alert: UniversalAlertProps; showEnhancements?: boolean }) {
-  // Safe date parsing with fallback
   const formattedTime = (() => {
     try {
       if (!alert.createdAt) return 'Unknown';
@@ -48,46 +46,6 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
     }
   })();
 
-  // Use simple, consistent content - eliminates environment-dependent rendering
-  const displayContent = alert.message || 'Alert content unavailable';
-  const isStructured = false; // Always use plain formatting for consistency
-
-  // Helper function to generate game state header
-  const getGameStateHeader = () => {
-    const parts = [];
-    
-    // Add game time/period based on sport
-    if (alert.sport === 'MLB' && alert.context) {
-      const inningIndicator = alert.context.isTopInning ? '▲' : '▼';
-      const inning = alert.context.inning || 'N/A';
-      parts.push(`${inningIndicator} ${inning}`);
-    } else if (['NFL', 'CFL', 'NCAAF'].includes(alert.sport) && alert.context) {
-      const quarter = alert.context.quarter ? `Q${alert.context.quarter}` : 'N/A';
-      const time = alert.context.timeRemaining || '';
-      parts.push(time ? `${quarter} ${time}` : quarter);
-    } else if (['NBA', 'WNBA'].includes(alert.sport) && alert.context) {
-      const quarter = alert.context.quarter ? `Q${alert.context.quarter}` : 'N/A';
-      const time = alert.context.timeRemaining || '';
-      parts.push(time ? `${quarter} ${time}` : quarter);
-    } else if (alert.sport === 'NHL' && alert.context) {
-      const period = alert.context.period ? `P${alert.context.period}` : 'N/A';
-      const time = alert.context.timeRemaining || '';
-      parts.push(time ? `${period} ${time}` : period);
-    }
-
-    // Add score if available
-    if (alert.awayScore !== undefined && alert.homeScore !== undefined) {
-      const awayTeamShort = alert.awayTeam || 'Away';
-      const homeTeamShort = alert.homeTeam || 'Home';
-      parts.push(`${awayTeamShort} ${alert.awayScore}, ${homeTeamShort} ${alert.homeScore}`);
-    }
-
-    return parts.length > 0 ? parts.join(' • ') : null;
-  };
-
-  const gameStateHeader = getGameStateHeader();
-
-  // Get sport-specific icon and color with static class mappings
   const getSportConfig = (sport: string) => {
     const sportConfigs = {
       'MLB': {
@@ -136,56 +94,65 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
 
   const sportConfig = getSportConfig(alert.sport);
 
-  // Get sport-specific styling - use sport colors as main theme with subtle urgency indicators
-  const getSportStyle = () => {
-    // Static class mappings to ensure Tailwind includes all classes
-    const styleMap: Record<string, { base: string; critical: string; normal: string }> = {
-      'MLB': {
-        base: 'bg-green-500/5 border-green-500/20',
-        critical: 'ring-2 ring-green-500/60',
-        normal: 'ring-1 ring-green-500/40'
-      },
-      'NFL': {
-        base: 'bg-orange-500/5 border-orange-500/20',
-        critical: 'ring-2 ring-orange-500/60',
-        normal: 'ring-1 ring-orange-500/40'
-      },
-      'NBA': {
-        base: 'bg-purple-500/5 border-purple-500/20',
-        critical: 'ring-2 ring-purple-500/60',
-        normal: 'ring-1 ring-purple-500/40'
-      },
-      'NHL': {
-        base: 'bg-cyan-500/5 border-cyan-500/20',
-        critical: 'ring-2 ring-cyan-500/60',
-        normal: 'ring-1 ring-cyan-500/40'
-      },
-      'NCAAF': {
-        base: 'bg-blue-500/5 border-blue-500/20',
-        critical: 'ring-2 ring-blue-500/60',
-        normal: 'ring-1 ring-blue-500/40'
-      },
-      'CFL': {
-        base: 'bg-red-500/5 border-red-500/20',
-        critical: 'ring-2 ring-red-500/60',
-        normal: 'ring-1 ring-red-500/40'
-      },
-      'WNBA': {
-        base: 'bg-pink-500/5 border-pink-500/20',
-        critical: 'ring-2 ring-pink-500/60',
-        normal: 'ring-1 ring-pink-500/40'
-      }
-    };
+  const getGameStateHeader = () => {
+    let gamePeriod = '';
+    
+    if (alert.sport === 'MLB' && alert.context) {
+      const inningIndicator = alert.context.isTopInning ? '▲' : '▼';
+      const inning = alert.context.inning || '';
+      gamePeriod = `${inningIndicator} ${inning}`;
+    } else if (['NFL', 'CFL', 'NCAAF'].includes(alert.sport) && alert.context) {
+      const quarter = alert.context.quarter ? `Q${alert.context.quarter}` : '';
+      const time = alert.context.timeRemaining || '';
+      gamePeriod = time ? `${quarter} ${time}` : quarter;
+    } else if (['NBA', 'WNBA'].includes(alert.sport) && alert.context) {
+      const quarter = alert.context.quarter ? `Q${alert.context.quarter}` : '';
+      const time = alert.context.timeRemaining || '';
+      gamePeriod = time ? `${quarter} ${time}` : quarter;
+    } else if (alert.sport === 'NHL' && alert.context) {
+      const period = alert.context.period ? `P${alert.context.period}` : '';
+      const time = alert.context.timeRemaining || '';
+      gamePeriod = time ? `${period} ${time}` : period;
+    }
 
-    const sportStyle = styleMap[alert.sport] || {
-      base: 'bg-slate-500/5 border-slate-500/20',
-      critical: 'ring-2 ring-slate-500/60',
-      normal: 'ring-1 ring-slate-500/40'
-    };
+    const awayName = alert.awayTeam || 'Away';
+    const homeName = alert.homeTeam || 'Home';
+    const awayScore = alert.awayScore ?? 0;
+    const homeScore = alert.homeScore ?? 0;
 
-    // Always use normal ring for consistent styling
-    return `${sportStyle.base} ${sportStyle.normal}`;
+    return `${gamePeriod} - ${awayName} ${awayScore}, ${homeName} ${homeScore}`;
   };
+
+  const getSituationHeader = () => {
+    return alert.type.replace(/^(MLB|NFL|NBA|NCAAF|WNBA|CFL|NHL)_/, '').replace(/_/g, ' ');
+  };
+
+  const parseContextBullets = () => {
+    const bullets: string[] = [];
+    
+    if (alert.message) {
+      const lines = alert.message.split('\n').map(l => l.trim()).filter(l => l);
+      lines.forEach(line => {
+        if (line.startsWith('•') || line.startsWith('-') || line.startsWith('*')) {
+          bullets.push(line.replace(/^[•\-*]\s*/, ''));
+        } else if (bullets.length === 0) {
+          bullets.push(line);
+        }
+      });
+    }
+    
+    return bullets.length > 0 ? bullets : [alert.message];
+  };
+
+  const contextBullets = parseContextBullets();
+
+  const chip = (text: string) => (
+    <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-slate-300 border-slate-600/60 bg-slate-800/60">
+      {text}
+    </span>
+  );
+
+  const safeConfidence = Math.max(0, Math.min(100, Math.round((alert.confidence || 0) * 100)));
 
   return (
     <motion.div
@@ -198,205 +165,18 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
       }}
     >
       <Card 
-        className={`backdrop-blur-sm rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 border-0 ${getSportStyle()}`}
+        className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800/60 shadow-sm"
         data-testid={`universal-alert-card-${alert.id}`}
       >
-        <CardContent className="p-6 min-h-[220px]">
-          {/* Game State Header - Prominent at Top */}
-          {gameStateHeader && (
-            <div className="mb-4 pb-3 border-b border-slate-700/30">
-              <div className="text-lg font-bold text-slate-100" data-testid={`game-state-${alert.id}`}>
-                {gameStateHeader}
+        <CardContent className="p-0">
+          {/* Header */}
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="text-sm text-slate-400" data-testid={`game-state-${alert.id}`}>
+                {getGameStateHeader()}
               </div>
             </div>
-          )}
-
-          {/* Alert Type Header with Sport Icon */}
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${sportConfig.iconColor}`}>
-                {sportConfig.icon}
-              </div>
-              <div>
-                <h3 className="text-lg font-black uppercase tracking-wide text-slate-100 mb-1" data-testid={`alert-type-${alert.id}`}>
-                  {alert.type.replace(/^(MLB|NFL|NBA|NCAAF|WNBA|CFL)_/, '').replace(/_/g, ' ')}
-                </h3>
-                <span className="text-xs text-slate-400" data-testid={`alert-timestamp-${alert.id}`}>{formattedTime}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Main Alert Content - Normalized Format */}
-          {displayContent && (
-            <div className="mb-6 rounded-xl p-4 border bg-slate-800/60 border-slate-700/50" data-testid={`alert-content-${alert.id}`}>
-              <div className="text-slate-100 text-sm font-medium leading-relaxed whitespace-normal break-words overflow-hidden max-h-24 line-clamp-4">
-                {displayContent}
-              </div>
-            </div>
-          )}
-
-          {/* Generative AI Enhanced Content */}
-        {showEnhancements && alert.context?.generativeAI && (
-          <div className="mt-3 p-3 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-            <div className="flex items-center gap-2 mb-2">
-              <Bot className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <span className="font-medium text-purple-700 dark:text-purple-300">AI Generated Insights</span>
-            </div>
-
-            {/* AI Generated Headline */}
-            {alert.context.generativeAI.aiGeneratedContent?.headline && (
-              <div className="mb-2">
-                <div className="text-sm font-semibold text-purple-800 dark:text-purple-200">
-                  {alert.context.generativeAI.aiGeneratedContent.headline}
-                </div>
-              </div>
-            )}
-
-            {/* Predictive Insights */}
-            {alert.context.generativeAI.predictiveInsights && (
-              <div className="mb-2">
-                <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">Next Play Prediction:</div>
-                <div className="text-sm text-purple-800 dark:text-purple-200">
-                  {alert.context.generativeAI.predictiveInsights.nextPlay} 
-                  <span className="text-xs text-purple-500 ml-2">
-                    ({alert.context.generativeAI.predictiveInsights.probability}% confidence)
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Fan Engagement Score */}
-            {alert.context.generativeAI.fanEngagement && (
-              <div className="flex items-center gap-4 text-xs">
-                <div className="flex items-center gap-1">
-                  <Flame className="w-4 h-4" />
-                  <span>Excitement: {alert.context.generativeAI.fanEngagement.excitementLevel}/10</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Tv className="w-4 h-4" />
-                  <span>Watchability: {alert.context.generativeAI.fanEngagement.watchabilityScore}%</span>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-          {/* Game Context - Compact and Scannable */}
-          {alert.context && (
-            <div className="mb-5">
-              {/* MLB Context */}
-              {alert.sport === 'MLB' && (
-                <div className="flex items-center justify-between bg-slate-800/40 rounded-lg p-2.5">
-                  <div className="flex items-center gap-3 text-sm text-slate-300">
-                    {alert.context.outs !== undefined && (
-                      <span className="font-medium">{alert.context.outs} out{alert.context.outs !== 1 ? 's' : ''}</span>
-                    )}
-                    {(alert.context.balls !== undefined && alert.context.strikes !== undefined) && (
-                      <span className="text-emerald-400 font-mono font-bold">{alert.context.balls}-{alert.context.strikes}</span>
-                    )}
-                  </div>
-                  {(alert.context.hasFirst || alert.context.hasSecond || alert.context.hasThird) && (
-                    <BaseballDiamond 
-                      size="sm" 
-                      showCount={false}
-                      runners={{
-                        first: alert.context.hasFirst,
-                        second: alert.context.hasSecond,
-                        third: alert.context.hasThird
-                      }}
-                    />
-                  )}
-                </div>
-              )}
-
-              {/* NFL/CFL/NCAAF Context */}
-              {(['NFL', 'CFL', 'NCAAF'].includes(alert.sport)) && (
-                <div className="bg-slate-800/40 rounded-lg p-2.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-sm">
-                      {(alert.context.down && alert.context.yardsToGo) && (
-                        <span className="text-orange-300 font-bold">
-                          {alert.context.down} & {alert.context.yardsToGo}
-                        </span>
-                      )}
-                      {alert.context.yardLine && (
-                        <span className="text-slate-300 font-medium">{alert.context.yardLine}</span>
-                      )}
-                    </div>
-                    {alert.context.redZone && (
-                      <span className="text-red-300 font-medium text-sm flex items-center gap-1">
-                        <Target className="w-4 h-4" /> Red Zone
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* NBA/WNBA Context */}
-              {(['NBA', 'WNBA'].includes(alert.sport)) && (
-                <div className="bg-slate-800/40 rounded-lg p-2.5">
-                  <div className="flex items-center gap-3 text-sm">
-                    {alert.context.clutchTime && (
-                      <span className="text-yellow-300 font-medium flex items-center gap-1">
-                        <Zap className="w-4 h-4" /> Clutch Time
-                      </span>
-                    )}
-                    {alert.context.run && (
-                      <span className="text-purple-300 font-medium">{alert.context.run} run</span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* NHL Context */}
-              {alert.sport === 'NHL' && (
-                <div className="bg-slate-800/40 rounded-lg p-2.5">
-                  {alert.context.powerPlay && (
-                    <div className="text-blue-300 font-medium text-sm flex items-center gap-1">
-                      <Zap className="w-4 h-4" /> Power Play {alert.context.powerPlayTime && `(${alert.context.powerPlayTime})`}
-                    </div>
-                  )}
-                  {alert.context.penalty && (
-                    <div className="text-red-300 text-sm flex items-center gap-1">
-                      <AlertTriangle className="w-4 h-4" /> {alert.context.penalty}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Gambling Insights - Gated behind showEnhancements */}
-          {showEnhancements && alert.gamblingInsights && (
-            <div className="mb-4 p-3 bg-slate-800/40 rounded-lg border border-slate-700/30">
-              <div className="flex items-center gap-2 mb-2">
-                <DollarSign className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs font-semibold text-emerald-400">Betting Insights</span>
-              </div>
-              {alert.gamblingInsights.structuredTemplate && (
-                <div className="text-sm text-slate-300 mb-2">{alert.gamblingInsights.structuredTemplate}</div>
-              )}
-              {alert.gamblingInsights.bullets && alert.gamblingInsights.bullets.length > 0 && (
-                <ul className="space-y-1">
-                  {alert.gamblingInsights.bullets.map((bullet, idx) => (
-                    <li key={idx} className="text-xs text-slate-400 flex items-start gap-2">
-                      <span className="text-emerald-400">•</span>
-                      <span>{bullet}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {alert.gamblingInsights.confidence != null && (
-                <div className="mt-2 text-xs text-slate-400">
-                  Confidence: {Math.round(alert.gamblingInsights.confidence * 100)}%
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Bottom Stats Row - System Metrics Always Visible */}
-          <div className="flex items-center justify-between pt-4 border-t border-slate-700/30">
-            <div className="flex items-center gap-4 text-xs text-slate-400">
+            <div className="flex items-center gap-2">
               <Badge 
                 variant="outline" 
                 className={`${sportConfig.iconColor} font-semibold text-xs`}
@@ -404,24 +184,104 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
               >
                 {alert.sport}
               </Badge>
-              {alert.confidence != null && (
-                <span className="text-slate-300 font-medium">
-                  {Math.round(alert.confidence * 100)}% Confidence
-                </span>
-              )}
+              <span className="text-xs text-slate-500" data-testid={`alert-timestamp-${alert.id}`}>{formattedTime}</span>
             </div>
+          </div>
 
-            <div className="flex items-center gap-3 text-xs">
+          {/* Situation Badge Row */}
+          <div className="flex items-center gap-3 mb-3">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg ${sportConfig.iconColor}`}>
+              {sportConfig.icon}
+            </div>
+            <h3 className="text-sm font-extrabold uppercase tracking-wide text-slate-100" data-testid={`alert-type-${alert.id}`}>
+              {getSituationHeader()}
+            </h3>
+          </div>
+
+          {/* Context Bullets */}
+          <div className="mb-3">
+            <div className="rounded-xl p-4 bg-slate-800/60 border border-slate-700/50">
+              <div className="space-y-2">
+                {contextBullets.map((bullet, idx) => (
+                  <div key={idx} className="flex items-start gap-2 text-sm text-slate-100">
+                    {contextBullets.length > 1 && <span className="text-amber-400 mt-0.5">🔥</span>}
+                    <span className="leading-relaxed">{bullet}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Context Chips */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            {alert.sport === 'MLB' && alert.context && (
+              <>
+                {alert.context.outs !== undefined && chip(`${alert.context.outs} out${alert.context.outs !== 1 ? 's' : ''}`)}
+                {(alert.context.balls !== undefined && alert.context.strikes !== undefined) && 
+                  chip(`${alert.context.balls}-${alert.context.strikes}`)}
+              </>
+            )}
+            {(['NFL', 'CFL', 'NCAAF'].includes(alert.sport)) && alert.context && (
+              <>
+                {(alert.context.down && alert.context.yardsToGo) && 
+                  chip(`${alert.context.down} & ${alert.context.yardsToGo}`)}
+                {alert.context.yardLine && chip(`@ ${alert.context.yardLine}`)}
+                {alert.context.redZone && chip('Red Zone')}
+              </>
+            )}
+            {(['NBA', 'WNBA'].includes(alert.sport)) && alert.context && (
+              <>
+                {alert.context.quarter && chip(`Q${alert.context.quarter}`)}
+                {alert.context.clutchTime && chip('Clutch Time')}
+                {alert.context.run && chip(`${alert.context.run} run`)}
+              </>
+            )}
+            {alert.sport === 'NHL' && alert.context && (
+              <>
+                {alert.context.period && chip(`P${alert.context.period}`)}
+                {alert.context.powerPlay && chip('Power Play')}
+                {alert.context.penalty && chip(alert.context.penalty)}
+              </>
+            )}
+          </div>
+
+          {/* Bottom: Bases/Game State + Confidence */}
+          <div className="flex items-center justify-between gap-4">
+            {/* MLB Bases Diamond */}
+            {alert.sport === 'MLB' && alert.context && (alert.context.hasFirst || alert.context.hasSecond || alert.context.hasThird) && (
+              <BaseballDiamond 
+                size="sm" 
+                showCount={false}
+                runners={{
+                  first: alert.context.hasFirst,
+                  second: alert.context.hasSecond,
+                  third: alert.context.hasThird
+                }}
+              />
+            )}
+            
+            {/* Spacer for non-MLB or no runners */}
+            {!(alert.sport === 'MLB' && alert.context && (alert.context.hasFirst || alert.context.hasSecond || alert.context.hasThird)) && (
+              <div className="flex-1" />
+            )}
+
+            {/* Confidence Meter */}
+            <div className="min-w-[160px]">
+              <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                <span>Confidence</span>
+                <span className="text-slate-200 font-medium">{safeConfidence}%</span>
+              </div>
+              <div className="h-2 w-full rounded bg-slate-800 overflow-hidden">
+                <div
+                  className="h-2 rounded bg-emerald-500 transition-[width] duration-300"
+                  style={{ width: `${safeConfidence}%` }}
+                  data-testid={`confidence-bar-${alert.id}`}
+                />
+              </div>
               {alert.priority != null && (
-                <span className="font-bold text-slate-400" data-testid={`priority-${alert.id}`}>
+                <div className="mt-2 text-[10px] font-semibold text-slate-400" data-testid={`priority-${alert.id}`}>
                   P{alert.priority}
-                </span>
-              )}
-              {alert.sentToTelegram && (
-                <Smartphone className="w-4 h-4 text-blue-300" />
-              )}
-              {showEnhancements && alert.weather?.temperature && (
-                <span className="text-slate-400">{alert.weather.temperature}°F</span>
+                </div>
               )}
             </div>
           </div>
