@@ -2,7 +2,7 @@
 # ChirpBot V3 Product Duplication Framework
 
 ## System Overview
-ChirpBot V3 is a multi-sport intelligence platform providing real-time notifications across MLB, NFL, NCAAF, NBA, WNBA, and CFL with sub-250ms response times and AI-enhanced insights.
+ChirpBot V3 is an advanced multi-sport betting intelligence platform providing real-time notifications and gambling insights across MLB, NFL, NCAAF, NBA, WNBA, and CFL with sub-250ms response times, AI-enhanced analysis, and predictive betting opportunities for informed wagering decisions.
 
 ## Core Architecture Components
 
@@ -125,12 +125,12 @@ ai_settings: AI engine configuration per sport
 
 ### Development Laws:
 1. No new engines without discussion
-2. Kid-friendly content only
+2. Gambling insights and betting probability calculations are core features
 3. User settings validation required
 4. Deduplication before expensive operations
 5. AI analysis only when enabled
-6. Consistent alert structure
-7. 3-second readability requirement
+6. Consistent alert structure with actionable betting context
+7. 3-second readability requirement for alert messages
 
 ## Technology Stack Details
 

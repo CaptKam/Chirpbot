@@ -1,6 +1,6 @@
 # Overview
 
-ChirpBot V3 is an advanced multi-sport intelligence platform that provides real-time notifications and AI-enhanced insights across six major sports leagues: MLB, NFL, NCAAF, NBA, WNBA, and CFL. The platform delivers sub-250ms response times, cross-sport AI enhancement with 0ms intelligent caching, and predictive alert capabilities. It monitors teams using authentic API data sources to generate intelligent alerts for high-impact game situations and anticipates high-value betting opportunities.
+ChirpBot V3 is an advanced multi-sport betting intelligence platform that provides real-time notifications, gambling insights, and AI-enhanced analysis across six major sports leagues: MLB, NFL, NCAAF, NBA, WNBA, and CFL. The platform delivers sub-250ms response times, cross-sport AI enhancement with 0ms intelligent caching, and predictive alert capabilities. It monitors teams using authentic API data sources to generate intelligent alerts for high-impact game situations and anticipates high-value betting opportunities with probability calculations and wagering recommendations.
 
 # User Preferences
 
