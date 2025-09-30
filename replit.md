@@ -1,92 +1,6 @@
 # Overview
 
-ChirpBot V3 is an advanced multi-sport intelligence platform providing real-time notifications and AI-enhanced insights across 6 major sports leagues: MLB, NFL, NCAAF, NBA, WNBA, and CFL. It has evolved into a comprehensive system featuring sub-250ms response times, cross-sport AI enhancement with 0ms intelligent caching for repeated scenarios, and predictive alert capabilities. The platform monitors teams using authentic API data sources to generate intelligent alerts for high-impact game situations and anticipates high-value betting opportunities.
-
-# Recent Changes
-
-## September 30, 2025 - PHASE 1 RELIABILITY IMPROVEMENTS COMPLETED ✅
-- **PRODUCTION-SAFE MUTEX SYSTEM:** Implemented correct queue-based per-game and per-sport mutex locks using tail-chain pattern
-- **IDEMPOTENT TRANSITIONS:** Added early-return checks in transitionEngine to prevent "Invalid transition: ACTIVE → ACTIVE" crashes
-- **RACE CONDITION ELIMINATION:** Per-game locks wrap startEngines, stopEngines, warmupEngines, pauseEngines, terminateEngines
-- **COOLDOWN TIMER FIX:** stopEngines now clears existing cooldown timer before setting new one, preventing duplicate INACTIVE transitions
-- **STATE SERIALIZATION:** Per-sport locks ensure all state transitions for a given sport are fully serialized, no concurrent mutations
-- **ACCURATE TELEMETRY:** Error path in transitionEngine captures previousState before mutation for correct observability
-- **VERIFIED STABLE:** System running with "6 healthy, 0 errors" status after all fixes applied
-- **ARCHITECT APPROVED:** Received PASS verdict - implementation is production-safe with proper lock ordering and no deadlock potential
-- **MUTEX PATTERN:** `tail = locks.get(key) || Promise.resolve(); release; next = tail.then(() => new Promise(r => (release = r))); locks.set(key, next); await tail; return () => release();`
-- **NEXT PHASE:** Ready for safe simplification approach (merge CalendarSync/GameState/EngineLifecycle services) to reduce architectural complexity
-
-## September 30, 2025 - NFL AI SITUATION PARSER IMPLEMENTED ✅
-- **AI FALLBACK SYSTEM:** Created OpenAI-powered situation parser to extract down/distance/field position from play text when ESPN data is missing
-- **INTELLIGENT DETECTION:** Uses nullish checks (== null) to correctly identify missing data without false positives at fieldPosition=0 (goal line)
-- **SMART CACHING:** 30-second TTL cache prevents redundant AI calls for same play text, reducing costs and latency
-- **CIRCUIT BREAKER PROTECTION:** Wrapped OpenAI calls with protectedFetch and circuit breaker for resilience against API failures
-- **NORMALIZED MATCHING:** AI-extracted team possession is trimmed and uppercased before comparison to prevent match failures
-- **ROSTER ENRICHMENT:** After AI provides possession, system re-runs roster lookup to extract QB name if not already available
-- **RED ZONE ACCURACY:** Fixed red zone/goal line calculations to use != null instead of truthiness, preventing false negatives at yard line 0
-- **LIVE VERIFIED:** Successfully extracted fieldPosition=39 and possession=NYJ from penalty play text with 0.9 confidence during live game 401772813
-- **MULTI-SPORT READY:** Made parseEnhancedGameResponse async across all 7 sport APIs (NFL, MLB, NCAAF, NBA, WNBA, CFL, NHL) for future AI integration
-- **PERFORMANCE:** AI parsing adds ~2.4s latency but only engages when ESPN data is incomplete, maintaining sub-250ms for normal operations
-
-## September 22, 2025 - MAJOR V3 ARCHITECTURE CLEANUP COMPLETED ✅
-- **LEGACY SYSTEMS REMOVED:** Eliminated entire event-stream directory with 12 duplicate processor files that were creating parallel event processing
-- **SHADOW MODE ELIMINATED:** Removed LegacyBridge initialization and dual-write architecture that was causing duplicate alerts and verbose outputs
-- **SINGLE DATA SYSTEM:** CalendarSyncService now established as the sole unified data ingestion system across all 6 sports leagues
-- **CONFLICT RESOLUTION:** Removed event-comparison-system.ts, output-router.ts, and 9 legacy test files from previous versions
-- **CLEAN V3 ARCHITECTURE:** System now runs with zero conflicts - UnifiedAlertGenerator + Weather-on-Live + CalendarSyncService only
-- **PERFORMANCE IMPROVEMENT:** Eliminated duplicate processing that was causing toggle functionality issues and verbose alert formats
-- **VERIFIED STABLE:** All 6 sport engines (MLB, NFL, NCAAF, NBA, WNBA, CFL) running with "6 healthy, 0 errors" status
-- **TYPESCRIPT CLEAN:** All compilation errors resolved, system fully operational for clean, simple alert generation
-
-## September 17, 2025 - MLB GAME START MODULE PERFECTED ✅
-- **CRITICAL FIX:** extractLastPlay and extractLastPitch methods added to MLBApiService to resolve TypeError crashes
-- **GAME START TIMING:** Now triggers exactly once at top of inning 1 with proper duplicate prevention
-- **PERFORMANCE TRACKING:** Fixed all references to lastPlay/lastPitch objects to use correct properties
-- **VERIFIED WORKING:** Live games successfully generating MLB_GAME_START, MLB_SEVENTH_INNING_STRETCH, and MLB_LATE_INNING_CLOSE alerts
-- **DATABASE SAVES:** Alerts properly persisting with 5-minute TTL and deduplication working correctly
-
-## September 17, 2025 - MLB WIND CHANGE MODULE ENHANCED WITH RESEARCH-BACKED ANALYTICS ✅
-- **SPEED THRESHOLD:** Lowered from 6mph to 5mph based on research showing 5mph adds ~19 feet of carry distance
-- **DIRECTION IMPACT REFINEMENT:** Left field winds now get highest impact (3), center/out moderate (2), right field lowest (1), blowing in negative (-2)
-- **SUBTLE CHANGE DETECTION:** Now triggers on 1+ impact category differences instead of 2+ to catch subtle but meaningful shifts
-- **ALERT LOGIC FIX:** Requires significant speed OR direction change instead of alerting on any minor variation
-- **RESEARCH BASIS:** Aligned with modern baseball analytics showing direction matters more than sheer speed
-- **VERIFIED WORKING:** Wind change module properly running with new precision thresholds and improved direction analysis
-
-## September 17, 2025 - SEVENTH INNING STRETCH MODULE FIXED ✅
-- **CRITICAL FIX:** Seventh inning stretch alerts were triggering multiple times throughout late innings (7th, 8th, 9th)
-- **PRECISE TIMING:** Now triggers exactly once per game, only at the top of the 7th inning (inning=7, isTopInning=true)
-- **DUPLICATE PREVENTION:** Added game tracking with private `triggeredGames` Set to prevent multiple alerts per game
-- **STABLE ALERT KEYS:** Updated to stable format `mlb_seventh_inning_stretch_{gameId}` (no more timestamps)
-- **VERIFIED WORKING:** Live testing confirmed games in innings 1, 6, and 9 properly do NOT trigger seventh inning stretch
-- **CODE QUALITY:** Clean, efficient implementation with proper TypeScript typing and error handling
-
-## September 17, 2025 - MLB PERFORMANCE CONTEXT ENHANCEMENT ✅
-- **NEW SYSTEM:** Built comprehensive MLB performance tracker for real-time batter/pitcher/team stats
-- **CONTEXT GENERATION:** Alerts now include "Batter 3-for-4 tonight", "95+ pitches", "Team rally: scored in last 3 innings"
-- **MOMENTUM DETECTION:** Tracks scoring runs, dry spells, and unusual patterns (5 strikeouts in 6 batters)
-- **FIXED CRITICAL BUG:** Pitcher fatigue was reading wrong number (3 instead of 95 pitches) - now correctly parsed
-- **5 MODULES ENHANCED:** Bases loaded, scoring opportunity, and late-inning modules now use performance data
-- **STABLE ALERT KEYS:** Removed timestamps that were breaking deduplication
-- **VELOCITY TRACKING:** Now detects and reports when pitcher velocity drops 3+ mph
-
-## September 17, 2025 - MLB ALERT SYSTEM FULLY FIXED ✅
-- **CRITICAL FIX:** MLB_STRIKEOUT module was not loading - added it and 2 other missing modules to engine lifecycle
-- **MAJOR BUG FIX:** Scoring opportunity module was using wrong GameState fields (runners.second instead of hasSecond)
-- **MODULE COUNT:** System now loads 23 MLB modules (up from 16) - all cylinders operational
-- **NEW MODULE:** Created MLB_BASES_LOADED_TWO_OUTS module for high-pressure situations
-- **TYPESCRIPT:** Fixed 9 TypeScript errors across steal-likelihood and on-deck-prediction modules
-- **VERIFIED WORKING:** Live alerts confirmed firing - bases loaded alert successfully generated and saved to database
-- **FIELD NORMALIZATION:** All modules now consistently use hasFirst/hasSecond/hasThird for base runner detection
-
-## September 16, 2025 - CRITICAL ALERT PIPELINE FIXED ✅
-- **MAJOR FIX:** Implemented missing `setOnEnhancedAlert` callback in UnifiedAIProcessor that was preventing alerts from saving to database
-- **VERIFIED WORKING:** Live alerts from real MLB games now successfully generate → AI enhance → save to database → serve via API
-- **Database Confirmation:** Multiple live alerts confirmed saved (mlb_game_start_776319_1, 776312_on_deck_Noelvi_Marte_010_1_3_1, etc.)
-- **Complete Pipeline:** Alert Generation → AI Enhancement → Database Save → API Serving → Frontend Display now fully operational
-- Fixed misleading WebSocket log messages, system now uses direct database saves with SSE broadcasting
-- Eliminated WebSocket dependencies that were causing confusion in alert persistence flow
-- Resolved authentication requirements for alerts API endpoint (requires logged-in users to return alerts)
+ChirpBot V3 is an advanced multi-sport intelligence platform that provides real-time notifications and AI-enhanced insights across six major sports leagues: MLB, NFL, NCAAF, NBA, WNBA, and CFL. The platform delivers sub-250ms response times, cross-sport AI enhancement with 0ms intelligent caching, and predictive alert capabilities. It monitors teams using authentic API data sources to generate intelligent alerts for high-impact game situations and anticipates high-value betting opportunities.
 
 # User Preferences
 
@@ -97,10 +11,7 @@ Preferred communication style: Simple, everyday language.
 ## Frontend Architecture
 - **Framework**: React with TypeScript using Vite.
 - **UI Library**: Shadcn/ui components built on Radix UI primitives.
-- **Styling**: Tailwind CSS with a modern, bold, sports-centric design system.
-  - **Color Palette**: #F2F4F7 (background), #1C2B5E (accent), #2387F4 (CTA), #F02D3A (alert), #DCE1E7 (borders).
-  - **Typography**: Inter font family, bold uppercase headings with letter spacing.
-  - **Components**: 12px rounded corners on cards, shadow-lg on hover effects.
+- **Styling**: Tailwind CSS with a modern, bold, sports-centric design system featuring a specific color palette, Inter font family, 12px rounded corners, and shadow-lg hover effects.
 - **State Management**: TanStack Query for server state with WebSocket integration.
 - **Routing**: Wouter for lightweight client-side routing.
 - **Design**: Mobile-first responsive design.
@@ -108,18 +19,21 @@ Preferred communication style: Simple, everyday language.
 ## Backend Architecture
 - **Runtime**: Node.js with Express.js RESTful API, optimized for sub-250ms response times.
 - **Database ORM**: Drizzle ORM with PostgreSQL for type-safe operations.
-- **Multi-Sport Engine System**: 6 specialized engines (MLB, NFL, NCAAF, NBA, WNBA, CFL) with a unified architecture.
-- **AsyncAI Processing**: Background AI enhancement with intelligent queuing and timeout protection.
+- **Multi-Sport Engine System**: 6 specialized engines (MLB, NFL, NCAAF, NBA, WNBA, CFL) with unified, event-driven architecture.
+- **Coordinator Pattern (Phase 2 in progress)**: GameLifecycleService coordinator with event bus and per-game state machine running in parallel with existing services, CalendarDataSource for slim data fetching. Next step: bootstrap with games.
+- **AsyncAI Processing**: Background AI enhancement with intelligent queuing and timeout protection, including an OpenAI-powered situation parser with caching and circuit breaker protection.
 - **Adaptive Polling Manager**: Intelligent game state detection with sport-specific polling intervals.
 - **Real-time Communication**: WebSocket server for live alert broadcasting and enhanced alert delivery.
 - **Session Management**: Express sessions with PostgreSQL session store.
 - **Build System**: ESBuild for production bundling with TypeScript support.
-- **System Stability**: Robust error handling, auto-recovery, and a `keep-alive.js` process manager for guaranteed uptime.
+- **System Stability**: Robust error handling, auto-recovery, and a `keep-alive.js` process manager.
+- **Concurrency Control**: Implemented queue-based per-game and per-sport mutex locks to prevent race conditions and ensure idempotent transitions.
+- **Data Ingestion**: CalendarSyncService as the sole unified data ingestion system across all leagues (transitioning to CalendarDataSource).
 
 ## Data Storage
 - **Primary Database**: PostgreSQL with Drizzle ORM.
-- **Schema Design**: Entities for users, teams, alerts, settings, and user_monitored_teams.
-- **Persistence**: User game selections saved to `user_monitored_teams` for cross-session persistence.
+- **Schema Design**: Entities for users, teams, alerts, settings, and `user_monitored_teams`.
+- **Persistence**: User game selections saved for cross-session persistence.
 - **Session Storage**: PostgreSQL-backed session management using `connect-pg-simple`.
 - **Migration System**: Drizzle Kit for database schema migrations.
 
@@ -134,7 +48,7 @@ Preferred communication style: Simple, everyday language.
 - **Team Monitoring**: Dynamic enable/disable of team tracking with instant updates.
 - **Persistent Game Selection**: User choices saved to database and restored on page reload.
 - **Deduplication**: Context-aware deduplication system for alerts.
-- **Predictive Analytics**: On-Deck Prediction Module and Wind Change Detection for MLB.
+- **Predictive Analytics**: On-Deck Prediction Module and enhanced Wind Change Detection for MLB, and real-time batter/pitcher/team performance tracking.
 
 # External Dependencies
 
@@ -151,7 +65,6 @@ Preferred communication style: Simple, everyday language.
 ## Sports Data
 - **MLB.com Official API**: Primary data source for MLB games.
 - **ESPN API Integration**: Real-time sports data for NFL, NCAAF, NBA, WNBA, CFL.
-- **Unified Data Processing**: Cross-sport data normalization and intelligent alert generation.
 
 ## Infrastructure Services
 - **Neon Database**: PostgreSQL hosting with serverless architecture.
