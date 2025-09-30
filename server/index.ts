@@ -47,6 +47,7 @@ if (!(globalThis as any).__v3_alert_system_bootstrapped__) {
   
   void (async () => {
     try {
+      // === EXISTING SERVICES (V3.0) ===
       const { CalendarSyncService } = await import('./services/calendar-sync-service');
       const { GameStateManager } = await import('./services/game-state-manager');
       const { EngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
@@ -73,7 +74,25 @@ if (!(globalThis as any).__v3_alert_system_bootstrapped__) {
       (global as any).engineLifecycleManager = engineLifecycleManager;
       (global as any).migrationAdapter = migrationAdapter;
       
+      // === NEW UNIFIED COORDINATOR (V3.1 - Running in Parallel) ===
+      const { GameLifecycleService } = await import('./services/game-lifecycle-service');
+      const { CalendarDataSource } = await import('./services/calendar-data-source');
+      
+      const gameLifecycleService = new GameLifecycleService();
+      const calendarDataSource = new CalendarDataSource({ cacheTtlMs: 30_000 });
+      
+      // Wire dependencies
+      gameLifecycleService.setDataSource(calendarDataSource);
+      gameLifecycleService.setEngineManager(engineLifecycleManager);
+      
+      // Start coordinator (will run in parallel with existing system)
+      await gameLifecycleService.start();
+      
+      (global as any).gameLifecycleService = gameLifecycleService;
+      (global as any).calendarDataSource = calendarDataSource;
+      
       console.log("✅ V3 Alert System: Unified pipeline active");
+      console.log("✅ V3.1 Coordinator: Running in parallel for testing");
     } catch (e) {
       console.error("❌ V3 Alert System: Failed to initialize", e);
     }
