@@ -653,6 +653,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         }
       }
 
+      // Pattern 4: Fallback to context.gameId if extraction failed
+      if (gameId === 'unknown' && (alert as any).context?.gameId) {
+        gameId = (alert as any).context.gameId;
+        console.log(`✅ Using gameId from alert context: ${gameId}`);
+      }
+
       console.log(`📌 Extracted gameId: ${gameId} from alertKey: ${alert.alertKey}`);
 
       // Get all users monitoring this game
