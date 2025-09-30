@@ -88,6 +88,9 @@ if (!(globalThis as any).__v3_alert_system_bootstrapped__) {
       // Start coordinator (will run in parallel with existing system)
       await gameLifecycleService.start();
       
+      // Bootstrap coordinator with today's games
+      await gameLifecycleService.seedFromTodayCalendars(['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL']);
+      
       (global as any).gameLifecycleService = gameLifecycleService;
       (global as any).calendarDataSource = calendarDataSource;
       

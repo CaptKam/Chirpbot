@@ -628,6 +628,33 @@ export class GameLifecycleService {
     console.log(`✅ Unregistered game ${gameId}`);
   }
   
+  async seedFromTodayCalendars(sports: string[] = ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL']): Promise<void> {
+    if (!this.dataSource) {
+      console.error('❌ Cannot seed: data source not available');
+      return;
+    }
+    
+    console.log(`🌱 Seeding coordinator with today's games for: ${sports.join(', ')}`);
+    let totalGamesSeeded = 0;
+    
+    for (const sport of sports) {
+      try {
+        const games = await this.dataSource.fetchTodayGames(sport);
+        console.log(`📅 Found ${games.length} games for ${sport}`);
+        
+        for (const gameData of games) {
+          await this.registerGame(gameData);
+          totalGamesSeeded++;
+        }
+      } catch (error) {
+        console.error(`❌ Failed to seed ${sport} games:`, error);
+      }
+    }
+    
+    console.log(`✅ Coordinator seeded with ${totalGamesSeeded} games`);
+    console.log(`📊 Games by state: ${JSON.stringify(this.getMetrics().gamesByState)}`);
+  }
+  
   getGame(gameId: string): GameStateInfo | undefined {
     return this.games.get(gameId);
   }
