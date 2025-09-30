@@ -1,0 +1,281 @@
+Absolutely. Here’s a single AI logic + math layer you can drop in that works across MLB, NFL, NCAAF, NBA/WNBA, NHL. It standardizes how you compute probability, confidence, leverage, and priority, then hands one clean payload to your AI text composer and UI card.
+
+0) Goals (what this layer guarantees)
+
+One shared scoring formula across all sports.
+
+Sport-specific probability models behind the scenes (plug-ins).
+
+Calibrated confidence (0–100) you can trust visually.
+
+Leverage = “how much this matters right now”.
+
+Priority tiers that dedupe and throttle correctly.
+
+AI text only decorates; math drives the card.
+
+1) Inputs (normalized)
+
+Every alert feeds this structure:
+
+type NormalizedState = {
+  sport: 'MLB'|'NFL'|'NCAAF'|'NBA'|'WNBA'|'NHL';
+  gameId: string;
+  clock: string;                // "Top 7", "Q4 2:11", "P3 05:22"
+  score: { away: number; home: number };
+  context: Record<string, any>; // downDistance, yardLine, bases, outs, etc.
+  weather?: { windMph?: number; dir?: 'out'|'in'|'cross'|string; tempF?: number };
+  players?: string[];           // key actors if known
+  market?: { line?: number; total?: number; liveProb?: number }; // optional
+};
+
+2) Core math outputs (shared)
+
+For any sport, produce:
+
+type MathOutput = {
+  p_event: number;     // 0..1 probability of the alert-worthy event in next window
+  leverage: number;    // 0..1 importance given game context
+  confidence: number;  // 0..100 calibrated
+  priority: 'P90'|'P75'|'P50'|'P25';
+};
+
+3) Probability plug-ins (per sport)
+MLB (example: scoring chance / run-producing PA)
+
+Feature set: inning, outs, base state (RE24), batter ISO/HH%, pitcher HR/BB%, platoon, wind (mph & direction), park HR park factor, score leverage (tie/one-run).
+
+Base model: Logistic regression (fast, explainable):
+
+logit(p_run_in_half_inning) =
+  β0 + β1*RE24 + β2*wind_out_mph + β3*batter_ISO + β4*pitcher_HR9
+    + β5*park_HR + β6*late_close + β7*outs + β8*is_risp
+
+
+Wind adjustment (multiplicative to HR/sLD contact):
+
+HR_multiplier = 1 + 0.03 * max(0, wind_out_mph)   // 3% per mph blowing out (cap later)
+
+
+Cap multiplier to, say, 1.5.
+
+Output: p_event = p(run_scored_in_next_PA | state) or p(run_this_half_inning) depending on cylinder.
+
+NFL/NCAAF (example: TD/score on current drive)
+
+Feature set: down, distance, yard line (red zone proximity), EPA per play (team), QB pressure rate, tempo, time remaining.
+
+Model: Gradient-boosted trees or logistic:
+
+logit(p_score_drive) =
+  α0 + α1*rz_proximity + α2*down_distance_bucket + α3*qb_epa
+    + α4*def_pressure + α5*time_urgency + α6*win_prob_swing_potential
+
+NBA/WNBA (example: clutch scoring run or go-ahead probability)
+
+Feature set: time left, possession, score diff, recent run (last 6–10 poss), star on floor, foul situation, timeouts.
+
+Model: Markov / logistic for p(next 2 possessions favorable).
+
+NHL (example: power play goal likelihood in next 2 min)
+
+Feature set: manpower (PP/PK), shot attempts rate, xG/60 on ice, goalie sv%.
+
+Model: Poisson process for goals in window, → convert to p_event.
+
+You can swap models underneath later; the outputs stay the same.
+
+4) Leverage (shared)
+
+Leverage answers: If this event occurs, how much does it swing the game?
+
+Use win probability added (WPA) proxy:
+
+leverage_raw = E[ |WP_after_event - WP_now| ]
+leverage = clamp01( scale0_1(leverage_raw) )
+
+
+Shortcuts if you don’t have WP live:
+
+MLB: late (≥7th) & tie/±1 run → leverage_raw = 0.6; earlier innings scale down.
+
+NFL: red zone in Q4 or one-score game → 0.7–0.9; midfield Q2 → 0.2–0.4.
+
+NBA: last 3:00 within 2 points → 0.8–0.95.
+
+5) Confidence calibration (shared)
+
+Confidence is “how certain is our model”.
+
+Start with model probability p_event.
+
+Apply reliability curve from past backtests (Platt scaling / isotonic):
+
+p_cal = Calibrate(p_event)
+
+
+Penalize for missing signals (e.g., unknown batter, missing wind):
+
+missing_penalty = 1 - 0.15 * num_critical_missing   // cap at -30%
+p_adj = clamp01(p_cal * missing_penalty)
+
+
+Convert to 0–100:
+
+confidence = round(100 * p_adj)
+
+6) Priority rules (shared)
+
+Single, explainable rule:
+
+alert_score = w1*p_event + w2*leverage + w3*(confidence/100)
+
+Default: w1=0.45, w2=0.35, w3=0.20
+
+
+Buckets:
+
+P90 if alert_score ≥ 0.80
+
+P75 if 0.65–0.79
+
+P50 if 0.50–0.64
+
+P25 otherwise
+
+This makes late, high-impact moments float up even with moderate p_event.
+
+7) Dedupe + cooldown (shared)
+
+Dedup key: sport:gameId:variant:state_hash(clock,bases/down,score).
+
+Cooldown: per dedup key, min(120s, window_size).
+
+Escalation: if priority increases (P50→P75), allow one override ping.
+
+8) Guardrails before AI text
+
+Never allow AI if:
+
+players[] mentions a name that’s not in current lineup/on floor.
+
+confidence < 20.
+
+Always pass math outputs into AI prompt so it can speak truthfully (e.g., “Edge: 82%”).
+
+Truncate to 25 words.
+
+Prompt skeleton (what you already have is perfect; add math tokens):
+
+INPUT:
+{...normalizedState, math: { p_event, leverage, confidence, priority }}
+
+OUTPUT:
+<one line, ≤25 words, 1–3 emojis, no fabrication>
+
+9) Minimal API (drop-in service)
+export interface AIMathService {
+  score(state: NormalizedState): Promise<MathOutput>;
+}
+
+// Factory wires the right sport plugin:
+export function createAIMathService(): AIMathService {
+  const mlb = new MLBProbModel();
+  const nfl = new NFLProbModel();
+  const hoops = new HoopsProbModel();
+  const nhl = new NHLProbModel();
+
+  const calibrator = new PlattCalibrator(); // or isotonic
+
+  return {
+    async score(ns) {
+      let p_event = 0;
+      switch (ns.sport) {
+        case 'MLB': p_event = mlb.prob(ns); break;
+        case 'NFL':
+        case 'NCAAF': p_event = nfl.prob(ns); break;
+        case 'NBA':
+        case 'WNBA': p_event = hoops.prob(ns); break;
+        case 'NHL': p_event = nhl.prob(ns); break;
+      }
+
+      const leverage = computeLeverage(ns); // WPA proxy rules
+      const p_cal = calibrator.apply(ns.sport, p_event);
+      const missingPenalty = 1 - 0.15 * countCriticalMissing(ns);
+      const confidence = Math.round(100 * clamp01(p_cal * missingPenalty));
+
+      const alert_score = 0.45*p_event + 0.35*leverage + 0.20*(confidence/100);
+      const priority =
+        alert_score >= 0.80 ? 'P90' :
+        alert_score >= 0.65 ? 'P75' :
+        alert_score >= 0.50 ? 'P50' : 'P25';
+
+      return { p_event, leverage, confidence, priority };
+    }
+  }
+}
+
+
+Utility sketches:
+
+const clamp01 = (x:number)=>Math.max(0, Math.min(1, x));
+
+function countCriticalMissing(ns: NormalizedState): number {
+  let m = 0;
+  if (ns.sport==='MLB') {
+    if (!ns.context?.outs) m++;
+    if (!ns.context?.bases) m++;
+    if (ns.weather && ns.weather.windMph===undefined) m++;
+  }
+  // add similar for other sports
+  return Math.min(m, 2); // cap penalty
+}
+
+10) Example end-to-end
+MLB – “Second & Third, 1 out, wind out, star up”
+
+p_event (run next PA) = 0.58 after wind & batter power
+
+leverage (7th, tie/±1) = 0.72
+
+Calibrated → confidence = 86
+
+alert_score = 0.450.58 + 0.350.72 + 0.2*0.86 ≈ 0.68 → P75
+
+AI line:
+“⚾ RISP, one down! 🌬️ Wind carrying — middle-of-order chance to cash a run here. Pressure on the mound 🔥”
+
+NFL – “3rd & 4 at 12, Q4 2:04, one-score”
+
+p_event (score on this drive) = 0.64
+
+leverage = 0.80
+
+confidence = 82
+
+alert_score ≈ 0.450.64 + 0.350.80 + 0.2*0.82 = 0.72 → P75/P90 threshold
+
+AI line:
+“🏈 Red zone, Q4: 3rd & 4 at the 12. Game tilts on this snap 🔥”
+
+11) Where it plugs in your pipeline
+
+Engines → Cylinders → AIMathService.score() → (guardrails) → AI Composer → Card Renderer → Dedupe/Cooldown
+
+Engines/cylinders keep their triggers.
+
+AIMathService standardizes numbers.
+
+AI composer crafts one line (optional).
+
+UI uses confidence + priority consistently across sports.
+
+If you want, I can package this into a /engine/ai-math/ folder with:
+
+models/ (sport plug-ins)
+
+calibration/ (saved curves per sport)
+
+index.ts (factory + shared scoring)
+
+simple unit tests for bucket thresholds and dedupe keys.
