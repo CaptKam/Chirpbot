@@ -1,0 +1,425 @@
+Let’s break it down step by step:
+
+1. Purpose of the Card
+
+Your alert card needs to do three things fast:
+
+Show what’s happening (sport, situation, urgency).
+
+Give context/value (why it matters, e.g., scoring chance, betting edge).
+
+Look clean and exciting (so users trust it and want to act on it).
+
+2. Layout Structure (Simple & Consistent)
+
+Think of it like a sports trading card:
+
+Top Row (Header):
+
+Sport Icon + League (⚾ MLB | 🏈 NFL)
+
+Situation Title (RED ZONE | BASES LOADED | FINAL MINUTE)
+
+Middle (Main Content):
+
+Scoreline + Time (Q4 2:11 — Bengals 3, Broncos 28)
+
+Highlighted Event (🔥 “Scoring chance: 75% run expectancy”)
+
+Optional Context (e.g., player, weather, field position)
+
+Bottom (Footer):
+
+Confidence/Edge % (ex: “88% Confidence”)
+
+Tagline / Edge type (💰 “Live Edge Alert”)
+
+3. Content Style
+
+Your problem may be that the text feels robotic or messy. Alerts should be short, sharp, and hype-driven:
+
+❌ “Unknown QB/player ⚡ Indoor conditions • Unknown field position impact”
+
+✅ “⚡ Inside the 20, QB under pressure — Red Zone drive”
+
+Think sports ticker + betting edge tone.
+
+4. Visual Design Tips
+
+Spacing: Don’t cram text; group related info.
+
+Icons/Emojis: Quick scanning beats words (🏟️, ⏰, 💰, 🔥).
+
+Hierarchy: Bold the situation, keep context secondary.
+
+Consistency: Every sport’s card should “feel” the same skeleton.
+
+Here’s a cleaned-up example rework of one of your alerts:
+
+Q4 • 2:11 — Bengals 3, Broncos 28
+🏈 RED ZONE ALERT
+🔥 Drive inside the 20 — scoring chance is live!
+💰 Edge Confidence: 88%
+
+👉 Want me to mock up 2–3 different alert card templates (visual + text style) so you can compare and pick a direction?
+
+You said:
+I want AI to have some freedom here, if there is a situaltion that AI thinks would be a great alert too, I want my user to know. Like basesload, Wind is pushing to the out feild, and otnia is up to bat. But we cant get alerts anywhere close to this 
+ChatGPT said:
+
+Ahh, now I see what you’re aiming for. You don’t just want static triggers (like “Bases Loaded” or “Red Zone”). You want AI-crafted storytelling alerts that mix conditions together into something unique, contextual, and exciting.
+
+Right now your alerts are too rigid:
+
+They only fire on a single condition (e.g., bases loaded).
+
+They spit out raw data without meaning.
+
+What you want is an AI Enhancement Layer that can take multiple signals → combine them → output a moment that feels alive.
+
+Example Flow for Smart AI Alerts
+
+Game State Cylinder Triggers (structured data)
+
+Bases loaded, wind speed, batter = Ohtani, inning, score diff.
+
+AI Context Composer
+
+Feeds those signals into a short prompt:
+
+Situation: MLB, 7th inning, bases loaded, wind blowing out, Ohtani at bat. 
+Task: Write a hype-driven alert in under 25 words with emojis.
+
+
+Output
+
+“⚾ Bases juiced, 7th inning! 🌬️ Wind pushing deep, Ohtani steps in — slam potential is SKY HIGH 🚀”
+
+Why This Works
+
+AI is free to create: not locked to “just bases loaded.”
+
+Multi-factor storytelling: brings in wind, batter, score, etc.
+
+Short, punchy, human tone: not robotic.
+
+Guardrails You Need
+
+Filters: AI shouldn’t hallucinate (no “Ohtani” unless he’s actually batting).
+
+Length Control: Max ~25 words.
+
+Style Control: Sports hype, not gambling advice (keeps you safe + readable).
+
+Fallback: If AI enhancement fails, default to structured alert (e.g., “Bases loaded, 7th inning, 0 outs”).
+
+⚡ So the system would look like this:
+Game Data → Sport Engine → Alert Cylinders → AI Composer (freedom to hype) → User Card
+
+Do you want me to write a prototype AI prompt template you could plug into your engine that would generate these “alive” alerts (like the Ohtani example)?
+
+You said:
+yes 
+ChatGPT said:
+
+Perfect. Here’s a prototype AI prompt template you can plug into your engine. It gives AI freedom to make alerts hype-driven, but with strong guardrails so it stays accurate, short, and exciting.
+
+AI Alert Composer Prompt
+You are an AI sports announcer. 
+Your job is to turn structured game data into a short, hype-driven alert card message.
+
+INPUT DATA:
+- Sport: {{sport}}
+- Teams: {{awayTeam}} {{awayScore}}, {{homeTeam}} {{homeScore}}
+- Inning/Quarter/Period: {{timeContext}}
+- Situation: {{situation}} (ex: bases loaded, red zone, 2-minute warning)
+- Key Players: {{keyPlayers}} (if any)
+- Weather: {{weather}} (wind, rain, heat, etc.)
+- Confidence/Probability: {{confidence}}%
+
+TASK:
+1. **Always keep it under 25 words.**
+2. **Must be accurate to the input data.**
+3. Use a **sports hype tone** — urgent, fun, like a live announcer.
+4. Include up to 3 emojis that fit naturally (⚾, 🏈, 🌬️, 🔥, 🚀, etc.).
+5. If a superstar player is in the moment, highlight them.
+6. If weather or special conditions apply, weave them into the hype.
+7. Never fabricate players or stats.
+
+OUTPUT EXAMPLES:
+- "⚾ Bases juiced, 7th! 🌬️ Wind pushing deep, Ohtani at the plate — slam chance rising 🚀"
+- "🏈 4th & Goal! 2:00 left — Chiefs knocking at the door 🔥 Edge: 82%"
+- "⚾ Close game alert! Yankees 5, Red Sox 5 — late inning tension building 🏟️"
+
+Now generate the alert:
+
+How This Fits into Your System
+
+Sport Engine → detects structured event (bases loaded, red zone).
+
+AI Composer → gets that structured data + optional weather + player info.
+
+AI Output → replaces robotic text with dynamic, hype alert.
+
+Fallback → if AI fails, use structured template like “Bases loaded, 7th inning, Yankees 3, Red Sox 2.”
+
+Want me to also design the alert card layout JSON schema that pairs with this AI prompt (so every alert has the same skeleton but flexible AI text)?
+
+ChatGPT said:
+Thought for 7s
+
+Awesome—here’s a tight, production-ready Alert Card Schema that gives AI room to “tell the story” while keeping a consistent skeleton for every sport.
+
+Alert Card JSON Schema (lean + future-proof)
+{
+  "id": "string",                 // unique (gameId + alert type + ts)
+  "sport": "MLB|NFL|NCAAF|NBA|WNBA|CFL|NHL",
+  "league": "string",             // optional, e.g., 'AL', 'SEC'
+  "gameId": "string",
+  "ts": "2025-09-30T17:36:00Z",
+
+  "header": {
+    "variant": "BASES_LOADED|RED_ZONE|FINAL_MINUTES|CUSTOM",
+    "icon": "⚾",
+    "badge": "LIVE|HOT|NEW|AI"
+  },
+
+  "context": {
+    "clock": "Q4 2:11" ,          // or "Top 7 • 1 out"
+    "venue": "optional",
+    "teams": {
+      "away": {"name": "CIN", "score": 3},
+      "home": {"name": "DEN", "score": 28}
+    },
+    "state": {
+      "possession": "DEN",        // football
+      "yardLine": "DEN 12",       // football
+      "downDistance": "3rd & 4",  // football
+
+      "inning": "Top 7",          // baseball
+      "outs": 1,                  // baseball
+      "bases": {"1B": true, "2B": true, "3B": true}, // baseball
+
+      "period": 4                 // basketball/hockey (optional)
+    }
+  },
+
+  "factors": {
+    "players": ["Shohei Ohtani"], // if known
+    "weather": {
+      "summary": "Wind out to RF",
+      "windMph": 18,
+      "direction": "outfield"
+    },
+    "trend": {
+      "oddsMove": null,
+      "momentum": "3 straight first downs" // free text, optional
+    }
+  },
+
+  "metrics": {
+    "confidence": 88,             // 0-100 (your model)
+    "probability": 0.76,          // 0-1 when relevant
+    "leverage": "HIGH|MED|LOW"    // optional UX hint
+  },
+
+  "ai": {
+    "text": "⚾ Bases juiced, 7th! 🌬️ Wind pushing deep—Ohtani steps in. Slam chance rising 🚀",
+    "maxWords": 25,
+    "version": "ai-composer@1.2.0",
+    "sources": ["game_state","weather","lineups"]   // traceability
+  },
+
+  "actions": [
+    {"type": "OPEN_GAME", "label": "Open game"},
+    {"type": "MUTE_TYPE", "label": "Mute this alert"}
+  ],
+
+  "lifecycle": {
+    "cooldownMs": 300000,
+    "expiresAt": "2025-09-30T17:41:00Z",
+    "dedupeKey": "MLB:1234:BASES_LOADED:Top7"
+  }
+}
+
+TypeScript Interfaces (drop-in)
+export type Sport = 'MLB'|'NFL'|'NCAAF'|'NBA'|'WNBA'|'CFL'|'NHL';
+
+export interface AlertCard {
+  id: string;
+  sport: Sport;
+  league?: string;
+  gameId: string;
+  ts: string;
+
+  header: {
+    variant: 'BASES_LOADED'|'RED_ZONE'|'FINAL_MINUTES'|'CUSTOM';
+    icon: string;
+    badge?: 'LIVE'|'HOT'|'NEW'|'AI';
+  };
+
+  context: {
+    clock?: string;
+    venue?: string;
+    teams: {
+      away: { name: string; score: number; };
+      home: { name: string; score: number; };
+    };
+    state?: {
+      possession?: string;
+      yardLine?: string;
+      downDistance?: string;
+      inning?: string;
+      outs?: number;
+      bases?: { '1B': boolean; '2B': boolean; '3B': boolean; };
+      period?: number;
+    };
+  };
+
+  factors?: {
+    players?: string[];
+    weather?: {
+      summary?: string;
+      windMph?: number;
+      direction?: 'infield'|'outfield'|'left'|'right'|'cross'|string;
+    };
+    trend?: {
+      oddsMove?: string|null;
+      momentum?: string;
+    };
+  };
+
+  metrics?: {
+    confidence?: number;      // 0..100
+    probability?: number;     // 0..1
+    leverage?: 'HIGH'|'MED'|'LOW';
+  };
+
+  ai: {
+    text: string;             // ≤ 25 words enforced upstream
+    maxWords?: number;
+    version?: string;
+    sources?: string[];
+  };
+
+  actions?: { type: 'OPEN_GAME'|'MUTE_TYPE'|'PIN'|'SHARE'; label: string; }[];
+
+  lifecycle?: {
+    cooldownMs?: number;
+    expiresAt?: string;
+    dedupeKey?: string;
+  };
+}
+
+AI Prompt (guardrailed) — final form
+
+Use exactly this as your system prompt for the composer:
+
+You are an AI sports announcer. Output ONE short alert.
+Rules:
+- ≤ 25 words. 1–3 emojis max.
+- Must reflect INPUT exactly. No made-up players/stats.
+- Hype tone, but neutral on betting (no advice).
+- If weather or star player is relevant, weave it in.
+- If any required field is missing, gracefully omit it (do not invent).
+
+INPUT:
+{{json_payload_from_engine}}
+
+OUTPUT:
+<one-line string only>
+
+Fallback (deterministic, no-AI)
+{{header.variant}} • {{context.clock}} — {{context.teams.away.name}} {{context.teams.away.score}}, {{context.teams.home.name}} {{context.teams.home.score}}
+{{deterministic_line}}
+Edge: {{metrics.confidence}}%
+
+
+Example deterministic_line (MLB bases loaded):
+
+Bases loaded {{context.state.inning}}, {{context.state.outs}} out(s). Runners on 1B/2B/3B.
+
+Examples (ready to paste)
+
+MLB – Ohtani + Wind
+
+{
+  "id": "mlb_123_BASES_LOADED_2025-09-30T17:36:00Z",
+  "sport": "MLB",
+  "league": "AL",
+  "gameId": "mlb_123",
+  "ts": "2025-09-30T17:36:00Z",
+  "header": {"variant":"BASES_LOADED","icon":"⚾","badge":"AI"},
+  "context": {
+    "clock": "Top 7 • 1 out",
+    "teams": {"away":{"name":"LAA","score":3},"home":{"name":"NYY","score":4}},
+    "state": {
+      "inning": "Top 7",
+      "outs": 1,
+      "bases": {"1B": true,"2B": true,"3B": true}
+    }
+  },
+  "factors": {
+    "players": ["Shohei Ohtani"],
+    "weather": {"summary":"Wind out to RF","windMph":18,"direction":"outfield"}
+  },
+  "metrics": {"confidence": 91, "probability": 0.72, "leverage": "HIGH"},
+  "ai": {
+    "text": "⚾ Bases juiced, Top 7! 🌬️ Wind carrying to right—Ohtani steps in. Big fly potential is real 🚀",
+    "version": "ai-composer@1.2.0",
+    "sources": ["game_state","weather","lineups"]
+  },
+  "actions": [{"type":"OPEN_GAME","label":"Open game"},{"type":"MUTE_TYPE","label":"Mute this alert"}],
+  "lifecycle": {"cooldownMs":300000,"expiresAt":"2025-09-30T17:41:00Z","dedupeKey":"MLB:mlb_123:BASES_LOADED:Top7"}
+}
+
+
+NFL – Red Zone
+
+{
+  "id": "nfl_55_RED_ZONE_2025-09-30T17:20:10Z",
+  "sport": "NFL",
+  "league": "NFL",
+  "gameId": "nfl_55",
+  "ts": "2025-09-30T17:20:10Z",
+  "header": {"variant":"RED_ZONE","icon":"🏈","badge":"LIVE"},
+  "context": {
+    "clock": "Q4 2:04",
+    "teams": {"away":{"name":"CIN","score":3},"home":{"name":"DEN","score":28}},
+    "state": {"possession":"DEN","yardLine":"CIN 12","downDistance":"3rd & 4"}
+  },
+  "metrics": {"confidence": 88, "probability": 0.64, "leverage":"MED"},
+  "ai": {
+    "text": "🏈 Red Zone! Q4 2:04 — 3rd & 4 at the 12. Door is wide open 🔥",
+    "version":"ai-composer@1.2.0",
+    "sources":["game_state"]
+  },
+  "actions":[{"type":"OPEN_GAME","label":"Open game"}],
+  "lifecycle":{"cooldownMs":120000,"expiresAt":"2025-09-30T17:22:10Z","dedupeKey":"NFL:nfl_55:RED_ZONE:Q4:2:04"}
+}
+
+Render Rules (UI polish that just works)
+
+Header row: icon + header.variant as title; right side: header.badge pill and metrics.confidence%.
+
+Primary line: ai.text (truncate at 25 words; show “AI” pill when present).
+
+Secondary line (context chips):
+
+Clock chip (⏰), score chip (e.g., LAA 3 — NYY 4), state chip (inning/downs), weather chip if present (🌬️ 18 mph out).
+
+Action row: left aligned “Open game”; overflow menu: “Mute this alert,” “Pin,” “Share.”
+
+Colors: variant-based accent (e.g., RED_ZONE = red accent, BASES_LOADED = amber accent), neutral body.
+
+Engine Integration (where to put the AI)
+
+Cylinder fires → build the schema object without ai.text.
+
+Call the AI Composer with the same object as JSON INPUT.
+
+Validate output (≤ 25 words, no unknown player names).
+
+Hydrate ai.text; compute lifecycle.dedupeKey; emit.
+
+If AI fails: populate ai.text with deterministic fallback and keep moving.
