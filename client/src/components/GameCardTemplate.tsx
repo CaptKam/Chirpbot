@@ -306,7 +306,7 @@ export function GameCardTemplate({
               outs={displayOuts}
               balls={displayBalls}
               strikes={displayStrikes}
-              size="sm"
+              size="md"
               showCount={status === 'live'}
             />
           )}
