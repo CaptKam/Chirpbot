@@ -153,26 +153,6 @@ const updateUserProfileSchema = z.object({
   oddsApiKey: z.string().optional(),
 }).strict(); // strict() ensures no additional fields are allowed
 
-// Helper function for validating and normalizing sport names
-function validateSportName(sport: string): { valid: boolean; normalized: string; error?: string } {
-  const supportedSports = ['MLB', 'NFL', 'NBA', 'WNBA', 'NCAAF', 'CFL'];
-  const normalizedSport = sport.toUpperCase().trim();
-
-  if (!normalizedSport) {
-    return { valid: false, normalized: '', error: 'Sport name cannot be empty' };
-  }
-
-  if (!supportedSports.includes(normalizedSport)) {
-    return {
-      valid: false,
-      normalized: normalizedSport,
-      error: `Unsupported sport: ${normalizedSport}. Supported sports: ${supportedSports.join(', ')}`
-    };
-  }
-
-  return { valid: true, normalized: normalizedSport };
-}
-
 // USER session parser - for regular app users only
 const userSessionParser = session({
   name: 'cb.sid',
@@ -558,13 +538,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const now = Date.now();
       const lastBroadcast = recentBroadcasts.get(alertKey);
 
-      // Check if this alert was recently broadcast
+      // Atomic check-and-set: Check if this alert was recently broadcast
       if (lastBroadcast && (now - lastBroadcast) < BROADCAST_DEDUPE_TTL) {
         console.log(`🚫 Duplicate broadcast prevented for alert: ${alertKey} (sent ${now - lastBroadcast}ms ago)`);
         return;
       }
 
-      // Record this broadcast
+      // Record this broadcast BEFORE processing to prevent race conditions
+      // If another broadcast comes in during processing, it will see this timestamp
       recentBroadcasts.set(alertKey, now);
       console.log(`✅ Broadcasting new alert: ${alertKey}${sequenceNumber ? ` (seq: ${sequenceNumber})` : ''}`);
     }
