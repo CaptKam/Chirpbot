@@ -129,42 +129,12 @@
       opacity: 1;
     }
     50% {
-      opacity: 0.85;
+      opacity: 0.8;
     }
   }
   
   .animate-pulse-subtle {
     animation: pulse-subtle 2s ease-in-out infinite;
-  }
-  
-  /* Smooth entrance animation */
-  @keyframes fade-in-up {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  .animate-fade-in-up {
-    animation: fade-in-up 0.5s ease-out;
-  }
-  
-  /* Glow effect for interactive elements */
-  @keyframes glow-pulse {
-    0%, 100% {
-      box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
-    }
-    50% {
-      box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
-    }
-  }
-  
-  .animate-glow-pulse {
-    animation: glow-pulse 2s ease-in-out infinite;
   }
   
   /* Color utilities */

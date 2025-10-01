@@ -202,54 +202,49 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.96 }}
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.5, type: "spring", stiffness: 120, damping: 15 }}
+      transition={{ duration: 0.4, type: "spring", stiffness: 100 }}
       whileHover={{ 
-        scale: 1.015,
-        y: -2,
-        transition: { duration: 0.25, ease: "easeOut" } 
+        scale: 1.02, 
+        transition: { duration: 0.2 } 
       }}
     >
       <Card 
-        className={`relative backdrop-blur-xl rounded-2xl shadow-2xl hover:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] transition-all duration-500 border overflow-hidden ${sportConfig.borderColor} bg-gradient-to-br from-slate-900/60 via-slate-900/50 to-slate-800/40`}
+        className={`relative backdrop-blur-sm rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 border overflow-hidden ${sportConfig.borderColor} bg-slate-900/50`}
         data-testid={`universal-alert-card-${alert.id}`}
       >
-        {/* Sport Color Accent Bar with Gradient */}
-        <div className={`h-1.5 ${sportConfig.accentColor} bg-gradient-to-r opacity-90`} />
+        {/* Sport Color Accent Bar */}
+        <div className={`h-1 ${sportConfig.accentColor}`} />
         
-        {/* Refined Gradient Background Overlay */}
-        <div className={`absolute inset-0 bg-gradient-to-br ${sportConfig.gradientFrom} ${sportConfig.gradientTo} pointer-events-none opacity-30`} />
+        {/* Gradient Background Overlay */}
+        <div className={`absolute inset-0 bg-gradient-to-br ${sportConfig.gradientFrom} ${sportConfig.gradientTo} pointer-events-none opacity-50`} />
         
-        {/* Subtle Glow Effect */}
-        <div className={`absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-white/[0.02] pointer-events-none`} />
-        
-        <CardContent className="p-6 sm:p-7 relative">
+        <CardContent className="p-5 relative">
           {/* Header: Sport Icon, Type, Time, Priority */}
-          <div className="flex items-start justify-between mb-5">
-            <div className="flex items-center gap-4 flex-1">
-              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl ${sportConfig.bgColor} ${sportConfig.borderColor} border-2 shadow-lg backdrop-blur-sm relative overflow-hidden`}>
-                <div className={`absolute inset-0 bg-gradient-to-br ${sportConfig.gradientFrom} ${sportConfig.gradientTo} opacity-40`} />
-                <span className="relative z-10">{sportConfig.icon}</span>
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-3 flex-1">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${sportConfig.bgColor} ${sportConfig.borderColor} border-2`}>
+                {sportConfig.icon}
               </div>
               <div className="flex-1">
-                <h3 className={`text-lg font-black uppercase tracking-wide mb-1.5 ${sportConfig.iconColor} leading-tight`} data-testid={`alert-type-${alert.id}`}>
+                <h3 className={`text-base font-black uppercase tracking-wide mb-1 ${sportConfig.iconColor}`} data-testid={`alert-type-${alert.id}`}>
                   {alert.type.replace(/^(MLB|NFL|NBA|NCAAF|WNBA|CFL|NHL)_/, '').replace(/_/g, ' ')}
                 </h3>
                 <div className="flex items-center gap-2">
-                  <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="text-xs font-medium text-slate-400" data-testid={`alert-timestamp-${alert.id}`}>{formattedTime}</span>
+                  <Clock className="w-3 h-3 text-slate-400" />
+                  <span className="text-xs text-slate-400" data-testid={`alert-timestamp-${alert.id}`}>{formattedTime}</span>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2">
               {alert.priority != null && (
-                <Badge variant="outline" className="text-xs font-bold text-slate-300 border-slate-600/60 bg-slate-800/40 backdrop-blur-sm px-2.5 py-1" data-testid={`priority-${alert.id}`}>
+                <Badge variant="outline" className="text-xs font-bold text-slate-300 border-slate-600" data-testid={`priority-${alert.id}`}>
                   P{alert.priority}
                 </Badge>
               )}
               {alert.sentToTelegram && (
-                <div className={`p-2 rounded-xl ${sportConfig.bgColor} backdrop-blur-sm shadow-md`}>
+                <div className={`p-1.5 rounded-lg ${sportConfig.bgColor}`}>
                   <Smartphone className={`w-4 h-4 ${sportConfig.iconColor}`} />
                 </div>
               )}
@@ -266,16 +261,14 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
           )}
 
           {/* Main Alert Message with AI Badge */}
-          <div className={`mb-5 rounded-2xl p-5 border ${sportConfig.borderColor} bg-gradient-to-br from-slate-800/90 to-slate-800/70 backdrop-blur-md shadow-inner`} data-testid={`alert-content-${alert.id}`}>
+          <div className={`mb-4 rounded-xl p-4 border ${sportConfig.borderColor} bg-slate-800/80`} data-testid={`alert-content-${alert.id}`}>
             {(alert.hasComposerEnhancement || alert.context?.generativeAI) && (
-              <div className="flex items-center gap-2 mb-3 pb-3 border-b border-slate-700/40">
-                <div className={`p-1.5 rounded-lg ${sportConfig.bgColor}`}>
-                  <Bot className={`w-3.5 h-3.5 ${sportConfig.iconColor}`} />
-                </div>
-                <span className={`text-xs font-bold ${sportConfig.iconColor} uppercase tracking-wider`}>AI Enhanced</span>
+              <div className="flex items-center gap-2 mb-2">
+                <Bot className={`w-4 h-4 ${sportConfig.iconColor}`} />
+                <span className={`text-xs font-semibold ${sportConfig.iconColor} uppercase tracking-wide`}>AI Enhanced</span>
               </div>
             )}
-            <div className="text-slate-100 text-base font-medium leading-relaxed">
+            <div className="text-slate-100 text-sm font-medium leading-relaxed">
               {displayContent}
             </div>
           </div>
@@ -602,11 +595,11 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
           )}
 
           {/* Footer: Confidence Badge and Metadata */}
-          <div className="flex items-center justify-between pt-4 border-t border-slate-700/30">
+          <div className="flex items-center justify-between pt-3 border-t border-slate-700/50">
             <div className="flex items-center gap-3">
               <Badge 
                 variant="outline" 
-                className={`${sportConfig.iconColor} ${sportConfig.borderColor} font-bold text-xs px-3 py-1.5 bg-slate-800/40 backdrop-blur-sm`}
+                className={`${sportConfig.iconColor} ${sportConfig.borderColor} font-bold text-xs`}
                 data-testid={`sport-badge-${alert.sport.toLowerCase()}`}
               >
                 {alert.sport}
@@ -615,18 +608,14 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
 
             {/* Confidence Indicator */}
             {confidencePercent > 0 && (
-              <div className="flex items-center gap-2.5">
-                <div className="flex items-center gap-2">
-                  <div className={`relative w-12 h-12 rounded-full ${sportConfig.bgColor} border-2 ${sportConfig.borderColor} flex items-center justify-center backdrop-blur-sm shadow-lg`}>
-                    <div className={`absolute inset-0 bg-gradient-to-br ${sportConfig.gradientFrom} ${sportConfig.gradientTo} rounded-full opacity-30`} />
-                    <span className={`text-sm font-black ${sportConfig.iconColor} relative z-10`}>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  <div className={`relative w-10 h-10 rounded-full ${sportConfig.bgColor} border-2 ${sportConfig.borderColor} flex items-center justify-center`}>
+                    <span className={`text-xs font-bold ${sportConfig.iconColor}`}>
                       {confidencePercent}
                     </span>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs font-semibold text-slate-300">Confidence</span>
-                    <span className="text-[10px] text-slate-500">Score</span>
-                  </div>
+                  <span className="text-xs text-slate-400">Confidence</span>
                 </div>
               </div>
             )}
