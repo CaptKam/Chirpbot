@@ -117,15 +117,16 @@ const AlertSkeleton = ({ sport }: { sport: string }) => {
   const colors = getSportSkeletonClasses(sport === 'all' ? 'MLB' : sport);
   
   return (
-    <div className={`bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl ${colors.shadow} animate-pulse`}>
-      <div className="flex items-center justify-between mb-4">
-        <div className={`h-6 ${colors.bg1} rounded-lg w-32 animate-pulse`}></div>
-        <div className={`h-4 ${colors.bg2} rounded w-16 animate-pulse`}></div>
+    <div className={`bg-gradient-to-br from-slate-900/40 to-slate-800/30 backdrop-blur-md ring-1 ring-white/5 border-0 rounded-2xl p-7 shadow-2xl ${colors.shadow}`}>
+      <div className="flex items-center justify-between mb-5">
+        <div className={`h-7 ${colors.bg1} rounded-xl w-36 animate-pulse`}></div>
+        <div className={`h-5 ${colors.bg2} rounded-lg w-20 animate-pulse`}></div>
       </div>
-      <div className={`h-4 ${colors.bg2} rounded w-full mb-4 animate-pulse`}></div>
+      <div className={`h-5 ${colors.bg2} rounded-lg w-full mb-3 animate-pulse`}></div>
+      <div className={`h-4 ${colors.bg2} rounded-lg w-4/5 mb-5 animate-pulse`}></div>
       <div className="flex items-center justify-between">
-        <div className={`h-6 ${colors.bg1} rounded-lg w-48 animate-pulse`}></div>
-        <div className={`h-6 ${colors.bg2} rounded w-12 animate-pulse`}></div>
+        <div className={`h-7 ${colors.bg1} rounded-xl w-52 animate-pulse`}></div>
+        <div className={`h-8 ${colors.bg2} rounded-full w-14 animate-pulse`}></div>
       </div>
     </div>
   );
@@ -196,7 +197,7 @@ export default function AlertsPage() {
 
 
   return (
-    <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen" data-testid="alerts-page">
+    <div className="pb-24 sm:pb-28 bg-gradient-to-br from-[#0A0F1E] via-[#0B1220] to-[#0D1528] text-slate-100 antialiased min-h-screen" data-testid="alerts-page">
       <PageHeader 
         title="ChirpBot" 
         subtitle="Real-Time Alert Dashboard"
@@ -210,7 +211,7 @@ export default function AlertsPage() {
         data-testid="sport-filter-tabs" 
       />
 
-      <div className="max-w-4xl mx-auto space-y-6 px-2 sm:px-4 md:px-6" data-testid="alerts-container">
+      <div className="max-w-5xl mx-auto space-y-5 px-3 sm:px-5 md:px-8" data-testid="alerts-container">
         {/* Alerts Content */}
         <div className="pb-8 space-y-4" data-testid="alerts-list">
         {alertsError ? (
