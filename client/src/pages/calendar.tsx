@@ -331,7 +331,9 @@ export default function Calendar() {
 
   return (
     <>
-    <div className="pb-24 sm:pb-28 min-h-screen">
+      
+    
+    <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
       <PageHeader 
         title="ChirpBot" 
         subtitle="Game Calendar & Monitoring" 
