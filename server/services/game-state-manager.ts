@@ -683,7 +683,7 @@ export class GameStateManager {
           const engine = this.engineManager.getEngine(sport);
 
           if (engine && engine.generateLiveAlerts) {
-            // Convert game data to GameState format for engine
+            // Convert game data to GameState format for engine (sport-specific fields)
             const gameState = {
               gameId: gameInfo.gameId,
               sport: gameInfo.sport,
@@ -693,16 +693,29 @@ export class GameStateManager {
               awayTeam: newGameData.awayTeam?.name || gameInfo.awayTeam || 'Away', 
               homeScore: gameInfo.homeScore || 0,
               awayScore: gameInfo.awayScore || 0,
-              inning: newGameData.inning || 1,
-              isTopInning: newGameData.isTopInning || false,
-              outs: newGameData.outs || 0,
-              balls: newGameData.balls || 0,
-              strikes: newGameData.strikes || 0,
-              hasFirst: newGameData.hasFirst || false,
-              hasSecond: newGameData.hasSecond || false, 
-              hasThird: newGameData.hasThird || false,
-              currentBatter: newGameData.currentBatter || null,
-              currentPitcher: newGameData.currentPitcher || null
+              // MLB-specific fields
+              inning: newGameData.inning,
+              isTopInning: newGameData.isTopInning,
+              outs: newGameData.outs,
+              balls: newGameData.balls,
+              strikes: newGameData.strikes,
+              hasFirst: newGameData.hasFirst,
+              hasSecond: newGameData.hasSecond, 
+              hasThird: newGameData.hasThird,
+              currentBatter: newGameData.currentBatter,
+              currentPitcher: newGameData.currentPitcher,
+              // Basketball-specific fields (NBA, WNBA)
+              quarter: newGameData.quarter || newGameData.period,
+              timeRemaining: newGameData.timeRemaining || newGameData.clock,
+              period: newGameData.period || newGameData.quarter,
+              clock: newGameData.clock || newGameData.timeRemaining,
+              possession: newGameData.possession,
+              // Football-specific fields (NFL, NCAAF, CFL)
+              down: newGameData.down,
+              yardsToGo: newGameData.yardsToGo,
+              yardLine: newGameData.yardLine,
+              fieldPosition: newGameData.fieldPosition,
+              redZone: newGameData.redZone
             };
 
             console.log(`🚨 Generating alerts for ${sport} game ${gameId}`);

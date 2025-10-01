@@ -196,8 +196,16 @@ export class WNBAEngine extends BaseSportEngine {
         const wnbaApi = new WNBAApiService();
         const enhancedData = await wnbaApi.getEnhancedGameData(gameState.gameId);
 
+        console.log(`🔍 WNBA Enhanced Data for ${gameState.gameId}:`, {
+          quarter: enhancedData?.quarter,
+          timeRemaining: enhancedData?.timeRemaining,
+          homeScore: enhancedData?.homeScore,
+          awayScore: enhancedData?.awayScore,
+          hasError: !!enhancedData?.error
+        });
+
         if (enhancedData && !enhancedData.error) {
-          return {
+          const enhanced = {
             ...gameState,
             quarter: enhancedData.quarter || gameState.quarter || 1,
             timeRemaining: enhancedData.timeRemaining || gameState.timeRemaining || '',
@@ -205,16 +213,19 @@ export class WNBAEngine extends BaseSportEngine {
             homeScore: enhancedData.homeScore || gameState.homeScore,
             awayScore: enhancedData.awayScore || gameState.awayScore,
             // WNBA-specific fields
-            period: enhancedData.period || gameState.quarter,
-            clock: enhancedData.clock || gameState.timeRemaining,
+            period: enhancedData.period || enhancedData.quarter || gameState.quarter || 1,
+            clock: enhancedData.clock || enhancedData.timeRemaining || gameState.timeRemaining || '',
             situation: enhancedData.situation || {}
           };
+          console.log(`✅ WNBA Enhanced GameState for ${gameState.gameId}: quarter=${enhanced.quarter}, time=${enhanced.timeRemaining}`);
+          return enhanced;
         }
       }
     } catch (error) {
       console.error('Error enhancing WNBA game state with live data:', error);
     }
 
+    console.log(`⚠️ WNBA: Using original gameState for ${gameState.gameId} (enhancement failed or not live)`);
     return gameState;
   }
 
