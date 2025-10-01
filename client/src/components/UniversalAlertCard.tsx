@@ -191,8 +191,14 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
     return <Minus className="w-3 h-3" />;
   };
 
-  // Calculate confidence percentage
-  const confidencePercent = Math.round((alert.confidence || 0) * 100);
+  // Calculate confidence percentage - handle both decimal (0-1) and percentage (0-100) formats
+  const confidencePercent = (() => {
+    const conf = alert.confidence || 0;
+    // If already a percentage (>1), clamp it to 0-100
+    if (conf > 1) return Math.min(100, Math.max(0, Math.round(conf)));
+    // If decimal (0-1), convert to percentage
+    return Math.round(conf * 100);
+  })();
 
   return (
     <motion.div
@@ -205,7 +211,7 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
       }}
     >
       <Card 
-        className={`backdrop-blur-sm rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 border overflow-hidden ${sportConfig.borderColor} bg-slate-900/50`}
+        className={`relative backdrop-blur-sm rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 border overflow-hidden ${sportConfig.borderColor} bg-slate-900/50`}
         data-testid={`universal-alert-card-${alert.id}`}
       >
         {/* Sport Color Accent Bar */}
