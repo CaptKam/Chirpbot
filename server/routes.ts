@@ -1078,12 +1078,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           games = await nbaService.getTodaysGames(req.query.date as string);
           break;
 
-        case 'NHL':
-          const { NHLApiService } = await import('./services/nhl-api');
-          const nhlService = new NHLApiService();
-          games = await nhlService.getTodaysGames(req.query.date as string);
-          break;
-
         case 'CFL':
           const { CFLApiService } = await import('./services/cfl-api');
           const cflService = new CFLApiService();

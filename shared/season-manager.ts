@@ -39,13 +39,6 @@ export const SPORT_SEASONS: SportSeason[] = [
     color: { border: 'border-purple-500', text: 'text-purple-400', bg: 'bg-purple-500/10' }
   },
   {
-    sport: 'NHL',
-    startMonth: 10,   // October  
-    endMonth: 6,      // June (crosses year boundary)
-    priority: 80,     // Lower than NBA when overlapping
-    color: { border: 'border-cyan-500', text: 'text-cyan-400', bg: 'bg-cyan-500/10' }
-  },
-  {
     sport: 'NCAAF',
     startMonth: 8,    // August
     endMonth: 1,      // January (crosses year boundary)
@@ -207,6 +200,6 @@ export function getSportTabColors(sport: string): { border: string; text: string
 
 // Export default sports array sorted by current season
 export function getSeasonAwareSports(currentDate = new Date()): string[] {
-  const allSports = ["MLB", "NFL", "NBA", "NHL", "CFL", "NCAAF", "WNBA"];
+  const allSports = ["MLB", "NFL", "NBA", "CFL", "NCAAF", "WNBA"];
   return sortSportsBySeason(allSports, currentDate);
 }

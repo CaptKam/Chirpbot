@@ -539,16 +539,6 @@ export const storage = {
           'NBA_PLAYOFF_INTENSITY': true,
           'NBA_SUPERSTAR_ANALYTICS': true,
           'NBA_TWO_MINUTE_WARNING': true
-        },
-        'nhl': {
-          'NHL_THIRD_PERIOD': true,
-          'NHL_CLOSE_GAME': true,
-          'NHL_OVERTIME': true,
-          'NHL_POWER_PLAY': true,
-          'NHL_PENALTY_KILL': true,
-          'NHL_CLUTCH_PERFORMANCE': true,
-          'POWER_PLAY': true,
-          'EMPTY_NET': true
         }
       };
 

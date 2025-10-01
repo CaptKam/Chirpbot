@@ -67,7 +67,7 @@ export const userMonitoredTeams = pgTable("user_monitored_teams", {
 // Global alert settings for admin management
 export const globalAlertSettings = pgTable("global_alert_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  sport: text("sport").notNull(), // MLB, NFL, NBA, NHL, etc.
+  sport: text("sport").notNull(), // MLB, NFL, NBA, CFL, NCAAF, WNBA
   alertType: text("alert_type").notNull(), // RISP, BASES_LOADED, etc.
   enabled: boolean("enabled").notNull().default(true),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -158,7 +158,7 @@ export type UserMonitoredTeam = typeof userMonitoredTeams.$inferSelect;
 export const userAlertPreferences = pgTable("user_alert_preferences", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  sport: text("sport").notNull(), // MLB, NFL, NBA, NHL
+  sport: text("sport").notNull(), // MLB, NFL, NBA, CFL, NCAAF, WNBA
   alertType: text("alert_type").notNull(), // RISP, CLOSE_GAME, etc.
   enabled: boolean("enabled").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
