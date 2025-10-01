@@ -429,26 +429,13 @@ async function startServer() {
 
     // 🔒 FALLBACK: Add 'listening' event handler for reliability
     server.on('listening', () => {
-      console.log('📡 HTTP Server listening event triggered - DataIngestionService should be operational');
-
-      // Verify DataIngestionService is running
-      const di = (global as any).dataIngestionIntegration;
-      if (di) {
-        console.log('✅ DataIngestionService confirmed operational via listening event');
-      } else {
-        console.log('⚠️ DataIngestionService not yet available - may still be initializing');
-      }
+      console.log('📡 HTTP Server listening event triggered - CalendarSyncService operational');
     });
 
     // 🔒 SECURE SERVER STARTUP - Port conflicts now impossible!
     server.listen(PORT, HOST, () => {
       console.log(`🚀 Server is running on ${HOST}:${PORT}`);
-      console.log(`📋 DATAINGESTIONSERVICE: BOOTSTRAP HIT - Version 3.1.2`);
-      console.log(`📋 DATAINGESTIONSERVICE: Starting immediate initialization in guaranteed execution path`);
-
-      // ✅ V3: CalendarSyncService is the sole data ingestion system
-      // Alert generation: CalendarSyncService → GameStateManager → Engines
-      console.log('📋 V3: Using CalendarSyncService as single data ingestion system');
+      console.log(`📋 V3 Alert Pipeline: CalendarSyncService → GameStateManager → Engines`);
 
 
       // Start Weather-on-Live service after server is ready
@@ -467,8 +454,6 @@ async function startServer() {
         }
       }, 6000); // Wait 6 seconds to start after alert monitoring
 
-      // 🚀 DataIngestionService now initialized at top-level (Architect's Fix)
-      console.log('📋 DataIngestionService: Initialization moved to top-level for proper execution');
 
       console.log(`🔒 Singleton lock active - port conflicts prevented`);
       console.log(`📱 Database connected: Yes`);
