@@ -8,6 +8,7 @@ import { getHealthMonitor } from './unified-health-monitor';
 import { memoryManager } from '../middleware/memory-manager';
 import type { InsertAlert } from "../../shared/schema";
 import { GamblingInsightsComposer } from "./gambling-insights-composer";
+import { unifiedAIProcessor, type CrossSportContext, type UnifiedAIResponse } from "./unified-ai-processor";
 
 // Extended interface for local calendar game data (renamed to avoid import conflict)
 interface LocalCalendarGameData {
@@ -909,6 +910,119 @@ export class UnifiedAlertGenerator {
   }
 
   /**
+   * Enhance alerts with AI processing using UnifiedAIProcessor
+   */
+  private async enhanceAlertsWithAI(
+    alerts: WeatherEnhancedAlert[],
+    gameState: GameState,
+    sport: string
+  ): Promise<WeatherEnhancedAlert[]> {
+    try {
+      console.log(`🤖 AI Enhancement: Processing ${alerts.length} alerts for ${sport} game ${gameState.gameId}`);
+
+      const aiEnhancedAlerts: WeatherEnhancedAlert[] = [];
+
+      for (const alert of alerts) {
+        try {
+          // Build CrossSportContext from gameState and alert
+          const context: CrossSportContext = {
+            sport: sport as any,
+            gameId: gameState.gameId,
+            alertType: alert.type,
+            priority: alert.priority || 0,
+            probability: alert.priority || 0, // Use priority as probability
+            
+            // Universal game state
+            homeTeam: typeof gameState.homeTeam === 'string' ? gameState.homeTeam : (gameState.homeTeam as any)?.name || 'Team',
+            awayTeam: typeof gameState.awayTeam === 'string' ? gameState.awayTeam : (gameState.awayTeam as any)?.name || 'Team',
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            isLive: gameState.isLive,
+            
+            // MLB-specific
+            inning: gameState.inning as number | undefined,
+            outs: gameState.outs as number | undefined,
+            balls: gameState.balls as number | undefined,
+            strikes: gameState.strikes as number | undefined,
+            baseRunners: (gameState.runners as { first: boolean; second: boolean; third: boolean }) || undefined,
+            
+            // Football-specific (NFL/NCAAF/CFL)
+            quarter: gameState.quarter as number | undefined,
+            down: gameState.down as number | undefined,
+            yardsToGo: gameState.yardsToGo as number | undefined,
+            fieldPosition: gameState.fieldPosition as number | undefined,
+            possession: gameState.possession as string | undefined,
+            
+            // Basketball-specific (NBA/WNBA)
+            timeLeft: gameState.timeRemaining as string | undefined,
+            shotClock: gameState.shotClock as number | undefined,
+            fouls: gameState.fouls as { home: number; away: number } | undefined,
+            
+            // Weather context from alert
+            weather: alert.weatherContext?.currentWeather ? {
+              temperature: alert.weatherContext.currentWeather.temperature || 70,
+              condition: alert.weatherContext.currentWeather.condition || 'clear',
+              windSpeed: alert.weatherContext.currentWeather.windSpeed,
+              humidity: alert.weatherContext.currentWeather.humidity,
+              impact: (alert.weatherContext as any).impact
+            } : undefined,
+            
+            // Original message for fallback
+            originalMessage: alert.message,
+            originalContext: alert.context || {}
+          };
+
+          // Call UnifiedAIProcessor to enhance the alert
+          const aiResponse: UnifiedAIResponse = await unifiedAIProcessor.enhanceAlert(context);
+
+          // Merge AI response into the alert
+          const aiEnhancedAlert: WeatherEnhancedAlert = {
+            ...alert,
+            // Update message with AI enhancements
+            message: aiResponse.enhancedMessage || alert.message,
+            displayMessage: aiResponse.enhancedTitle || alert.displayMessage,
+            // Add AI-generated insights to context
+            context: {
+              ...alert.context,
+              aiInsights: aiResponse.contextualInsights,
+              aiRecommendation: aiResponse.actionableRecommendation,
+              urgencyLevel: aiResponse.urgencyLevel,
+              bettingContext: aiResponse.bettingContext,
+              gameProjection: aiResponse.gameProjection,
+              enhancedContext: aiResponse.enhancedContext,
+              tags: aiResponse.tags,
+              analysis: aiResponse.analysis,
+              aiConfidence: aiResponse.confidence,
+              aiProcessingTime: aiResponse.aiProcessingTime
+            },
+            // Merge AI insights into gambling insights
+            gamblingInsights: {
+              ...alert.gamblingInsights,
+              confidence: Math.max(aiResponse.confidence / 100, alert.gamblingInsights?.confidence || 0)
+            }
+          };
+
+          aiEnhancedAlerts.push(aiEnhancedAlert);
+          console.log(`✅ AI Enhanced: ${alert.type} - confidence: ${aiResponse.confidence}%`);
+
+        } catch (alertError) {
+          // If individual alert AI enhancement fails, keep the original alert
+          console.error(`⚠️ AI Enhancement failed for alert ${alert.type}:`, alertError);
+          aiEnhancedAlerts.push(alert);
+        }
+      }
+
+      console.log(`🤖 AI Enhancement Complete: Enhanced ${aiEnhancedAlerts.length}/${alerts.length} alerts`);
+      return aiEnhancedAlerts;
+
+    } catch (error) {
+      console.error(`❌ AI Enhancement Error for ${sport}:`, error);
+      // Return original alerts on error to maintain pipeline stability
+      return alerts;
+    }
+  }
+
+  /**
    * Check if alert type benefits from weather enhancement
    */
   private isAlertWeatherRelevant(alertType: string, sport: string): boolean {
@@ -1097,7 +1211,10 @@ export class UnifiedAlertGenerator {
           const weatherEnhancedAlerts = await this.enhanceAlertsWithWeatherContext(alertResults, gameState, sport);
 
           // Enhance alerts with gambling insights after weather enhancement but before AI processing
-          const enhancedAlerts = await this.enhanceAlertsWithGamblingInsights(weatherEnhancedAlerts, gameState, sport);
+          const gamblingEnhancedAlerts = await this.enhanceAlertsWithGamblingInsights(weatherEnhancedAlerts, gameState, sport);
+
+          // Enhance alerts with AI processing (OpenAI GPT-4o)
+          const enhancedAlerts = await this.enhanceAlertsWithAI(gamblingEnhancedAlerts, gameState, sport);
 
           if (enhancedAlerts && enhancedAlerts.length > 0) {
             if (this.logLevel !== 'quiet') {
