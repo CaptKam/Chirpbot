@@ -5,7 +5,7 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
   sport = 'NBA';
 
   isTriggered(gameState: GameState): boolean {
-    // Triggered at exactly 2:00 mark in fourth quarter or overtime (close games)
+    // Triggered at the 2:00 mark in fourth quarter or overtime (close games) - final 2 minutes of regulation/OT
     const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining);
     const scoreDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
     
@@ -31,7 +31,7 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     return {
       alertKey: `${gameState.gameId}_nba_two_minute_warning_${gameState.quarter}`,
       type: this.alertType,
-      message: `⏰ NBA TWO MINUTE WARNING! ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} - Official timeout in ${periodText}`,
+      message: `⏰ 2:00 Remaining — ${gameState.awayTeam} ${gameState.awayScore}, ${gameState.homeTeam} ${gameState.homeScore} — Official timeout in ${periodText}`,
       context: {
         gameId: gameState.gameId,
         homeTeam: gameState.homeTeam,
@@ -43,9 +43,9 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
         scoreDiff,
         // NBA-specific context
         nbaContext: {
-          isTwoMinuteWarning: true,
+          isFinalTwoMinutes: true,
           isOfficialTimeout: true,
-          reviewPeriod: 'All plays reviewed under 2 minutes',
+          reviewPeriod: 'All plays reviewed in final 2 minutes',
           strategyTime: 'Coaches planning final strategy',
           foulGame: 'Fouling strategy may begin',
           possessionCount: Math.ceil(scoreDiff / 3),
@@ -62,7 +62,7 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
 
     const scoreDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
     
-    let probability = 88; // Base probability for two-minute warning
+    let probability = 88; // Base probability for final 2 minutes
 
     // Closer games get higher probability
     if (scoreDiff <= 3) probability = 96; // One possession

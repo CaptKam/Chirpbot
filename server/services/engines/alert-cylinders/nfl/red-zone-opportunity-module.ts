@@ -5,6 +5,8 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
   alertType = 'NFL_RED_ZONE_OPPORTUNITY';
   sport = 'NFL';
 
+  private lastSignatureByGame: Map<string, string> = new Map();
+
   // Historical data for touchdown probability calculations
   private readonly DOWN_DISTANCE_MULTIPLIERS = {
     1: { [1]: 1.3, [2]: 1.2, [3]: 1.1, [4]: 1.0, [5]: 0.95, [6]: 0.9, [7]: 0.85, [8]: 0.8, [9]: 0.75, [10]: 0.7 },
@@ -47,18 +49,36 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
   };
 
   isTriggered(gameState: GameState): boolean {
-    // Trigger for predictive red zone opportunities
+    const gameId = gameState.gameId;
+    
+    // Check basic conditions first
     const meetsBasicConditions = gameState.status === 'live' && 
                                  gameState.fieldPosition !== undefined && 
                                  gameState.fieldPosition <= 30 &&
                                  gameState.fieldPosition > 0 &&
                                  gameState.down !== undefined &&
-                                 gameState.down <= 3; // Only 1st-3rd downs for opportunity prediction
+                                 gameState.down <= 3;
+
+    // If not in red zone anymore, clear the signature
+    if (!meetsBasicConditions || (gameState.fieldPosition && gameState.fieldPosition > 30)) {
+      this.lastSignatureByGame.delete(gameId);
+      return false;
+    }
 
     if (!meetsBasicConditions) return false;
 
-    // Always trigger for red zone opportunities - removed probability barrier
-    return true;
+    // Build current signature
+    const currentSignature = this.buildGameSignature(gameState);
+    const lastSignature = this.lastSignatureByGame.get(gameId);
+
+    // First time seeing this game in red zone, or signature changed
+    if (!lastSignature || lastSignature !== currentSignature) {
+      this.lastSignatureByGame.set(gameId, currentSignature);
+      return true;
+    }
+
+    // Same signature - don't trigger
+    return false;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
@@ -269,6 +289,23 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
     }
     
     return parseInt(cleanTime) || 0;
+  }
+
+  private buildGameSignature(gameState: GameState): string {
+    const possessionTeam = this.getPossessionTeam(gameState);
+    const quarter = gameState.quarter || 0;
+    const down = gameState.down || 0;
+    const yardsToGo = gameState.yardsToGo || 0;
+    const fieldPosition = gameState.fieldPosition || 0;
+    
+    // Field position bucket: group yards into buckets (1-5, 6-10, 11-15, 16-20, 21-25, 26-30)
+    const fieldPositionBucket = Math.ceil(fieldPosition / 5) * 5;
+    
+    // Clock bucket: round time to 30-second intervals to avoid jitter
+    const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining || '0:00');
+    const clockBucket = Math.floor(timeSeconds / 30) * 30;
+    
+    return `${possessionTeam}|Q${quarter}|${down}&${yardsToGo}|${fieldPositionBucket}|${clockBucket}`;
   }
   
   private getTimePressureLevel(gameState: GameState): string {

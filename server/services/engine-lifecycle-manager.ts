@@ -81,6 +81,8 @@ export interface EngineTransitionResult {
 // === MAIN ENGINE LIFECYCLE MANAGER ===
 
 export class EngineLifecycleManager implements IEngineLifecycleManager {
+  private static hasRunEmergencyRecovery: boolean = false;
+  
   private engines: Map<string, EngineStateInfo> = new Map();
   private healthCheckInterval?: NodeJS.Timeout;
   private cleanupInterval?: NodeJS.Timeout;
@@ -140,13 +142,18 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
     
     // 🚨 ONE-TIME RECOVERY: Immediate recovery for stuck football engines
     setTimeout(() => {
-      console.log('🚨 EMERGENCY: Starting one-time recovery for stuck football engines...');
-      this.reinitializeModules('NFL').then(result => {
-        console.log(`🎯 NFL recovery result: ${result}`);
-      });
-      this.reinitializeModules('NCAAF').then(result => {
-        console.log(`🎯 NCAAF recovery result: ${result}`);
-      });
+      if (!EngineLifecycleManager.hasRunEmergencyRecovery) {
+        EngineLifecycleManager.hasRunEmergencyRecovery = true;
+        console.log('🚨 EMERGENCY: Starting one-time recovery for stuck football engines...');
+        this.reinitializeModules('NFL').then(result => {
+          console.log(`🎯 NFL recovery result: ${result}`);
+        });
+        this.reinitializeModules('NCAAF').then(result => {
+          console.log(`🎯 NCAAF recovery result: ${result}`);
+        });
+      } else {
+        console.log('⏭️ Emergency recovery already executed, skipping');
+      }
     }, 5000); // 5 second delay
   }
   

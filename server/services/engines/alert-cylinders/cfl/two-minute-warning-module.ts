@@ -5,42 +5,42 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
   alertType = 'CFL_TWO_MINUTE_WARNING';
   sport = 'CFL';
 
-  private isExactlyTwoMinutes(timeRemaining: string): boolean {
+  private isExactlyThreeMinutes(timeRemaining: string): boolean {
     if (!timeRemaining) return false;
 
     try {
       const [minutes, seconds] = timeRemaining.split(':').map(Number);
       const totalSeconds = minutes * 60 + seconds;
-      // Allow for 5-second window around exactly 2:00 (115-125 seconds)
-      return totalSeconds >= 115 && totalSeconds <= 125;
+      // Allow for 5-second window around exactly 3:00 (175-185 seconds)
+      return totalSeconds >= 175 && totalSeconds <= 185;
     } catch (error) {
       return false;
     }
   }
 
   isTriggered(gameState: GameState): boolean {
-    console.log(`🔍 CFL Two Minute check for ${gameState.gameId}: status=${gameState.status}, Q${gameState.quarter}, time=${gameState.timeRemaining}, scores=${gameState.homeScore}-${gameState.awayScore}`);
+    console.log(`🔍 CFL Three Minute check for ${gameState.gameId}: status=${gameState.status}, Q${gameState.quarter}, time=${gameState.timeRemaining}, scores=${gameState.homeScore}-${gameState.awayScore}`);
 
     // Must be a live game
     if (gameState.status !== 'live') {
-      console.log(`❌ Two Minute: Game not live (${gameState.status})`);
+      console.log(`❌ Three Minute: Game not live (${gameState.status})`);
       return false;
     }
 
     // Must be in 2nd or 4th quarter (end of half situations)
     if (gameState.quarter !== 2 && gameState.quarter !== 4) {
-      console.log(`❌ Two Minute: Wrong quarter (Q${gameState.quarter})`);
+      console.log(`❌ Three Minute: Wrong quarter (Q${gameState.quarter})`);
       return false;
     }
 
-    // Must be exactly at 2:00 remaining (within 5 second window)
-    const exactlyTwoMinutes = this.isExactlyTwoMinutes(gameState.timeRemaining);
-    if (!exactlyTwoMinutes) {
-      console.log(`❌ Two Minute: Not exactly 2:00 remaining (${gameState.timeRemaining})`);
+    // Must be exactly at 3:00 remaining (within 5 second window)
+    const exactlyThreeMinutes = this.isExactlyThreeMinutes(gameState.timeRemaining);
+    if (!exactlyThreeMinutes) {
+      console.log(`❌ Three Minute: Not exactly 3:00 remaining (${gameState.timeRemaining})`);
       return false;
     }
 
-    console.log(`🎯 CFL Two Minute WARNING TRIGGERED for ${gameState.gameId}`);
+    console.log(`🎯 CFL Three Minute WARNING TRIGGERED for ${gameState.gameId}`);
     return true;
   }
 
@@ -50,10 +50,10 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     const halfText = isFirstHalf ? '1st Half' : '2nd Half';
     const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining);
 
-    const message = `⏰ Two Minutes Remaining in the ${halfText}! ${this.getScoreDisplay(gameState)}`;
+    const message = `⏰ Three Minutes Remaining in the ${halfText}! ${this.getScoreDisplay(gameState)}`;
     
     return {
-      alertKey: `${gameState.gameId}_two_minute_warning_q${gameState.quarter}_${timeSeconds}`,
+      alertKey: `${gameState.gameId}_three_minute_warning_q${gameState.quarter}_${timeSeconds}`,
       type: this.alertType,
       message,
       context: {
@@ -67,7 +67,7 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
         timeSeconds,
         halfText,
         isFirstHalf,
-        twoMinuteWarning: true
+        threeMinuteWarning: true
       },
       priority: 88
     };
@@ -75,7 +75,7 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
 
   calculateProbability(gameState: GameState): number {
     if (!this.isTriggered(gameState)) return 0;
-    return 95; // High probability since it's exactly at 2:00 mark
+    return 95; // High probability since it's exactly at 3:00 mark
   }
 
   private parseTimeToSeconds(timeString: string): number {

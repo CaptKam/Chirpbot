@@ -6,36 +6,73 @@ export default class RedZoneModule extends BaseAlertModule {
   alertType = 'NCAAF_RED_ZONE';
   sport = 'NCAAF';
 
+  private lastSignatureByGame: Map<string, string> = new Map();
+
   isTriggered(gameState: GameState): boolean {
+    const gameId = gameState.gameId;
+    
     console.log(`🔍 NCAAF Red Zone check for ${gameState.gameId}: status=${gameState.status}, fieldPos=${gameState.fieldPosition}, quarter=${gameState.quarter}`);
     
-    // Must be a live game
-    if (gameState.status !== 'live') {
-      console.log(`❌ Red Zone: Game not live (${gameState.status})`);
+    // Check if we have field position data
+    const hasFieldPosition = gameState.fieldPosition !== undefined && gameState.fieldPosition !== null;
+    
+    // PATH 1: Normal red zone detection with field position
+    if (hasFieldPosition) {
+      const meetsBasicConditions = gameState.status === 'live' && 
+                                   gameState.fieldPosition <= 20 &&
+                                   gameState.fieldPosition > 0;
+
+      // If not in red zone anymore, clear the signature
+      if (!meetsBasicConditions || gameState.fieldPosition > 20) {
+        this.lastSignatureByGame.delete(gameId);
+        console.log(`❌ Red Zone: Not in red zone, clearing signature for ${gameId}`);
+        return false;
+      }
+
+      // Build current signature
+      const currentSignature = this.buildGameSignature(gameState);
+      const lastSignature = this.lastSignatureByGame.get(gameId);
+
+      // First time seeing this game in red zone, or signature changed
+      if (!lastSignature || lastSignature !== currentSignature) {
+        console.log(`🎯 NCAAF Red Zone TRIGGERED for ${gameId}: ${gameState.fieldPosition} yard line (signature changed from "${lastSignature}" to "${currentSignature}")`);
+        this.lastSignatureByGame.set(gameId, currentSignature);
+        return true;
+      }
+
+      // Same signature - don't trigger
+      console.log(`⏭️  Red Zone: Same signature, skipping alert for ${gameId}: ${currentSignature}`);
       return false;
     }
     
-    // Primary check: Team is in red zone (within 20 yards of goal line)
-    if (gameState.fieldPosition !== undefined && 
-        gameState.fieldPosition !== null &&
-        gameState.fieldPosition <= 20 &&
-        gameState.fieldPosition > 0) {
-      console.log(`🎯 NCAAF Red Zone TRIGGERED for ${gameState.gameId}: ${gameState.fieldPosition} yard line`);
-      return true;
-    }
+    // PATH 2: Q4 close-game fallback when fieldPosition is missing
+    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
+    const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining || '0:00');
+    const isQ4Close = gameState.status === 'live' &&
+                     gameState.quarter === 4 && 
+                     scoreDiff <= 14 && 
+                     timeSeconds <= 300; // 5 minutes
     
-    // RELAXED: Fallback for close games in Q4 when field position is missing
-    if (gameState.fieldPosition === null || gameState.fieldPosition === undefined) {
-      const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-      const isCloseQ4Game = gameState.quarter === 4 && scoreDiff <= 7;
+    if (isQ4Close) {
+      // Build fallback signature
+      const currentSignature = this.buildFallbackSignature(gameState);
+      const lastSignature = this.lastSignatureByGame.get(gameId);
       
-      if (isCloseQ4Game) {
-        console.log(`🎯 NCAAF Red Zone TRIGGERED (Q4 close game fallback) for ${gameState.gameId}: score diff ${scoreDiff}`);
+      if (!lastSignature || lastSignature !== currentSignature) {
+        console.log(`🎯 NCAAF Red Zone TRIGGERED (Q4 fallback) for ${gameId}: No field position, Q4 close game (signature changed from "${lastSignature}" to "${currentSignature}")`);
+        this.lastSignatureByGame.set(gameId, currentSignature);
         return true;
       }
+      
+      console.log(`⏭️  Red Zone Q4 fallback: Same signature, skipping alert for ${gameId}: ${currentSignature}`);
+      return false;
     }
     
-    console.log(`❌ Red Zone: Not in red zone or fallback conditions`);
+    // Neither path triggered - clear signature if exists
+    if (this.lastSignatureByGame.has(gameId)) {
+      this.lastSignatureByGame.delete(gameId);
+      console.log(`❌ Red Zone: Conditions not met, clearing signature for ${gameId}`);
+    }
     return false;
   }
 
@@ -69,8 +106,6 @@ export default class RedZoneModule extends BaseAlertModule {
   }
 
   calculateProbability(gameState: GameState): number {
-    if (!this.isTriggered(gameState)) return 0;
-
     let probability = 55; // Base red zone probability for college
 
     // Field position impact
@@ -127,5 +162,56 @@ export default class RedZoneModule extends BaseAlertModule {
         return `${down}${ordinalSuffix} & ${yardsToGo} - Red zone opportunity`;
       }
     }
+  }
+
+  private buildGameSignature(gameState: GameState): string {
+    const possessionTeam = this.getPossessionTeam(gameState);
+    const quarter = gameState.quarter || 0;
+    const down = gameState.down || 0;
+    const yardsToGo = gameState.yardsToGo || 0;
+    const fieldPosition = gameState.fieldPosition || 0;
+    
+    // Field position bucket: group yards into buckets (1-5, 6-10, 11-15, 16-20)
+    const fieldPositionBucket = Math.ceil(fieldPosition / 5) * 5;
+    
+    // Clock bucket: round time to 30-second intervals to avoid jitter
+    const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining || '0:00');
+    const clockBucket = Math.floor(timeSeconds / 30) * 30;
+    
+    return `${possessionTeam}|Q${quarter}|${down}&${yardsToGo}|${fieldPositionBucket}|${clockBucket}`;
+  }
+
+  private buildFallbackSignature(gameState: GameState): string {
+    const possessionTeam = this.getPossessionTeam(gameState);
+    const down = gameState.down || 0;
+    const yardsToGo = gameState.yardsToGo || 0;
+    
+    // Clock bucket: round time to 30-second intervals to avoid jitter
+    const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining || '0:00');
+    const clockBucket = Math.floor(timeSeconds / 30) * 30;
+    
+    return `${possessionTeam}|Q4_CLOSE|${down}&${yardsToGo}|${clockBucket}`;
+  }
+
+  private parseTimeToSeconds(timeString: string): number {
+    if (!timeString) return 0;
+    const cleanTime = timeString.trim().split(' ')[0];
+    
+    if (cleanTime.includes(':')) {
+      const [minutes, seconds] = cleanTime.split(':').map(t => parseInt(t) || 0);
+      return (minutes * 60) + seconds;
+    }
+    
+    return parseInt(cleanTime) || 0;
+  }
+
+  private getPossessionTeam(gameState: GameState): string {
+    // Use possession field if available
+    if (gameState.possession) {
+      return gameState.possession;
+    }
+    
+    // Default to away team for simplicity
+    return gameState.awayTeam;
   }
 }
