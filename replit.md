@@ -2,6 +2,14 @@
 
 ChirpBot V3 is an advanced multi-sport betting intelligence platform that provides real-time notifications, gambling insights, and AI-enhanced analysis across six major sports leagues: MLB, NFL, NCAAF, NBA, WNBA, and CFL. The platform delivers sub-250ms response times, cross-sport AI enhancement with 0ms intelligent caching, and predictive alert capabilities. It monitors teams using authentic API data sources to generate intelligent alerts for high-impact game situations and anticipates high-value betting opportunities with probability calculations and wagering recommendations.
 
+# Recent Changes
+
+## October 1, 2025 - Services Folder Cleanup
+- **NHL Removal**: Completely removed NHL support (not a supported sport). Deleted `nhl-api.ts`, updated routes, schema, season-manager, and storage to only include the 6 supported sports: MLB, NFL, NCAAF, NBA, WNBA, CFL.
+- **Dead Code Removal**: Removed `telegram-examples.md` (unused documentation).
+- **Bug Fixes**: Fixed TypeScript error in `weather-on-live-service.ts` where payload could be undefined.
+- **System Status**: All engines healthy, no LSP errors, MLB alerts generating correctly.
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
