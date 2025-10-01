@@ -73,15 +73,9 @@ if (!(globalThis as any).__v3_alert_system_bootstrapped__) {
       (global as any).engineLifecycleManager = engineLifecycleManager;
       (global as any).migrationAdapter = migrationAdapter;
       
-      // === V3.1 COORDINATOR DISABLED TO PREVENT CONFLICTS ===
-      // TODO: Re-enable after V3.0 system is fully deprecated
-      console.log("⚠️ V3.1 Coordinator disabled to prevent state conflicts");
-      
-      // (global as any).gameLifecycleService = null;
-      // (global as any).calendarDataSource = null;
-      
-      console.log("✅ V3 Alert System: Unified pipeline active");
-      console.log("✅ V3.1 Coordinator: Running in parallel for testing");
+      // === V3 ALERT SYSTEM ACTIVE ===
+      // CalendarSyncService → GameStateManager → Engines pipeline
+      console.log("✅ V3 Alert System: CalendarSyncService → GameStateManager → Engines pipeline active");
     } catch (e) {
       console.error("❌ V3 Alert System: Failed to initialize", e);
     }
