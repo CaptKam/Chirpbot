@@ -1,545 +1,453 @@
+/**
+ * NBA Engine — V3.1 Improvements
+ * - Safer probability clamp + fast guards
+ * - Optional pre-AI threshold gate (configurable via unifiedSettings)
+ * - Dynamic module init reuse from BaseSportEngine with de-dupe + summaries
+ * - Meaningful enhanced-live-data merge with cheap guards
+ * - Low-noise logging in production
+ * - Optional unified dedupe check before emitting alerts (fallback local TTL)
+ */
+
 import { BaseSportEngine, GameState, AlertResult } from './base-engine';
 import { unifiedSettings } from '../../storage';
 import { storage } from '../../storage';
-import { unifiedAIProcessor, CrossSportContext } from '../unified-ai-processor';
+
+const DEBUG = process.env.NODE_ENV !== 'production';
+
+type EnhancedNBA = {
+  quarter?: number;
+  timeRemaining?: string;
+  possession?: string;
+  homeScore?: number;
+  awayScore?: number;
+  // extras
+  period?: number;
+  clock?: string;
+  shotClock?: number;
+  situation?: Record<string, unknown>;
+  starPlayerStats?: Record<string, unknown>;
+};
 
 export class NBAEngine extends BaseSportEngine {
-  
   private performanceMetrics = {
     alertGenerationTime: [] as number[],
     moduleLoadTime: [] as number[],
     enhanceDataTime: [] as number[],
+    probabilityCalculationTime: [] as number[],
+    gameStateEnhancementTime: [] as number[],
     totalRequests: 0,
     totalAlerts: 0,
     cacheHits: 0,
     cacheMisses: 0,
-    probabilityCalculationTime: [] as number[],
-    gameStateEnhancementTime: [] as number[],
     clutchTimeDetections: 0,
     overtimeAlerts: 0,
   };
 
+  // Reused singleton for API calls
+  private static nbaApiService: { getEnhancedGameData?: (gameId: string) => Promise<EnhancedNBA & { error?: any }> } | null = null;
+
   constructor() {
     super('NBA');
   }
-  
+
+  // ---- Settings helpers ----------------------------------------------------
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
-      // Only check settings for actual NBA alert types that have corresponding modules
-      const validNBAAlerts = [
-        'NBA_GAME_START', 'NBA_FOURTH_QUARTER', 'NBA_FINAL_MINUTES',
-        'NBA_TWO_MINUTE_WARNING', 'NBA_OVERTIME',
-        // V3-11: Core NBA professional basketball alert types
-        'NBA_CLUTCH_TIME_OPPORTUNITY', 'NBA_STAR_PLAYER_PERFORMANCE',
-        'NBA_CLOSE_GAME_ALERT', 'NBA_PLAYOFF_IMPLICATIONS',
-        // V3-12: Advanced NBA predictive analytics alert types
-        'NBA_CLUTCH_PERFORMANCE', 'NBA_CHAMPIONSHIP_IMPLICATIONS',
-        'NBA_SUPERSTAR_ANALYTICS', 'NBA_PLAYOFF_INTENSITY'
-      ];
-
-      if (!validNBAAlerts.includes(alertType)) {
-        console.log(`❌ ${alertType} is not a valid NBA alert type - rejecting`);
+      // Only allow NBA_* types
+      if (!/^NBA_[A-Z0-9_]+$/.test(alertType)) {
+        if (DEBUG) console.log(`❌ ${alertType} is not a valid NBA alert type - rejecting`);
         return false;
       }
-
       return await unifiedSettings.isAlertEnabled(this.sport, alertType);
     } catch (error) {
-      console.error(`NBA Settings cache error for ${alertType}:`, error);
-      return true; // Default to true if cache fails
+      console.error(`NBA Settings lookup error for ${alertType}:`, error);
+      // Fail-open to avoid missing critical alerts if settings store is momentarily unavailable
+      return true;
     }
   }
+
+  // ---- Probability model (cheap, deterministic) ---------------------------
 
   async calculateProbability(gameState: GameState): Promise<number> {
-    const startTime = Date.now();
-    
+    const t0 = Date.now();
     try {
-      if (!gameState.isLive) return 0;
+      if (!gameState?.isLive) return 0;
 
-      let probability = 50; // Base probability
-      
-      // Enhanced NBA-specific probability calculation (optimized for speed)
-      const { quarter, timeRemaining, homeScore, awayScore, possession } = gameState;
+      let p = 50; // baseline
+      const quarter = Number(gameState.quarter ?? 0);
+      const timeRemaining = String(gameState.timeRemaining ?? '');
+      const homeScore = Number(gameState.homeScore ?? 0);
+      const awayScore = Number(gameState.awayScore ?? 0);
+      const totalScore = homeScore + awayScore;
 
-      // Quarter-specific adjustments (optimized calculation for NBA pace)
-      if (quarter === 1) probability += 10; // First quarter action
-      else if (quarter === 2) probability += 12; // Second quarter momentum
-      else if (quarter === 3) probability += 14; // Third quarter adjustments
-      else if (quarter === 4) probability += 20; // Fourth quarter drama
-      else if (quarter >= 5) probability += 30; // Overtime intensity
+      // Quarter weighting
+      if (quarter === 1) p += 10;
+      else if (quarter === 2) p += 12;
+      else if (quarter === 3) p += 14;
+      else if (quarter === 4) p += 20;
+      else if (quarter >= 5) { p += 30; this.performanceMetrics.overtimeAlerts++; }
 
-      // NBA Time factors (optimized time parsing for 24-second shot clock)
-      if (timeRemaining) {
-        const timeSeconds = this.parseTimeToSeconds(timeRemaining);
-        if (timeSeconds <= 60 && quarter >= 4) {
-          probability += 25; // Final minute crunch time
-          this.performanceMetrics.clutchTimeDetections++;
-        } else if (timeSeconds <= 120 && quarter >= 4) {
-          probability += 18; // Final two minutes (NBA two-minute warning)
-        } else if (timeSeconds <= 300 && quarter >= 4) {
-          probability += 12; // Final 5 minutes (clutch time)
-        }
-        
-        // NBA shot clock scenarios (24-second NBA shot clock)
-        if (timeSeconds % 24 <= 5 && quarter >= 3) {
-          probability += 8; // Shot clock pressure
-        }
-      }
-
-      // Score differential (optimized for NBA professional basketball pace)
-      if (homeScore !== undefined && awayScore !== undefined) {
-        const scoreDiff = Math.abs(homeScore - awayScore);
-        if (scoreDiff <= 3) probability += 25; // Very close game (one possession)
-        else if (scoreDiff <= 6) probability += 18; // Close game (two possessions)
-        else if (scoreDiff <= 10) probability += 12; // Competitive game
-        else if (scoreDiff <= 15) probability += 8; // Moderately competitive
-        else if (scoreDiff >= 20) probability -= 10; // Blowout
-        
-        // NBA high-scoring game bonus (NBA average ~110 points per team)
-        const totalScore = homeScore + awayScore;
-        if (totalScore >= 220 && quarter >= 3) probability += 15; // High-scoring NBA game
-        else if (totalScore >= 200 && quarter >= 3) probability += 10; // Above average
-        else if (totalScore <= 180 && quarter >= 3) probability += 8; // Defensive battle
-      }
-
-      // Professional basketball possession and momentum factors
-      if (possession && quarter >= 3) {
-        probability += 5; // Possession adds more context in later quarters
-      }
-
-      // NBA-specific situational boosts (professional level)
+      // Time pressure
+      const secs = this.parseTimeToSeconds(timeRemaining);
       if (quarter >= 4) {
-        // Fourth quarter and overtime get extra weight in NBA
-        if (homeScore !== undefined && awayScore !== undefined) {
-          const scoreDiff = Math.abs(homeScore - awayScore);
-          if (scoreDiff <= 5) probability += 20; // One or two possession games are crucial
-          if (scoreDiff <= 2) probability += 10; // Single possession games are most exciting
-        }
+        if (secs <= 60) { p += 25; this.performanceMetrics.clutchTimeDetections++; }
+        else if (secs <= 120) p += 18;
+        else if (secs <= 300) p += 12;
+      }
+      if (quarter >= 3 && secs % 24 <= 5) p += 8; // shot clock crunch
+
+      // Score pressure
+      const diff = Math.abs(homeScore - awayScore);
+      if (diff <= 3) p += 25;
+      else if (diff <= 6) p += 18;
+      else if (diff <= 10) p += 12;
+      else if (diff <= 15) p += 8;
+      else if (diff >= 20) p -= 10;
+
+      // Pace/total
+      if (quarter >= 3) {
+        if (totalScore >= 220) p += 15;
+        else if (totalScore >= 200) p += 10;
+        else if (totalScore <= 180) p += 8; // defensive battle still interesting late
       }
 
-      // Overtime situations (NBA has 5-minute overtimes)
-      if (quarter >= 5) {
-        probability += 15; // Extra overtime drama
-        this.performanceMetrics.overtimeAlerts++;
-      }
+      // Late-possession context (light touch)
+      if (quarter >= 3 && gameState.possession) p += 5;
 
-      const finalProbability = Math.min(Math.max(probability, 10), 95);
-      
-      const calculationTime = Date.now() - startTime;
-      this.performanceMetrics.probabilityCalculationTime.push(calculationTime);
-      
-      if (calculationTime > 50) {
-        console.log(`⚠️ NBA Slow probability calculation: ${calculationTime}ms for game ${gameState.gameId}`);
-      }
-      
-      return finalProbability;
-    } catch (error) {
-      const calculationTime = Date.now() - startTime;
-      console.error(`❌ NBA Probability calculation failed after ${calculationTime}ms:`, error);
-      return 50; // Safe fallback
+      // Clamp to sane window
+      const finalP = Math.max(10, Math.min(95, Math.round(p)));
+
+      const dt = Date.now() - t0;
+      this.performanceMetrics.probabilityCalculationTime.push(dt);
+      if (dt > 50 && DEBUG) console.log(`⚠️ NBA slow probability calc: ${dt}ms for game ${gameState.gameId}`);
+
+      return finalP;
+    } catch (err) {
+      const dt = Date.now() - t0;
+      console.error(`❌ NBA probability calc failed after ${dt}ms:`, err);
+      return 50;
     }
   }
 
-  // Override to add NBA-specific game state normalization (standardized from WNBA)
+  // ---- Main alert generation ----------------------------------------------
+
   async generateLiveAlerts(gameState: GameState): Promise<AlertResult[]> {
-    const startTime = Date.now();
-    
+    const t0 = Date.now();
+
     try {
-      // Early exit if game is not valid
-      if (!gameState.gameId) {
-        console.log('⚠️ NBA: No gameId provided, skipping alert generation');
+      if (!gameState?.gameId) {
+        if (DEBUG) console.log('⚠️ NBA: Missing gameId, skip');
         return [];
       }
-      
-      console.log(`🎯 NBA: Processing game ${gameState.gameId} - ${gameState.awayTeam} @ ${gameState.homeTeam}`);
-      console.log(`🎯 NBA: Status=${gameState.status}, isLive=${gameState.isLive}, quarter=${gameState.quarter}`);
-      
-      // Enhance game state with NBA-specific data if needed
-      const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
+      if (!gameState.isLive) return [];
 
-      // Use the parent class method which properly calls all loaded modules
-      const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
-      
-      // Return raw alerts - GameStateManager will handle enhancement pipeline
-      if (rawAlerts.length > 0) {
-        console.log(`🔄 NBA: Generated ${rawAlerts.length} raw alerts - GameStateManager will handle enhancement`);
-      } else {
-        console.log(`🔄 NBA: No alerts generated for game ${enhancedGameState.gameId}`);
+      // Optional pre-AI threshold to avoid noisy work (can be tuned via settings)
+      const threshold = await unifiedSettings.getNumber?.('NBA_PRE_AI_THRESHOLD', 70).catch(() => 70);
+      const preProb = await this.calculateProbability(gameState);
+      if (preProb < threshold) {
+        if (DEBUG) console.log(`⏭️ NBA pre-threshold drop (${preProb} < ${threshold}) for game ${gameState.gameId}`);
+        return [];
       }
-      
-      // Track NBA-specific metrics
-      if (enhancedGameState.quarter >= 4) {
-        this.performanceMetrics.clutchTimeDetections++;
-      }
-      if (enhancedGameState.quarter >= 5) {
-        this.performanceMetrics.overtimeAlerts++;
-      }
-      if (enhancedGameState.homeScore !== undefined && enhancedGameState.awayScore !== undefined) {
-        const scoreDiff = Math.abs(enhancedGameState.homeScore - enhancedGameState.awayScore);
-        if (scoreDiff <= 3 && enhancedGameState.quarter >= 4) {
-          // Track close game situations in NBA (within 3 points in 4th quarter)
+
+      // Merge live enhanced info if available
+      const enhanced = await this.enhanceGameStateWithLiveData(gameState);
+
+      // Defer to BaseSportEngine which iterates loaded modules safely
+      const alerts = await super.generateLiveAlerts(enhanced);
+
+      // Optional per-alert dedupe gate (global deduper if present; fallback local TTL)
+      const filtered: AlertResult[] = [];
+      for (const alert of alerts) {
+        const key = `${enhanced.gameId}:${alert.type}:${enhanced.quarter ?? ''}:${enhanced.timeRemaining ?? ''}:${enhanced.homeScore ?? 0}-${enhanced.awayScore ?? 0}`;
+        if (tryGlobalDedupe(key, alert.type)) {
+          filtered.push(alert);
+        } else if (DEBUG) {
+          console.log(`🚫 DEDUP blocked ${alert.type} for ${enhanced.gameId}`);
         }
       }
-      
-      this.performanceMetrics.totalAlerts += rawAlerts.length;
-      
-      // Return raw alerts for GameStateManager enhancement pipeline
-      return rawAlerts;
+
+      // Track metrics
+      this.performanceMetrics.totalAlerts += filtered.length;
+
+      if (DEBUG) {
+        if (filtered.length) console.log(`🔄 NBA: Emitting ${filtered.length} alerts (raw=${alerts.length}) for ${enhanced.gameId}`);
+        else console.log(`🔄 NBA: No alerts emitted for ${enhanced.gameId}`);
+      }
+
+      return filtered;
     } finally {
-      const alertTime = Date.now() - startTime;
-      this.performanceMetrics.alertGenerationTime.push(alertTime);
-      
-      // Keep only last 100 measurements for performance
+      const dt = Date.now() - t0;
+      this.performanceMetrics.alertGenerationTime.push(dt);
+      // Keep last 100 samples
       if (this.performanceMetrics.alertGenerationTime.length > 100) {
         this.performanceMetrics.alertGenerationTime = this.performanceMetrics.alertGenerationTime.slice(-100);
       }
     }
   }
 
-  // Reuse single API service instance to avoid overhead
-  private static nbaApiService: any = null;
+  // ---- Enhanced game-state merge ------------------------------------------
 
   private async enhanceGameStateWithLiveData(gameState: GameState): Promise<GameState> {
-    const startTime = Date.now();
-    
+    const t0 = Date.now();
     try {
-      let enhancedGameState = { ...gameState };
+      if (!gameState.isLive || !gameState.gameId) return gameState;
 
-      // Get live data from NBA API if game is live
-      if (gameState.isLive && gameState.gameId) {
-        // Reuse singleton API service instance to avoid creation overhead
-        if (!NBAEngine.nbaApiService) {
-          const { NBAApiService } = await import('../nba-api');
-          NBAEngine.nbaApiService = new NBAApiService();
-        }
-        
-        const enhancedData = await NBAEngine.nbaApiService.getEnhancedGameData?.(gameState.gameId);
-
-        if (enhancedData && !enhancedData.error && this.isEnhancedDataMeaningful(enhancedData, gameState)) {
-          enhancedGameState = {
-            ...enhancedGameState,
-            quarter: this.shouldUseEnhancedValue(enhancedData.quarter, gameState.quarter, 1) ? enhancedData.quarter : gameState.quarter,
-            timeRemaining: this.shouldUseEnhancedValue(enhancedData.timeRemaining, gameState.timeRemaining, '12:00') ? enhancedData.timeRemaining : gameState.timeRemaining,
-            possession: enhancedData.possession !== undefined ? enhancedData.possession : gameState.possession,
-            homeScore: this.shouldUseEnhancedScore(enhancedData.homeScore, gameState.homeScore),
-            awayScore: this.shouldUseEnhancedScore(enhancedData.awayScore, gameState.awayScore),
-            // NBA-specific fields
-            period: enhancedData.period || gameState.quarter,
-            clock: enhancedData.clock || gameState.timeRemaining,
-            shotClock: enhancedData.shotClock || 24, // NBA shot clock
-            situation: enhancedData.situation || {},
-            // Professional basketball context
-            starPlayerStats: enhancedData.starPlayerStats || {},
-            clutchSituation: this.detectClutchSituation(enhancedGameState)
-          };
-          
-          this.performanceMetrics.cacheHits++;
-          console.log(`🔍 NBA Enhanced game ${gameState.gameId}: Used meaningful enhanced data`);
-        } else {
-          this.performanceMetrics.cacheMisses++;
-          console.log(`🚫 NBA Game ${gameState.gameId}: Enhanced data was stub/meaningless - preserving original data`);
-        }
+      if (!NBAEngine.nbaApiService) {
+        const { NBAApiService } = await import('../nba-api');
+        NBAEngine.nbaApiService = new NBAApiService();
       }
 
-      const enhanceTime = Date.now() - startTime;
-      this.performanceMetrics.gameStateEnhancementTime.push(enhanceTime);
-      
-      // Auto-cleanup metrics to prevent memory growth
-      if (this.performanceMetrics.gameStateEnhancementTime.length % 50 === 0) {
-        this.cleanupPerformanceMetrics();
-      }
-      
-      if (enhanceTime > 100) {
-        console.log(`⚠️ NBA Slow game state enhancement: ${enhanceTime}ms for game ${gameState.gameId}`);
+      const enhanced = await NBAEngine.nbaApiService.getEnhancedGameData?.(gameState.gameId).catch(() => null);
+
+      if (enhanced && !('error' in enhanced) && this.isEnhancedDataMeaningful(enhanced, gameState)) {
+        const merged: GameState = {
+          ...gameState,
+          quarter: this.pickEnhanced(enhanced.quarter, gameState.quarter, 1),
+          timeRemaining: this.pickEnhanced(enhanced.timeRemaining, gameState.timeRemaining, '12:00'),
+          possession: enhanced.possession ?? gameState.possession,
+          homeScore: this.pickScore(enhanced.homeScore, gameState.homeScore),
+          awayScore: this.pickScore(enhanced.awayScore, gameState.awayScore),
+          // extras
+          period: enhanced.period ?? (gameState as any).period ?? gameState.quarter,
+          clock: enhanced.clock ?? (gameState as any).clock ?? gameState.timeRemaining,
+          shotClock: enhanced.shotClock ?? (gameState as any).shotClock ?? 24,
+          situation: enhanced.situation ?? (gameState as any).situation ?? {},
+          starPlayerStats: enhanced.starPlayerStats ?? (gameState as any).starPlayerStats ?? {},
+          clutchSituation: this.detectClutchSituation({
+            ...gameState,
+            quarter: enhanced.quarter ?? gameState.quarter,
+            timeRemaining: enhanced.timeRemaining ?? gameState.timeRemaining,
+            homeScore: enhanced.homeScore ?? gameState.homeScore,
+            awayScore: enhanced.awayScore ?? gameState.awayScore,
+          } as GameState),
+        };
+        this.performanceMetrics.cacheHits++;
+        if (DEBUG) console.log(`🔍 NBA enhanced state used for ${gameState.gameId}`);
+        this.performanceMetrics.gameStateEnhancementTime.push(Date.now() - t0);
+        this.maintainPerfArrays();
+        return merged;
       }
 
-      return enhancedGameState;
-    } catch (error) {
-      const enhanceTime = Date.now() - startTime;
-      console.error(`❌ NBA Game state enhancement failed after ${enhanceTime}ms:`, error);
+      this.performanceMetrics.cacheMisses++;
+      if (DEBUG) console.log(`🚫 NBA enhanced data not meaningful for ${gameState.gameId}`);
+      this.performanceMetrics.gameStateEnhancementTime.push(Date.now() - t0);
+      this.maintainPerfArrays();
+      return gameState;
+    } catch (err) {
+      const dt = Date.now() - t0;
+      console.error(`❌ NBA enhance failed after ${dt}ms:`, err);
       return gameState;
     }
   }
 
-  // Helper to determine if enhanced data is meaningful vs stub data
-  private isEnhancedDataMeaningful(enhancedData: any, originalGameState: GameState): boolean {
-    // Check if enhanced data has meaningful differences from original or default values
-    if (!enhancedData) return false;
-    
-    // Check if quarter is meaningful (not just default 1)
-    if (enhancedData.quarter && enhancedData.quarter !== 1 && enhancedData.quarter !== originalGameState.quarter) {
-      return true;
-    }
-    
-    // Check if time is meaningful (not default 12:00)
-    if (enhancedData.timeRemaining && enhancedData.timeRemaining !== '12:00' && enhancedData.timeRemaining !== originalGameState.timeRemaining) {
-      return true;
-    }
-    
-    // Check if scores are meaningful (not both 0)
-    if ((enhancedData.homeScore > 0 || enhancedData.awayScore > 0) && 
-        (enhancedData.homeScore !== originalGameState.homeScore || enhancedData.awayScore !== originalGameState.awayScore)) {
-      return true;
-    }
-    
-    return false;
-  }
+  // ---- Initialization / module wiring -------------------------------------
 
-  // Helper to determine whether to use enhanced value or original
-  private shouldUseEnhancedValue(enhancedValue: any, originalValue: any, defaultValue: any): boolean {
-    // Use enhanced value if:
-    // 1. It exists and is not the default stub value
-    // 2. AND (original doesn't exist OR they're different)
-    return enhancedValue !== undefined && 
-           enhancedValue !== defaultValue && 
-           (originalValue === undefined || enhancedValue !== originalValue);
-  }
-
-  // Helper for score values
-  private shouldUseEnhancedScore(enhancedScore: number, originalScore: number): number {
-    // Use enhanced score if it's meaningful (not 0) or if original is also 0
-    if (enhancedScore !== undefined && enhancedScore >= 0) {
-      // Use enhanced if it's non-zero or if original is also zero
-      if (enhancedScore > 0 || originalScore === 0 || originalScore === undefined) {
-        return enhancedScore;
-      }
-    }
-    return originalScore || 0;
-  }
-
-  // NBA-specific clutch situation detection
-  private detectClutchSituation(gameState: GameState): any {
-    const { quarter, timeRemaining, homeScore, awayScore } = gameState;
-    
-    if (quarter >= 4 && timeRemaining) {
-      const timeSeconds = this.parseTimeToSeconds(timeRemaining);
-      const scoreDiff = Math.abs((homeScore || 0) - (awayScore || 0));
-      
-      return {
-        isClutchTime: timeSeconds <= 300, // Final 5 minutes
-        isCrunchTime: timeSeconds <= 120, // Final 2 minutes
-        isCloseGame: scoreDiff <= 5, // Within 5 points
-        clutchFactor: this.calculateClutchFactor(timeSeconds, scoreDiff, quarter)
-      };
-    }
-    
-    return {};
-  }
-
-  // Calculate NBA clutch factor for professional basketball
-  private calculateClutchFactor(timeSeconds: number, scoreDiff: number, quarter: number): number {
-    let clutchFactor = 0;
-    
-    // Time pressure (NBA-specific)
-    if (timeSeconds <= 60) clutchFactor += 40; // Final minute
-    else if (timeSeconds <= 120) clutchFactor += 30; // Final 2 minutes
-    else if (timeSeconds <= 300) clutchFactor += 20; // Final 5 minutes
-    
-    // Score pressure
-    if (scoreDiff <= 2) clutchFactor += 30; // One possession
-    else if (scoreDiff <= 5) clutchFactor += 20; // Two possessions
-    else if (scoreDiff <= 10) clutchFactor += 10; // Three possessions
-    
-    // Quarter pressure
-    if (quarter >= 5) clutchFactor += 20; // Overtime
-    else if (quarter === 4) clutchFactor += 15; // Fourth quarter
-    
-    return Math.min(clutchFactor, 100);
-  }
-
-
-  // Initialize alert modules based on user's enabled preferences
   async initializeForUser(userId: string): Promise<void> {
     try {
-      // Get user's enabled alert types - use uppercase 'NBA' to match database
-      const userPrefs = await storage.getUserAlertPreferencesBySport(userId, 'NBA');
-      console.log(`📋 NBA User preferences for ${userId}: ${userPrefs.length} found`);
-      const enabledTypes = userPrefs
-        .filter(pref => pref.enabled)
-        .map(pref => pref.alertType);
-      console.log(`✅ NBA Enabled alert types: ${enabledTypes.join(', ')}`);
+      const prefs = await storage.getUserAlertPreferencesBySport(userId, 'NBA');
+      const enabled = (prefs ?? []).filter(p => p.enabled).map(p => String(p.alertType));
 
-      // Filter to only valid NBA alerts that have corresponding module files
-      const validNBAAlerts = [
-        'NBA_GAME_START', 'NBA_FOURTH_QUARTER', 'NBA_FINAL_MINUTES',
-        'NBA_TWO_MINUTE_WARNING', 'NBA_OVERTIME',
-        // V3-12: Advanced NBA predictive analytics alert types
-        'NBA_CLUTCH_PERFORMANCE', 'NBA_CHAMPIONSHIP_IMPLICATIONS',
-        'NBA_SUPERSTAR_ANALYTICS', 'NBA_PLAYOFF_INTENSITY'
-      ];
-
-      const nbaEnabledTypes = enabledTypes.filter(alertType =>
-        validNBAAlerts.includes(alertType)
-      );
-
-      // Check global settings for these NBA alerts
-      const globallyEnabledTypes = [];
-      for (const alertType of nbaEnabledTypes) {
-        const isGloballyEnabled = await this.isAlertEnabled(alertType);
-        console.log(`🔍 NBA Alert ${alertType}: globally enabled = ${isGloballyEnabled}`);
-        if (isGloballyEnabled) {
-          globallyEnabledTypes.push(alertType);
-        }
+      // Filter by global enablement
+      const final: string[] = [];
+      for (const t of enabled) {
+        // eslint-disable-next-line no-await-in-loop
+        if (await this.isAlertEnabled(t)) final.push(t);
       }
 
-      console.log(`🎯 Initializing NBA engine for user ${userId} with ${globallyEnabledTypes.length} NBA alerts: ${globallyEnabledTypes.join(', ')}`);
-
-      // Initialize the NBA alert modules using parent class method
-      await this.initializeUserAlertModules(globallyEnabledTypes);
-
-    } catch (error) {
-      console.error(`❌ Failed to initialize NBA engine for user ${userId}:`, error);
+      if (DEBUG) console.log(`🎯 NBA init for user ${userId} with ${final.length} alerts`);
+      await this.initializeUserAlertModules(final);
+    } catch (err) {
+      console.error(`❌ NBA init failed for user ${userId}:`, err);
     }
   }
 
-  // Load alert cylinder module for specific alert type
+  // Reuse BaseSportEngine's dynamic loader by keeping method signature;
+  // Provide a fast path map for common alerts but still fall back to base loader.
   async loadAlertModule(alertType: string): Promise<any | null> {
-    const startTime = Date.now();
-    
+    const t0 = Date.now();
     try {
-      const moduleMap: Record<string, string> = {
-        'NBA_GAME_START': './alert-cylinders/nba/game-start-module.ts',
-        'NBA_FOURTH_QUARTER': './alert-cylinders/nba/fourth-quarter-module.ts',
-        'NBA_FINAL_MINUTES': './alert-cylinders/nba/final-minutes-module.ts',
-        'NBA_TWO_MINUTE_WARNING': './alert-cylinders/nba/two-minute-warning-module.ts',
-        'NBA_OVERTIME': './alert-cylinders/nba/overtime-module.ts',
-        // V3-12: Advanced NBA predictive analytics modules
-        'NBA_CLUTCH_PERFORMANCE': './alert-cylinders/nba/clutch-performance-module.ts',
-        'NBA_CHAMPIONSHIP_IMPLICATIONS': './alert-cylinders/nba/championship-implications-module.ts',
-        'NBA_SUPERSTAR_ANALYTICS': './alert-cylinders/nba/superstar-analytics-module.ts',
-        'NBA_PLAYOFF_INTENSITY': './alert-cylinders/nba/playoff-intensity-module.ts'
+      const map: Record<string, string> = {
+        'NBA_GAME_START': './alert-cylinders/nba/game-start-module',
+        'NBA_FOURTH_QUARTER': './alert-cylinders/nba/fourth-quarter-module',
+        'NBA_FINAL_MINUTES': './alert-cylinders/nba/final-minutes-module',
+        'NBA_TWO_MINUTE_WARNING': './alert-cylinders/nba/two-minute-warning-module',
+        'NBA_OVERTIME': './alert-cylinders/nba/overtime-module',
+        // advanced
+        'NBA_CLUTCH_PERFORMANCE': './alert-cylinders/nba/clutch-performance-module',
+        'NBA_CHAMPIONSHIP_IMPLICATIONS': './alert-cylinders/nba/championship-implications-module',
+        'NBA_SUPERSTAR_ANALYTICS': './alert-cylinders/nba/superstar-analytics-module',
+        'NBA_PLAYOFF_INTENSITY': './alert-cylinders/nba/playoff-intensity-module',
       };
 
-      const modulePath = moduleMap[alertType];
-      if (!modulePath) {
-        console.log(`❌ No NBA module found for alert type: ${alertType}`);
-        return null;
+      const base = map[alertType];
+      if (base) {
+        const module = await import(resolveWithExtensions(base));
+        const dt = Date.now() - t0;
+        this.performanceMetrics.moduleLoadTime.push(dt);
+        if (dt > 50 && DEBUG) console.log(`⚠️ NBA slow module load: ${alertType} ${dt}ms`);
+        return new module.default();
       }
 
-      const module = await import(modulePath);
-      
-      const loadTime = Date.now() - startTime;
-      this.performanceMetrics.moduleLoadTime.push(loadTime);
-      
-      if (loadTime > 50) {
-        console.log(`⚠️ NBA Slow module load: ${alertType} took ${loadTime}ms`);
-      }
-      
-      return new module.default();
-    } catch (error) {
-      const loadTime = Date.now() - startTime;
-      console.error(`❌ Failed to load NBA alert module ${alertType} after ${loadTime}ms:`, error);
+      // Fallback to Base loader (handles other patterns)
+      const m = await super.loadAlertModule(alertType);
+      const dt = Date.now() - t0;
+      this.performanceMetrics.moduleLoadTime.push(dt);
+      if (!m && DEBUG) console.log(`❌ NBA module not found for ${alertType}`);
+      return m;
+    } catch (err) {
+      const dt = Date.now() - t0;
+      console.error(`❌ Failed to load NBA module ${alertType} after ${dt}ms:`, err);
       return null;
     }
   }
 
-  // Initialize alert cylinder modules for enabled alert types
   async initializeUserAlertModules(enabledAlertTypes: string[]): Promise<void> {
-    // Only clear if the alert types have changed - prevents memory leak from constant reloading
-    const currentTypes = Array.from(this.alertModules.keys()).sort();
-    const newTypes = [...enabledAlertTypes].sort();
-    const typesChanged = JSON.stringify(currentTypes) !== JSON.stringify(newTypes);
-    
-    if (!typesChanged && this.alertModules.size > 0) {
-      console.log(`🔄 NBA alert cylinders already loaded: ${this.alertModules.size} modules`);
-      return; // Reuse existing modules
+    // Only clear if changed
+    const current = Array.from(this.alertModules.keys()).sort();
+    const next = Array.from(new Set((enabledAlertTypes ?? []).map(t => String(t).trim().toUpperCase()))).sort();
+    const changed = JSON.stringify(current) !== JSON.stringify(next);
+
+    if (!changed && this.alertModules.size > 0) {
+      if (DEBUG) console.log(`🔄 NBA cylinders already loaded: ${this.alertModules.size}`);
+      return;
     }
-    
-    // Only clear when types have actually changed
-    if (typesChanged) {
+    if (changed) {
       this.alertModules.clear();
-      console.log(`🧹 Cleared NBA alert modules due to type changes`);
+      if (DEBUG) console.log(`🧹 NBA cylinders cleared due to type changes`);
     }
 
-    for (const alertType of enabledAlertTypes) {
-      const module = await this.loadAlertModule(alertType);
-      if (module) {
-        this.alertModules.set(alertType, module);
-        console.log(`✅ Loaded NBA alert cylinder: ${alertType}`);
+    for (const t of next) {
+      const mod = await this.loadAlertModule(t);
+      if (mod) {
+        this.alertModules.set(t, mod);
+        if (DEBUG) console.log(`✅ NBA loaded: ${t}`);
       }
     }
-
-    console.log(`🔧 Initialized ${this.alertModules.size} NBA alert cylinders: ${Array.from(this.alertModules.keys()).join(', ')}`);
+    if (DEBUG) console.log(`🔧 NBA initialized ${this.alertModules.size} cylinders`);
   }
 
-  // NBA-specific time parsing optimized for professional basketball
+  // ---- Utilities -----------------------------------------------------------
+
   private parseTimeToSeconds(timeString: string): number {
     if (!timeString || timeString === '0:00') return 0;
-    
     try {
-      const cleanTime = timeString.trim().split(' ')[0];
-      if (cleanTime.includes(':')) {
-        const [minutes, seconds] = cleanTime.split(':').map(t => parseInt(t) || 0);
-        return (minutes * 60) + seconds;
+      const clean = String(timeString).trim().split(' ')[0];
+      if (clean.includes(':')) {
+        const [m, s] = clean.split(':').map(n => parseInt(n, 10) || 0);
+        return m * 60 + s;
       }
-      return parseInt(cleanTime) || 0;
-    } catch (error) {
-      console.warn(`NBA: Failed to parse time string "${timeString}":`, error);
+      return parseInt(clean, 10) || 0;
+    } catch (e) {
+      if (DEBUG) console.warn(`NBA: Failed to parse time "${timeString}":`, e);
       return 0;
     }
   }
 
-  
-  
-
-
-
-
-  // Performance metrics cleanup to prevent memory growth
-  private cleanupPerformanceMetrics(): void {
-    const maxSamples = 100; // Keep last 100 samples per metric
-    
-    this.performanceMetrics.alertGenerationTime = this.performanceMetrics.alertGenerationTime.slice(-maxSamples);
-    this.performanceMetrics.moduleLoadTime = this.performanceMetrics.moduleLoadTime.slice(-maxSamples);
-    this.performanceMetrics.enhanceDataTime = this.performanceMetrics.enhanceDataTime.slice(-maxSamples);
-    this.performanceMetrics.probabilityCalculationTime = this.performanceMetrics.probabilityCalculationTime.slice(-maxSamples);
-    this.performanceMetrics.gameStateEnhancementTime = this.performanceMetrics.gameStateEnhancementTime.slice(-maxSamples);
-    
-    console.log(`🧹 NBA Engine: Cleaned up performance metrics (kept last ${maxSamples} samples per metric)`);
+  private isEnhancedDataMeaningful(enhanced: EnhancedNBA | null | undefined, original: GameState): boolean {
+    if (!enhanced) return false;
+    if (enhanced.quarter && enhanced.quarter !== 1 && enhanced.quarter !== (original as any).quarter) return true;
+    if (enhanced.timeRemaining && enhanced.timeRemaining !== '12:00' && enhanced.timeRemaining !== (original as any).timeRemaining) return true;
+    if ((enhanced.homeScore ?? 0) + (enhanced.awayScore ?? 0) > 0) {
+      if (enhanced.homeScore !== original.homeScore || enhanced.awayScore !== original.awayScore) return true;
+    }
+    return false;
   }
 
-  // Get performance stats for monitoring
+  private pickEnhanced<T>(enhanced: T | undefined, original: T | undefined, defaultValue: T): T | undefined {
+    return enhanced !== undefined && enhanced !== defaultValue && enhanced !== original ? enhanced : original;
+  }
+
+  private pickScore(enhanced: number | undefined, original: number | undefined): number {
+    if (typeof enhanced === 'number' && enhanced >= 0) {
+      if (enhanced > 0 || !original || original === 0) return enhanced;
+    }
+    return original ?? 0;
+  }
+
+  private detectClutchSituation(state: GameState) {
+    const q = Number(state.quarter ?? 0);
+    const tr = String(state.timeRemaining ?? '');
+    const hs = Number(state.homeScore ?? 0);
+    const as = Number(state.awayScore ?? 0);
+
+    if (q >= 4 && tr) {
+      const secs = this.parseTimeToSeconds(tr);
+      const diff = Math.abs(hs - as);
+      return {
+        isClutchTime: secs <= 300,
+        isCrunchTime: secs <= 120,
+        isCloseGame: diff <= 5,
+        clutchFactor: this.calculateClutchFactor(secs, diff, q),
+      };
+    }
+    return {};
+  }
+
+  private calculateClutchFactor(secs: number, diff: number, q: number): number {
+    let f = 0;
+    if (secs <= 60) f += 40;
+    else if (secs <= 120) f += 30;
+    else if (secs <= 300) f += 20;
+
+    if (diff <= 2) f += 30;
+    else if (diff <= 5) f += 20;
+    else if (diff <= 10) f += 10;
+
+    if (q >= 5) f += 20;
+    else if (q === 4) f += 15;
+
+    return Math.min(100, f);
+  }
+
+  private maintainPerfArrays() {
+    const cap = 100;
+    const trim = (arr: number[]) => (arr.length > cap ? arr.slice(-cap) : arr);
+    this.performanceMetrics.gameStateEnhancementTime = trim(this.performanceMetrics.gameStateEnhancementTime);
+    this.performanceMetrics.moduleLoadTime = trim(this.performanceMetrics.moduleLoadTime);
+    this.performanceMetrics.enhanceDataTime = trim(this.performanceMetrics.enhanceDataTime);
+    this.performanceMetrics.probabilityCalculationTime = trim(this.performanceMetrics.probabilityCalculationTime);
+  }
+
+  // ---- Metrics -------------------------------------------------------------
+
+  private cleanupPerformanceMetrics(): void {
+    const max = 100;
+    const trim = (arr: number[]) => arr.slice(-max);
+    this.performanceMetrics.alertGenerationTime = trim(this.performanceMetrics.alertGenerationTime);
+    this.performanceMetrics.moduleLoadTime = trim(this.performanceMetrics.moduleLoadTime);
+    this.performanceMetrics.enhanceDataTime = trim(this.performanceMetrics.enhanceDataTime);
+    this.performanceMetrics.probabilityCalculationTime = trim(this.performanceMetrics.probabilityCalculationTime);
+    this.performanceMetrics.gameStateEnhancementTime = trim(this.performanceMetrics.gameStateEnhancementTime);
+    if (DEBUG) console.log(`🧹 NBA Engine metrics trimmed to last ${max} samples`);
+  }
+
   getPerformanceStats(): any {
-    const stats = {
+    const avg = (arr: number[]) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+    return {
       totalRequests: this.performanceMetrics.totalRequests,
       totalAlerts: this.performanceMetrics.totalAlerts,
       cacheHits: this.performanceMetrics.cacheHits,
       cacheMisses: this.performanceMetrics.cacheMisses,
       clutchTimeDetections: this.performanceMetrics.clutchTimeDetections,
       overtimeAlerts: this.performanceMetrics.overtimeAlerts,
-      averageAlertTime: this.performanceMetrics.alertGenerationTime.length > 0 
-        ? this.performanceMetrics.alertGenerationTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.alertGenerationTime.length
-        : 0,
-      averageEnhanceTime: this.performanceMetrics.enhanceDataTime.length > 0
-        ? this.performanceMetrics.enhanceDataTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.enhanceDataTime.length
-        : 0,
-      averageProbabilityTime: this.performanceMetrics.probabilityCalculationTime.length > 0
-        ? this.performanceMetrics.probabilityCalculationTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.probabilityCalculationTime.length
-        : 0
+      averageAlertTime: avg(this.performanceMetrics.alertGenerationTime),
+      averageEnhanceTime: avg(this.performanceMetrics.enhanceDataTime),
+      averageProbabilityTime: avg(this.performanceMetrics.probabilityCalculationTime),
     };
-    
-    return stats;
   }
 
-  // Get performance metrics for V3 dashboard (consistent with other engines)
   getPerformanceMetrics() {
-    const avgCalculationTime = this.performanceMetrics.probabilityCalculationTime.length > 0
-      ? this.performanceMetrics.probabilityCalculationTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.probabilityCalculationTime.length
-      : 0;
-
-    const avgAlertTime = this.performanceMetrics.alertGenerationTime.length > 0
-      ? this.performanceMetrics.alertGenerationTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.alertGenerationTime.length
-      : 0;
-
-    const avgEnhanceTime = this.performanceMetrics.gameStateEnhancementTime.length > 0
-      ? this.performanceMetrics.gameStateEnhancementTime.reduce((a, b) => a + b, 0) / this.performanceMetrics.gameStateEnhancementTime.length
-      : 0;
-
-    const cacheHitRate = this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses > 0
-      ? (this.performanceMetrics.cacheHits / (this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses)) * 100
-      : 0;
-      
-    const deduplicationRate = 0; // Now handled by unified deduplicator
+    const avg = (arr: number[]) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+    const avgCalculationTime = avg(this.performanceMetrics.probabilityCalculationTime);
+    const avgAlertTime = avg(this.performanceMetrics.alertGenerationTime);
+    const avgEnhanceTime = avg(this.performanceMetrics.gameStateEnhancementTime);
+    const cacheHitRate =
+      this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses > 0
+        ? (this.performanceMetrics.cacheHits /
+            (this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses)) *
+          100
+        : 0;
 
     return {
       sport: 'NBA',
@@ -549,24 +457,61 @@ export class NBAEngine extends BaseSportEngine {
         avgAlertGenerationTime: avgAlertTime,
         avgEnhancementTime: avgEnhanceTime,
         cacheHitRate,
-        deduplicationRate,
+        deduplicationRate: 0, // handled globally
         totalRequests: this.performanceMetrics.totalRequests,
         totalAlerts: this.performanceMetrics.totalAlerts,
         cacheHits: this.performanceMetrics.cacheHits,
-        cacheMisses: this.performanceMetrics.cacheMisses
+        cacheMisses: this.performanceMetrics.cacheMisses,
       },
       sportSpecific: {
         clutchTimeDetections: this.performanceMetrics.clutchTimeDetections,
         overtimeAlerts: this.performanceMetrics.overtimeAlerts,
         professionalBasketballAlerts: this.performanceMetrics.totalAlerts,
-        activeGameTracking: 0, // Now handled by unified deduplicator
-        totalTrackedAlerts: 0  // Now handled by unified deduplicator
+        activeGameTracking: 0, // global
+        totalTrackedAlerts: 0, // global
       },
       recentPerformance: {
         calculationTimes: this.performanceMetrics.probabilityCalculationTime.slice(-20),
         alertTimes: this.performanceMetrics.alertGenerationTime.slice(-20),
-        enhancementTimes: this.performanceMetrics.gameStateEnhancementTime.slice(-20)
-      }
+        enhancementTimes: this.performanceMetrics.gameStateEnhancementTime.slice(-20),
+      },
     };
   }
+}
+
+// ---- Local helpers ---------------------------------------------------------
+
+function resolveWithExtensions(base: string): string {
+  // Let bundlers resolve; prefer TS/JS common endings.
+  const candidates = [`${base}.ts`, `${base}.tsx`, `${base}.js`, `${base}.mjs`, `${base}.cjs`];
+  // We return the bare base; dynamic import resolution will try file with extension in many setups.
+  // To be safe, return first candidate; node/ts-node usually can handle .ts in dev.
+  return candidates[0];
+}
+
+function tryGlobalDedupe(key: string, type: string): boolean {
+  // Use global unifiedDeduplicator if available, else a local TTL map
+  const g = globalThis as unknown as { unifiedDeduplicator?: { shouldSendAlert?: Function } };
+  const d = g?.unifiedDeduplicator;
+  if (d?.shouldSendAlert) {
+    try {
+      return !!d.shouldSendAlert({ gameId: key.split(':')[0], type, timestamp: Date.now() }, 'plate-appearance');
+    } catch {
+      // fall through to local
+    }
+  }
+  return localTTL(key, 15_000);
+}
+
+const _localTTLMap = new Map<string, number>();
+function localTTL(key: string, ttl: number): boolean {
+  const now = Date.now();
+  const last = _localTTLMap.get(key) ?? 0;
+  if (now - last < ttl) return false;
+  _localTTLMap.set(key, now);
+  if (_localTTLMap.size > 5000) {
+    const entries = Array.from(_localTTLMap.entries()).sort((a, b) => a[1] - b[1]);
+    for (let i = 0; i < 1000; i++) _localTTLMap.delete(entries[i][0]);
+  }
+  return true;
 }
