@@ -156,6 +156,7 @@ export class MLBEngine extends BaseSportEngine {
 
       // Check for inning end (3 outs)
       if (outs === 3 || gameState.inningJustEnded) {
+        console.log(`🏁 Inning end detected for game ${gameId}: outs=${outs}, inningJustEnded=${gameState.inningJustEnded}`);
         mlbPerformanceTracker.updateTeamMomentum(
           gameId,
           teamId,
@@ -166,6 +167,8 @@ export class MLBEngine extends BaseSportEngine {
             outs: 3
           }
         );
+        
+        mlbPerformanceTracker.resetInningPatterns(gameId);
       }
 
       // Clean up old games periodically

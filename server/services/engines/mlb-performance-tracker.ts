@@ -132,6 +132,7 @@ export interface TeamMomentum {
 export interface PatternDetection {
   gameId: string;
   lastOccurred?: number; // Timestamp for cleanup tracking
+  lastInning?: number; // Track last inning for reset detection
   // Unusual sequences
   consecutiveStrikeouts: {
     current: number;
@@ -302,7 +303,7 @@ export class MLBPerformanceTracker {
     batter.lastUpdated = Date.now();
 
     // Update pattern detection
-    this.updatePatternDetection(gameId, 'batter', outcome.type);
+    this.updatePatternDetection(gameId, 'batter', outcome.type, outcome.inning);
   }
 
   /**
@@ -405,7 +406,7 @@ export class MLBPerformanceTracker {
     pitcher.lastUpdated = Date.now();
 
     // Update pattern detection
-    this.updatePatternDetection(gameId, 'pitcher', pitchOutcome.type);
+    this.updatePatternDetection(gameId, 'pitcher', pitchOutcome.type, pitchOutcome.inning);
   }
 
   /**
@@ -900,12 +901,21 @@ export class MLBPerformanceTracker {
     return 'stable';
   }
 
-  private updatePatternDetection(gameId: string, type: 'batter' | 'pitcher', outcome: string): void {
+  private updatePatternDetection(gameId: string, type: 'batter' | 'pitcher', outcome: string, currentInning?: number): void {
     if (!this.patterns.has(gameId)) {
       this.patterns.set(gameId, this.initializePatternDetection(gameId));
     }
     
     const patterns = this.patterns.get(gameId)!;
+    
+    if (currentInning !== undefined && patterns.lastInning !== undefined && currentInning !== patterns.lastInning) {
+      console.log(`🔄 Inning changed from ${patterns.lastInning} to ${currentInning} - resetting patterns for game ${gameId}`);
+      this.resetInningPatterns(gameId);
+    }
+    
+    if (currentInning !== undefined) {
+      patterns.lastInning = currentInning;
+    }
     
     if (type === 'batter') {
       switch (outcome) {
@@ -965,6 +975,23 @@ export class MLBPerformanceTracker {
         patterns.pitcherDominance.active = true;
       }
     }
+  }
+
+  resetInningPatterns(gameId: string): void {
+    if (!this.patterns.has(gameId)) {
+      return;
+    }
+    
+    const patterns = this.patterns.get(gameId)!;
+    
+    console.log(`🔄 Resetting inning patterns for game ${gameId} (was: ${patterns.consecutiveHits.current} hits, ${patterns.consecutiveBaserunners} baserunners)`);
+    
+    patterns.consecutiveStrikeouts.current = 0;
+    patterns.consecutiveWalks.current = 0;
+    patterns.consecutiveHits.current = 0;
+    patterns.rallyMode.active = false;
+    patterns.rallyMode.runsScored = 0;
+    patterns.rallyMode.consecutiveBaserunners = 0;
   }
 
   private initializePatternDetection(gameId: string): PatternDetection {
