@@ -12,7 +12,6 @@ import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@share
 import { z } from "zod";
 import { oddsApiService } from './services/odds-api-service';
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
-import { UnifiedAlertGenerator } from "./services/unified-alert-generator";
 import { unifiedDeduplicator } from "./services/unified-deduplicator";
 import { memoryManager } from "./middleware/memory-manager";
 import { registerHealthRoutes } from "./services/unified-health-monitor";
@@ -1614,121 +1613,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
 
-  // Generate test live alerts - RULE COMPLIANT VERSION - ADMIN ONLY
-  app.post('/api/alerts/force-generate', requireAdminAuth, validateCSRF, async (req, res) => {
-    try {
-      console.log('🧪 ADMIN FORCING RULE-COMPLIANT TEST LIVE ALERTS');
-      console.log('🛡️ NOTE: All generated alerts will respect global admin settings and user preferences');
-
-      const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
-      const alertGenerator = new UnifiedAlertGenerator({ mode: 'production' });
-      const alertCount = await alertGenerator.generateLiveGameAlerts();
-
-      res.json({
-        message: `Generated ${alertCount} rule-compliant alerts (filtered by admin settings)`,
-        alertCount,
-        note: 'All alerts respect global admin settings and user preferences'
-      });
-    } catch (error) {
-      console.error('Error generating test alerts:', error);
-      res.status(500).json({ error: 'Failed to generate test alerts' });
-    }
-  });
-
-  // Force send test Telegram alert - RULE COMPLIANT VERSION - ADMIN ONLY
-  app.post('/api/telegram/force-test', requireAdminAuth, validateCSRF, async (req, res) => {
-    try {
-      console.log('🧪 TESTING TELEGRAM ALERT (Rule-Compliant)');
-
-      // Get all users with Telegram
-      const allUsers = await storage.getAllUsers();
-      const telegramUsers = allUsers.filter(u => u.telegramEnabled && u.telegramBotToken && u.telegramChatId);
-
-      console.log(`📱 Found ${telegramUsers.length} users with Telegram configured`);
-
-      let successCount = 0;
-      let errorCount = 0;
-
-      for (const user of telegramUsers) {
-        console.log(`📱 Testing Telegram for user: ${user.username}`);
-
-        // 🛡️ RULE COMPLIANCE: Check if TEST_STRIKEOUT is globally enabled
-        const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
-        const alertGenerator = new UnifiedAlertGenerator({ mode: 'production' });
-        const isGloballyEnabled = await alertGenerator.isAlertGloballyEnabled('MLB', 'TEST_STRIKEOUT');
-
-        if (!isGloballyEnabled) {
-          console.log(`🚫 RULE COMPLIANT: TEST_STRIKEOUT globally disabled - skipping user ${user.username}`);
-          errorCount++;
-          continue;
-        }
-
-        // 🛡️ RULE COMPLIANCE: Check user preferences
-        try {
-          const userPrefs = await storage.getUserAlertPreferencesBySport(user.id, 'mlb');
-          const userPref = userPrefs.find(p => p.alertType === 'TEST_STRIKEOUT');
-          const userHasEnabled = userPref ? userPref.enabled : isGloballyEnabled;
-
-          if (!userHasEnabled) {
-            console.log(`🚫 RULE COMPLIANT: User ${user.username} has TEST_STRIKEOUT disabled`);
-            errorCount++;
-            continue;
-          }
-        } catch (prefError) {
-          console.error(`❌ Error checking preferences for ${user.username}:`, prefError);
-          errorCount++;
-          continue;
-        }
-
-        const config: TelegramConfig = {
-          botToken: user.telegramBotToken || '',
-          chatId: user.telegramChatId || ''
-        };
-
-        const testAlert = {
-          type: 'TEST_STRIKEOUT',
-          title: 'Test Strikeout Alert',
-          description: '⚡ RULE-COMPLIANT TEST! Test Batter struck out by Test Pitcher - Test Team vs Test Team',
-          gameInfo: {
-            homeTeam: 'Test Home',
-            awayTeam: 'Test Away',
-            score: { home: 0, away: 0 },
-            inning: 5,
-            inningState: 'top',
-            outs: 2,
-            balls: 1,
-            strikes: 2,
-            runners: {
-              first: false,
-              second: true,
-              third: false
-            }
-          }
-        };
-
-        const sent = await sendTelegramAlert(config, testAlert);
-        if (sent) {
-          successCount++;
-          console.log(`📱 ✅ Rule-compliant test alert sent to ${user.username}`);
-        } else {
-          errorCount++;
-          console.log(`📱 ❌ Test alert failed for ${user.username}`);
-        }
-      }
-
-      res.json({
-        message: 'Rule-compliant test alerts completed',
-        userCount: telegramUsers.length,
-        successCount,
-        errorCount,
-        note: 'All alerts respect global admin settings and user preferences'
-      });
-    } catch (error) {
-      console.error('Error sending test alerts:', error);
-      res.status(500).json({ error: 'Failed to send test alerts' });
-    }
-  });
-
   // AI Cache management endpoint - Admin only
   app.post('/api/ai/cache/clear', requireAdminAuth, validateCSRF, async (req, res) => {
     try {
@@ -2836,48 +2720,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
 
-
-  // Test NCAAF two-minute warning logic
-  app.get('/api/test-ncaaf-2min/:time', async (req, res) => {
-    try {
-      // ✅ V3: Using UnifiedAlertGenerator instead of legacy V2 AlertGenerator
-      const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
-      const generator = new UnifiedAlertGenerator({ mode: 'production' });
-
-      const testTime = req.params.time;
-
-      // Test the two-minute detection logic
-      const isWithin2Min = (generator as any).isWithinTwoMinutes(testTime);
-
-      // Create mock game data
-      const mockGame = {
-        gameId: 'test-game',
-        awayTeam: 'Test Team A',
-        homeTeam: 'Test Team B',
-        awayScore: 14,
-        homeScore: 21,
-        timeRemaining: testTime,
-        quarter: 4,
-        status: 'live',
-        isLive: true
-      };
-
-      res.json({
-        inputTime: testTime,
-        isWithinTwoMinutes: isWithin2Min,
-        mockGame,
-        testResults: {
-          '1:30': (generator as any).isWithinTwoMinutes('1:30'),
-          '2:30': (generator as any).isWithinTwoMinutes('2:30'),
-          '0:45': (generator as any).isWithinTwoMinutes('0:45'),
-          '3:00': (generator as any).isWithinTwoMinutes('3:00')
-        }
-      });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
   // Admin Authentication Routes
   app.post('/api/admin-auth/login', async (req, res) => {
     try {
@@ -3082,19 +2924,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         debugResults.errors.push(`Weather service: ${error.message}`);
       }
 
-      // Test Alert Generator
-      try {
-        const { UnifiedAlertGenerator } = await import('./services/unified-alert-generator');
-        const alertGenerator = new UnifiedAlertGenerator({ mode: 'production' });
-        debugResults.services.alertGenerator = {
-          status: 'OK',
-          mode: 'production',
-          stats: alertGenerator.getStats()
-        };
-      } catch (error: any) {
-        debugResults.services.alertGenerator = { status: 'FAIL', error: error.message };
-        debugResults.errors.push(`Alert Generator: ${error.message}`);
-      }
+      // UnifiedAlertGenerator removed - dead code replaced by CalendarSyncService
 
       // Test Environment Variables
       debugResults.configuration = {

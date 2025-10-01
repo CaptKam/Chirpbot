@@ -8,7 +8,6 @@ import fs from "fs";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed-database";
-// ✅ V3: Using UnifiedAlertGenerator instead of legacy V2 AlertGenerator
 import { db } from "./db";
 import { alertCleanupService } from './services/alert-cleanup';
 import { SingleInstanceLock } from "./utils/singleton-lock";
@@ -453,9 +452,9 @@ async function startServer() {
       console.log(`📋 DATAINGESTIONSERVICE: BOOTSTRAP HIT - Version 3.1.2`);
       console.log(`📋 DATAINGESTIONSERVICE: Starting immediate initialization in guaranteed execution path`);
 
-      // ✅ V3: UnifiedAlertGenerator disabled - CalendarSyncService is now the sole data ingestion system
-      // Alert generation is handled by CalendarSyncService → GameStateManager → Engines flow
-      console.log('📋 V3: Using CalendarSyncService as single data ingestion system (UnifiedAlertGenerator disabled)');
+      // ✅ V3: CalendarSyncService is the sole data ingestion system
+      // Alert generation: CalendarSyncService → GameStateManager → Engines
+      console.log('📋 V3: Using CalendarSyncService as single data ingestion system');
 
 
       // Start Weather-on-Live service after server is ready
