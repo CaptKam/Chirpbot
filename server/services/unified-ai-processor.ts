@@ -101,15 +101,8 @@ export interface UnifiedAIResponse {
 
 // 🛡️ SECURITY: Strict schema validation for AI JSON responses
 const AIJSONResponseSchema = z.object({
-  situation: z.string().min(3).max(140),
-  context: z.string().min(3).max(200),
-  bet: z.object({
-    type: z.string().max(30),
-    lean: z.enum(['over', 'under', 'prop', 'none']).optional(),
-    note: z.string().max(120).optional()
-  }),
-  window: z.string().max(40),
-  safety: z.string().max(120).optional()
+  primary: z.string().min(5).max(200),
+  secondary: z.string().max(200).optional()
 });
 
 // Legacy schema for backward compatibility
@@ -1186,12 +1179,15 @@ export class UnifiedAIProcessor {
   }
 
   private buildSportSpecificPrompt(context: CrossSportContext): { system: string; user: string } {
-    const system = `You are a terse sports betting assistant.
+    const system = `You are a concise sports alert writer.
 - Never fabricate player names or odds.
-- If odds not provided, use "value leaning" or "prop available" without numbers.
-- Output JSON with keys: situation, context, bet, window, safety.
-- Max 2 sentences per field.
-- Use emoji markers: 🔥 for situation, ⚡ for context, 💰 for bet.
+- Output JSON with keys: primary, secondary.
+- Primary line: [Player/Team] + [Action] + [Opportunity] (one clear sentence)
+- Secondary line: ONLY impactful factors (runners on base, weather IF significant, momentum). Omit if nothing meaningful.
+- NO fluff phrases: no "key moment", "high confidence", "watch for"
+- NO defensive disclaimers: no "no fabricated odds", "evaluate carefully"
+- NO time windows: no "next 5min", "this at-bat" (already known from timestamp)
+- NO neutral info: only mention weather/conditions if they actively impact play
 `;
 
     const baseContext = `GAME CONTEXT:
@@ -1218,12 +1214,13 @@ ${context.championshipContext ? `- CHAMPIONSHIP CONTEXT: ${context.championshipC
 
 Return JSON:
 {
-  "situation": "🔥 [key moment] • [player]",
-  "context": "⚡ [fatigue/momentum] • [environmental factor]",
-  "bet": {"type": "[RBI/strikeout/total]", "lean": "over/under/prop", "note": "no fabricated odds"},
-  "window": "this at-bat / next 5min",
-  "safety": "[risk/caveat if any]"
-}`;
+  "primary": "[Batter name] at bat: [RBI/scoring/strikeout] chance",
+  "secondary": "[runners on base detail, OR wind impact if >15mph, OR momentum factor] OR omit if nothing impactful"
+}
+
+Example: 
+{"primary": "Bregman at bat: RBI scoring chance", "secondary": "2 runners on base"}
+{"primary": "Judge at bat: power hitter opportunity", "secondary": "Strong wind blowing out to center"}`;
         return { system, user };
       }
 
@@ -1240,12 +1237,13 @@ ${context.timeRemaining ? `- Time Pressure: ${context.timeRemaining}` : ''}
 
 Return JSON:
 {
-  "situation": "🔥 [down & distance] • [QB/player]",
-  "context": "⚡ [wind/weather] • [field position impact]",
-  "bet": {"type": "[TD/FG/yards]", "lean": "over/under/prop", "note": "no fabricated odds"},
-  "window": "this drive / next 2min",
-  "safety": "[risk if any]"
-}`;
+  "primary": "[Team/QB]: [TD/FG/scoring] opportunity",
+  "secondary": "[field position OR weather if severe OR momentum factor] OR omit if nothing impactful"
+}
+
+Example:
+{"primary": "Chiefs in red zone: TD scoring chance", "secondary": "1st and goal at 5 yard line"}
+{"primary": "4th down decision: FG or go for it", "secondary": "Strong winds affecting kick"}`;
         return { system, user };
       }
 
@@ -1258,12 +1256,13 @@ ${context.fouls ? `- Team fouls: ${context.fouls.home}-${context.fouls.away}` : 
 
 Return JSON:
 {
-  "situation": "🔥 [time/score situation] • [key player]",
-  "context": "⚡ [pace/foul situation] • [momentum]",
-  "bet": {"type": "[points/total]", "lean": "over/under", "note": "no fabricated odds"},
-  "window": "this possession / next 2min",
-  "safety": "[risk if any]"
-}`;
+  "primary": "[Player/Team]: [scoring/clutch/run] opportunity",
+  "secondary": "[foul situation OR pace factor OR momentum] OR omit if nothing impactful"
+}
+
+Example:
+{"primary": "Curry hot hand: scoring run building", "secondary": "Team on 12-0 run"}
+{"primary": "Clutch time situation: tight game", "secondary": "Bonus situation - free throws likely"}`;
         return { system, user };
       }
 
@@ -1277,29 +1276,30 @@ Provide analysis in JSON format.`;
 
   // Convert JSON response from OpenAI to unified format
   private convertJSONToUnifiedResponse(jsonResponse: any, context: CrossSportContext, startTime: number): UnifiedAIResponse {
-    // Build enhanced message from JSON fields
-    const enhancedMessage = `${jsonResponse.situation}\n${jsonResponse.context}\n💰 ${jsonResponse.bet.type} ${jsonResponse.bet.note ? '• ' + jsonResponse.bet.note : ''} • ${jsonResponse.window}`;
+    // Build enhanced message from new clean format (primary + optional secondary)
+    const enhancedMessage = jsonResponse.secondary 
+      ? `${jsonResponse.primary}\n${jsonResponse.secondary}`
+      : jsonResponse.primary;
     
     return {
       sport: context.sport,
       enhancedTitle: `${context.sport} Alert`,
       enhancedMessage,
       contextualInsights: [
-        jsonResponse.situation,
-        jsonResponse.context,
-        jsonResponse.bet.note || 'Betting opportunity identified'
-      ],
-      actionableRecommendation: jsonResponse.window,
+        jsonResponse.primary,
+        jsonResponse.secondary || ''
+      ].filter(Boolean),
+      actionableRecommendation: jsonResponse.primary,
       urgencyLevel: context.priority >= 80 ? 'HIGH' : 'MEDIUM',
       bettingContext: {
-        recommendation: jsonResponse.bet.note || 'Evaluate opportunity',
+        recommendation: jsonResponse.primary,
         confidence: 80,
-        reasoning: [jsonResponse.bet.type, jsonResponse.bet.lean || 'prop']
+        reasoning: [jsonResponse.secondary || 'Situation analysis'].filter(Boolean)
       },
       gameProjection: {
         winProbability: { home: 50, away: 50 },
-        keyFactors: [jsonResponse.safety || 'Standard risk'],
-        nextCriticalMoment: jsonResponse.window
+        keyFactors: [jsonResponse.secondary || 'Standard situation'].filter(Boolean),
+        nextCriticalMoment: jsonResponse.primary
       },
       aiProcessingTime: Date.now() - startTime,
       confidence: 85,
