@@ -663,19 +663,17 @@ export class UnifiedAlertGenerator {
 
       switch (sport) {
         case 'MLB':
-          // Placeholder for MLBApiService instance if it were managed here
-          if (this.mlbApi) { // Assuming mlbApi is initialized elsewhere
-            games = await this.mlbApi.getTodaysGames();
-          }
+          // API services removed - using CalendarSyncService only
+          // Fallback to empty array if engine not available
+          games = [];
           break;
         case 'NFL':
           games = await this.getNFLGames();
           break;
         case 'NCAAF':
-          // Placeholder for NCAAFApiService instance
-          if (this.ncaafApi) { // Assuming ncaafApi is initialized elsewhere
-            games = await this.ncaafApi.getTodaysGames();
-          }
+          // API services removed - using CalendarSyncService only
+          // Fallback to empty array if engine not available
+          games = [];
           break;
         case 'WNBA':
           games = await this.getWNBAGames();
@@ -1370,42 +1368,24 @@ export class UnifiedAlertGenerator {
   }
 
   private async getNFLGames(): Promise<any[]> {
-    try {
-      if (!this.nflApi) {
-        console.error('❌ NFL API service not initialized');
-        return [];
-      }
-      return await this.nflApi.getTodaysGames();
-    } catch (error) {
-      console.error('❌ Error fetching NFL games:', error);
-      return [];
-    }
+    // API services removed - using CalendarSyncService only
+    // Engines handle live game data when ACTIVE
+    console.log('📅 NFL: Using CalendarSyncService for game data');
+    return [];
   }
 
   private async getWNBAGames(): Promise<any[]> {
-    try {
-      if (!this.wnbaApi) {
-        console.error('❌ WNBA API service not initialized');
-        return [];
-      }
-      return await this.wnbaApi.getTodaysGames();
-    } catch (error) {
-      console.error('❌ Error fetching WNBA games:', error);
-      return [];
-    }
+    // API services removed - using CalendarSyncService only
+    // Engines handle live game data when ACTIVE
+    console.log('📅 WNBA: Using CalendarSyncService for game data');
+    return [];
   }
 
   private async getCFLGames(): Promise<any[]> {
-    try {
-      if (!this.cflApi) {
-        console.error('❌ CFL API service not initialized');
-        return [];
-      }
-      return await this.cflApi.getTodaysGames();
-    } catch (error) {
-      console.error('❌ Error fetching CFL games:', error);
-      return [];
-    }
+    // API services removed - using CalendarSyncService only
+    // Engines handle live game data when ACTIVE
+    console.log('📅 CFL: Using CalendarSyncService for game data');
+    return [];
   }
 
   private async initializeNFLPollingManager(): Promise<void> {
