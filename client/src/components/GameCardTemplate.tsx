@@ -216,6 +216,28 @@ export function GameCardTemplate({
   const homeScore = homeTeam.score || 0;
   const awayScore = awayTeam.score || 0;
 
+  // Fetch live game data for MLB games
+  const { data: liveGameData } = useQuery({
+    queryKey: ['liveGame', gameId],
+    queryFn: async () => {
+      const response = await fetch(`/api/games/${gameId}/live`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch live game data');
+      return response.json();
+    },
+    enabled: sport === 'MLB' && status === 'live' && showEnhancedMLB,
+    refetchInterval: status === 'live' ? 10000 : false, // Refetch every 10s for live games
+    staleTime: 8000,
+    retry: 1
+  });
+
+  // Use live data if available, otherwise use passed props
+  const displayRunners = liveGameData?.runners || runners || { first: false, second: false, third: false };
+  const displayOuts = liveGameData?.outs ?? outs ?? 0;
+  const displayBalls = liveGameData?.balls ?? balls ?? 0;
+  const displayStrikes = liveGameData?.strikes ?? strikes ?? 0;
+
   return (
     <Card 
       className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-2 ${cardHeight} ${
@@ -276,14 +298,14 @@ export function GameCardTemplate({
           {getGameState()}
 
           {/* Baseball Diamond for MLB games */}
-          {sport === 'MLB' && showEnhancedMLB && runners && (
+          {sport === 'MLB' && showEnhancedMLB && (
             <BaseballDiamond
-              runners={runners}
+              runners={displayRunners}
               inning={inning}
               isTopInning={isTopInning}
-              outs={outs}
-              balls={balls}
-              strikes={strikes}
+              outs={displayOuts}
+              balls={displayBalls}
+              strikes={displayStrikes}
               size="sm"
               showCount={status === 'live'}
             />
