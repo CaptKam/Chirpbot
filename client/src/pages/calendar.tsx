@@ -555,12 +555,16 @@ export default function Calendar() {
                     venue={game.venue}
                     inning={game.inning}
                     isTopInning={game.inningState === 'Top'}
+                    runners={{ first: false, second: false, third: false }}
+                    balls={0}
+                    strikes={0}
+                    outs={0}
                     isSelected={isSelected}
                     onSelect={() => toggleGameSelection(game.id)}
                     size="lg"
                     showWeather={true}
                     showVenue={true}
-                    showEnhancedMLB={false}
+                    showEnhancedMLB={true}
                   />
                 </div>
               );
