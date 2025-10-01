@@ -12,16 +12,49 @@
 
 import { RUNTIME, GameState as RuntimeGameState, WeatherArmReason } from '../config/runtime';
 import type { GameStateInfo, EngineLifecycleManager as IEngineLifecycleManager } from './game-state-manager';
-import { MLBEngine } from './engines/mlb-engine';
-import { NFLEngine } from './engines/nfl-engine';
-import { NCAAFEngine } from './engines/ncaaf-engine';
-import { NBAEngine } from './engines/nba-engine';
-import { WNBAEngine } from './engines/wnba-engine';
-import { CFLEngine } from './engines/cfl-engine';
 import type { BaseSportEngine } from './engines/base-engine';
 import { unifiedSettings } from '../storage';
 import { getHealthMonitor } from './unified-health-monitor';
 import { memoryManager } from '../middleware/memory-manager';
+
+// === DYNAMIC ENGINE LOADING ===
+
+type EngineCtor = new (...args: any[]) => BaseSportEngine;
+
+// Dynamic loaders for each sport - prevents one sport's failure from affecting others
+const engineLoaders: Record<string, () => Promise<EngineCtor>> = {
+  MLB: async () => (await import('./engines/mlb-engine')).MLBEngine,
+  NFL: async () => (await import('./engines/nfl-engine')).NFLEngine,
+  NCAAF: async () => (await import('./engines/ncaaf-engine')).NCAAFEngine,
+  NBA: async () => (await import('./engines/nba-engine')).NBAEngine,
+  WNBA: async () => (await import('./engines/wnba-engine')).WNBAEngine,
+  CFL: async () => (await import('./engines/cfl-engine')).CFLEngine,
+};
+
+// Per-sport loading state for circuit breaker
+interface SportLoadingState {
+  isLoading: boolean;
+  failures: number;
+  lastAttemptAt?: number;
+  lastError?: string;
+  loadPromise?: Promise<boolean>;
+}
+
+// Dynamically initialize loading state from supported sports
+const sportLoadingState: Record<string, SportLoadingState> = {};
+
+function getOrCreateLoadingState(sport: string): SportLoadingState {
+  if (!sportLoadingState[sport]) {
+    sportLoadingState[sport] = { isLoading: false, failures: 0 };
+  }
+  return sportLoadingState[sport];
+}
+
+// Exponential backoff: 10s, 30s, 60s, cap at 2m
+function getBackoffDelay(failures: number): number {
+  const delays = [0, 10000, 30000, 60000];
+  return Math.min(120000, delays[Math.min(failures, 3)] ?? 120000);
+}
 
 // === ENGINE STATE MANAGEMENT ===
 
@@ -100,15 +133,8 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
     maxRetryDelay: 30000, // 30 seconds max delay
   };
   
-  // Supported sports mapping
-  private readonly sportEngineClasses = {
-    'MLB': MLBEngine,
-    'NFL': NFLEngine,
-    'NCAAF': NCAAFEngine,
-    'NBA': NBAEngine,
-    'WNBA': WNBAEngine,
-    'CFL': CFLEngine,
-  };
+  // Supported sports - now using dynamic loading
+  private readonly supportedSports = Object.keys(engineLoaders);
   
   // Resource limits per sport (configurable)
   private readonly resourceLimits = {
@@ -160,9 +186,7 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
   // === INITIALIZATION ===
   
   private initializeAllEngines(): void {
-    const supportedSports = Object.keys(this.sportEngineClasses);
-    
-    for (const sport of supportedSports) {
+    for (const sport of this.supportedSports) {
       this.engines.set(sport, {
         sport,
         state: EngineState.INACTIVE,
@@ -184,7 +208,7 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
       });
     }
     
-    console.log(`🏁 Initialized ${supportedSports.length} sport engines: ${supportedSports.join(', ')}`);
+    console.log(`🏁 Initialized ${this.supportedSports.length} sport engines: ${this.supportedSports.join(', ')}`);
   }
   
   private startMonitoring(): void {
@@ -586,23 +610,125 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
   
   // === ENGINE LIFECYCLE OPERATIONS ===
   
-  private async preWarmEngine(engine: EngineStateInfo): Promise<void> {
-    const EngineClass = this.sportEngineClasses[engine.sport as keyof typeof this.sportEngineClasses];
-    if (!EngineClass) {
-      throw new Error(`No engine class found for sport: ${engine.sport}`);
+  /**
+   * Safely load engine with circuit breaker and error isolation
+   * This prevents one sport's failure from affecting others
+   */
+  private async ensureEngineLoaded(sport: string): Promise<boolean> {
+    const loadState = getOrCreateLoadingState(sport);
+    
+    // Already loading - await the existing promise
+    if (loadState.isLoading && loadState.loadPromise) {
+      console.log(`⏳ ${sport} engine already loading, awaiting...`);
+      return await loadState.loadPromise;
     }
     
+    // Circuit breaker - check if we need to wait due to previous failures
+    const backoffDelay = getBackoffDelay(loadState.failures);
+    const now = Date.now();
+    if (loadState.lastAttemptAt && (now - loadState.lastAttemptAt) < backoffDelay) {
+      const waitTime = Math.round((backoffDelay - (now - loadState.lastAttemptAt)) / 1000);
+      console.log(`⏸️ ${sport} engine in cooldown, retry in ${waitTime}s (${loadState.failures} failures)`);
+      // This is a soft failure - don't escalate to ERROR
+      return false;
+    }
+    
+    // Create and store the loading promise
+    loadState.isLoading = true;
+    loadState.lastAttemptAt = now;
+    
+    loadState.loadPromise = (async () => {
+      try {
+        const loader = engineLoaders[sport];
+        if (!loader) {
+          throw new Error(`No engine loader found for sport: ${sport}`);
+        }
+        
+        console.log(`📦 Dynamically loading ${sport} engine...`);
+        const EngineClass = await loader();
+        
+        const engine = this.engines.get(sport);
+        if (!engine) {
+          throw new Error(`Engine state not found for sport: ${sport}`);
+        }
+        
+        // Create new instance
+        engine.instance = new EngineClass();
+        
+        // Optional: engine self-test/health check
+        if (typeof (engine.instance as any).healthCheck === 'function') {
+          await (engine.instance as any).healthCheck();
+        }
+        
+        // Reset failure tracking on success
+        loadState.failures = 0;
+        loadState.lastError = undefined;
+        
+        console.log(`✅ ${sport} engine loaded successfully`);
+        return true;
+      } catch (error: any) {
+        loadState.failures += 1;
+        loadState.lastError = error?.message ?? String(error);
+        
+        const nextRetry = getBackoffDelay(loadState.failures);
+        console.error(`❌ ${sport} engine failed to load (attempt ${loadState.failures}): ${loadState.lastError}`);
+        console.error(`   Next retry in ${Math.round(nextRetry / 1000)}s`);
+        
+        // Mark sport as unavailable
+        await this.markSportUnavailable(sport, loadState.lastError);
+        
+        return false;
+      } finally {
+        loadState.isLoading = false;
+        loadState.loadPromise = undefined;
+      }
+    })();
+    
+    return await loadState.loadPromise;
+  }
+  
+  /**
+   * Mark a sport as unavailable in the system
+   * This provides graceful degradation without crashing other sports
+   */
+  private async markSportUnavailable(sport: string, reason?: string): Promise<void> {
+    console.warn(`⚠️ ${sport} UNAVAILABLE: ${reason ?? 'unknown error'}`);
+    
+    const engine = this.engines.get(sport);
+    if (engine) {
+      engine.state = EngineState.ERROR;
+      engine.lastErrorAt = new Date();
+      engine.consecutiveErrors += 1;
+    }
+    
+    // Notify health monitor
+    const healthMonitor = getHealthMonitor();
+    if (healthMonitor && typeof (healthMonitor as any).recordSportFailure === 'function') {
+      (healthMonitor as any).recordSportFailure(sport, reason);
+    }
+  }
+  
+  private async preWarmEngine(engine: EngineStateInfo): Promise<void> {
     console.log(`🔥 Pre-warming ${engine.sport} engine...`);
     
-    // Create engine instance if it doesn't exist
+    // Create engine instance if it doesn't exist - using safe loading
     if (!engine.instance) {
-      engine.instance = new EngineClass();
+      const loaded = await this.ensureEngineLoaded(engine.sport);
+      if (!loaded) {
+        // Soft failure - don't throw, just log
+        console.warn(`⏸️ ${engine.sport} engine not loaded (circuit breaker or in cooldown)`);
+        // Set next retry time for health check
+        const loadState = getOrCreateLoadingState(engine.sport);
+        const backoffDelay = getBackoffDelay(loadState.failures);
+        engine.nextRetryTime = new Date(Date.now() + backoffDelay);
+        return;
+      }
       console.log(`📦 Created ${engine.sport} engine instance`);
     }
     
     // Initialize user alert modules (light pre-loading)
     const enabledAlerts = await this.getEnabledAlerts(engine.sport);
-    await engine.instance.initializeUserAlertModules(enabledAlerts.slice(0, 5)); // Pre-load first 5
+    await engine.instance!.initializeUserAlertModules(enabledAlerts.slice(0, 5)); // Pre-load first 5
     
     console.log(`✅ ${engine.sport} engine pre-warmed with ${enabledAlerts.length} alert types`);
   }
@@ -613,6 +739,16 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
     // Ensure engine exists
     if (!engine.instance) {
       await this.preWarmEngine(engine);
+      
+      // Check if pre-warming succeeded
+      if (!engine.instance) {
+        // Soft failure - engine is in cooldown or failed to load
+        console.warn(`⏸️ ${engine.sport} engine activation deferred (not loaded)`);
+        const loadState = getOrCreateLoadingState(engine.sport);
+        const backoffDelay = getBackoffDelay(loadState.failures);
+        engine.nextRetryTime = new Date(Date.now() + backoffDelay);
+        throw new Error(`Engine not loaded - in cooldown or loading failed`);
+      }
     }
     
     // Polling management handled by CalendarSyncService
@@ -697,14 +833,32 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
   private async performHealthChecks(): Promise<void> {
     if (!this.isEnabled) return;
     
-    const now = new Date();
+    const now = Date.now();
     let healthyEngines = 0;
     let errorEngines = 0;
     
     for (const [sport, engine] of this.engines) {
       try {
-        // Check if engine needs recovery
-        if (engine.state === EngineState.ERROR && engine.nextRetryTime && now >= engine.nextRetryTime) {
+        // Auto-retry for failed engines after backoff period
+        if (engine.state === EngineState.ERROR && !engine.instance) {
+          const loadState = getOrCreateLoadingState(sport);
+          const backoffDelay = getBackoffDelay(loadState.failures);
+          
+          // Check if backoff period has elapsed
+          if (!loadState.lastAttemptAt || (now - loadState.lastAttemptAt) >= backoffDelay) {
+            console.log(`🔄 Auto-retry: Attempting to load ${sport} engine after backoff`);
+            const loaded = await this.ensureEngineLoaded(sport);
+            if (loaded) {
+              console.log(`✅ Auto-retry: ${sport} engine loaded successfully, resetting state`);
+              engine.state = EngineState.INACTIVE;
+              engine.consecutiveErrors = 0;
+              engine.lastErrorAt = undefined;
+            }
+          }
+        }
+        
+        // Check if engine needs recovery (existing logic)
+        if (engine.state === EngineState.ERROR && engine.nextRetryTime && new Date() >= engine.nextRetryTime) {
           await this.transitionEngine(sport, EngineState.RECOVERY);
         }
         
@@ -712,7 +866,7 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
         await this.checkResourceUsage(engine);
         
         // Update health check timestamp
-        engine.lastHealthCheck = now;
+        engine.lastHealthCheck = new Date();
         
         if (engine.state !== EngineState.ERROR) {
           healthyEngines++;
@@ -806,16 +960,15 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
 
       // 🔧 CRITICAL FIX: Ensure engine instance exists before initializing modules
       if (!engine.instance) {
-        console.log(`🔧 ${sport} engine instance missing - creating engine instance...`);
+        console.log(`🔧 ${sport} engine instance missing - loading dynamically...`);
         
-        // Create engine instance using the same logic as activateEngine
-        const EngineClass = this.sportEngineClasses[sport as keyof typeof this.sportEngineClasses];
-        if (!EngineClass) {
-          console.error(`❌ No engine class found for ${sport}`);
+        // Create engine instance using dynamic loading with circuit breaker
+        const loaded = await this.ensureEngineLoaded(sport);
+        if (!loaded) {
+          console.error(`❌ Failed to load ${sport} engine`);
           return false;
         }
         
-        engine.instance = new EngineClass();
         console.log(`✅ ${sport} engine instance created`);
       }
 
@@ -995,7 +1148,7 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
   }
   
   public getAllEnginesStatus(): Record<string, any> {
-    // Return status for all engines
+    // Return status for all engines with loading state
     const status: Record<string, any> = {
       totalEngines: this.engines.size,
       totalEnginesStarted: this.totalEnginesStarted,
@@ -1005,11 +1158,17 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
     };
     
     for (const [sport, engine] of this.engines) {
+      const loadState = getOrCreateLoadingState(sport);
       status.engines[sport] = {
         state: engine.state,
         activeGames: engine.activeGames.size,
         resourceUsage: engine.resourceUsage,
         alertsGenerated: engine.alertsGenerated,
+        loadingState: {
+          failures: loadState.failures,
+          lastError: loadState.lastError,
+          isLoading: loadState.isLoading,
+        },
       };
     }
     

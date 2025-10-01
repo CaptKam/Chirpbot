@@ -1,0 +1,119 @@
+// BEFORE (problem):
+// import { MLBEngine } from './engines/mlb-engine';
+// import { NFLEngine } from './engines/nfl-engine';
+// ...
+
+// AFTER (solution):
+type EngineCtor = new (...args: any[]) => BaseSportEngine;
+
+const engineLoaders: Record<string, () => Promise<EngineCtor>> = {
+  MLB: async () => (await import('./engines/mlb-engine')).MLBEngine,
+  NFL: async () => (await import('./engines/nfl-engine')).NFLEngine,
+  NCAAF: async () => (await import('./engines/ncaaf-engine')).NCAAFEngine,
+  NBA: async () => (await import('./engines/nba-engine')).NBAEngine,
+  WNBA: async () => (await import('./engines/wnba-engine')).WNBAEngine,
+  CFL: async () => (await import('./engines/cfl-engine')).CFLEngine,
+};
+
+// Per-sport runtime state
+interface SportRuntime {
+  status: 'idle'|'loading'|'active'|'error'|'disabled';
+  lastError?: string;
+  instance?: BaseSportEngine | null;
+  failures: number;           // for backoff/circuit breaker
+  lastStartedAt?: number;
+}
+
+const sportRuntime: Record<string, SportRuntime> = {
+  MLB:  { status: 'idle', failures: 0 },
+  NFL:  { status: 'idle', failures: 0 },
+  NCAAF:{ status: 'idle', failures: 0 },
+  NBA:  { status: 'idle', failures: 0 },
+  WNBA: { status: 'idle', failures: 0 },
+  CFL:  { status: 'idle', failures: 0 },
+};
+
+// Exponential backoff: 10s, 30s, 60s, cap at 2m
+const backoff = (failures: number) =>
+  Math.min(120_000, [0,10_000,30_000,60_000][Math.min(failures, 3)] ?? 120_000);
+
+// Lazy-load + construct one sport, without affecting others
+async function ensureEngineActive(sport: string): Promise<void> {
+  const rt = sportRuntime[sport];
+  if (!rt || rt.status === 'disabled' || rt.status === 'active' || rt.status === 'loading') return;
+
+  // Circuit breaker
+  const delay = backoff(rt.failures);
+  const now = Date.now();
+  if (rt.lastStartedAt && now - rt.lastStartedAt < delay) return;
+
+  rt.status = 'loading';
+  rt.lastStartedAt = now;
+
+  try {
+    const loader = engineLoaders[sport];
+    if (!loader) throw new Error(`No engine loader for sport=${sport}`);
+
+    const Ctor = await loader();              // <- dynamic import in try/catch
+    const instance = new Ctor({ /* deps */ }); // pass DI as needed
+
+    // Optional: engine self-test/health check
+    await instance?.healthCheck?.();
+
+    rt.instance = instance;
+    rt.status = 'active';
+    rt.failures = 0;
+    rt.lastError = undefined;
+    console.info(`[EngineLifecycle] ${sport} ACTIVE`);
+  } catch (err: any) {
+    rt.status = 'error';
+    rt.failures += 1;
+    rt.lastError = err?.message ?? String(err);
+    rt.instance = null;
+    console.error(`[EngineLifecycle] ${sport} ERROR: ${rt.lastError}`);
+  }
+}
+
+// Called by GameStateManager when a game transitions to LIVE
+export async function onGameLive(sport: string, gameId: string) {
+  await ensureEngineActive(sport);                    // only touches that sport
+  const inst = sportRuntime[sport]?.instance;
+  if (!inst || sportRuntime[sport].status !== 'active') {
+    // Graceful degradation: log + mark UI as unavailable for this sport
+    await markSportUnavailable(sport, gameId, sportRuntime[sport]?.lastError);
+    return;
+  }
+  inst.onLiveGame(gameId); // your existing hook
+}
+
+// Periodic tick per sport (safe)
+export function tickSportEngines() {
+  for (const sport of Object.keys(sportRuntime)) {
+    const rt = sportRuntime[sport];
+    if (rt.status === 'active') {
+      try {
+        rt.instance?.tick?.();
+      } catch (e: any) {
+        rt.status = 'error';
+        rt.failures += 1;
+        rt.lastError = e?.message ?? String(e);
+        rt.instance = null;
+        console.error(`[EngineLifecycle] ${sport} TICK ERROR: ${rt.lastError}`);
+      }
+    }
+  }
+}
+
+// Health snapshot for /ops
+export function getEngineHealth() {
+  return Object.fromEntries(Object.entries(sportRuntime).map(([sport, rt]) => [
+    sport,
+    { status: rt.status, failures: rt.failures, lastError: rt.lastError }
+  ]));
+}
+
+async function markSportUnavailable(sport: string, gameId: string, reason?: string) {
+  // Write a “sport unavailable” alert row or metric, do NOT throw.
+  console.warn(`[EngineLifecycle] ${sport} unavailable for ${gameId}: ${reason ?? 'unknown'}`);
+  // Optional: insert informational row in alerts table with type SPORT_UNAVAILABLE
+}
