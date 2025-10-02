@@ -419,17 +419,15 @@ export class UnifiedAIProcessor {
     const normalizedSport = sport.toUpperCase();
     const highValueTypes = this.highValueAlertTypes[normalizedSport] || [];
     
-    // Enhanced gating: Include high-value types + probability-based inclusion
+    // ALL alerts get AI enhancement - no probability gating
     const isHighValue = highValueTypes.includes(alertType);
-    const hasGoodProbability = (probability || 0) >= 60; // 60%+ probability threshold
-    const isGameStart = alertType.includes('GAME_START'); // Always enhance game starts
+    const isGameStart = alertType.includes('GAME_START');
     
-    const shouldEnhance = isHighValue || hasGoodProbability || isGameStart;
+    // Always enhance - alert already passed isTriggered() gate
+    const shouldEnhance = true;
     
-    if (shouldEnhance) {
-      if (isHighValue) this.performanceMetrics.highValueAlerts++;
-    } else {
-      this.performanceMetrics.gatedAlerts++;
+    if (isHighValue) {
+      this.performanceMetrics.highValueAlerts++;
     }
     
     return shouldEnhance;
