@@ -32,14 +32,10 @@ export class NFLEngine extends BaseSportEngine {
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
-      // Only check settings for actual NFL alert types
-      const validNFLAlerts = [
-        'NFL_GAME_START', 'NFL_SECOND_HALF_KICKOFF', 'NFL_TWO_MINUTE_WARNING',
-        'NFL_RED_ZONE', 'NFL_FOURTH_DOWN', 'NFL_RED_ZONE_OPPORTUNITY', 'NFL_TURNOVER_LIKELIHOOD',
-        'NFL_MASSIVE_WEATHER'
-      ];
-
-      if (!validNFLAlerts.includes(alertType)) {
+      // Validate against dynamically discovered alert types
+      const validAlerts = await this.getAvailableAlertTypes();
+      
+      if (!validAlerts.includes(alertType)) {
         console.log(`❌ ${alertType} is not a valid NFL alert type - rejecting`);
         return false;
       }
@@ -382,11 +378,7 @@ export class NFLEngine extends BaseSportEngine {
       console.log(`✅ NFL Enabled alert types: ${enabledTypes.join(', ')}`);
 
       // Filter to only valid NFL alerts that have corresponding module files
-      const validNFLAlerts = [
-        'NFL_GAME_START', 'NFL_SECOND_HALF_KICKOFF', 'NFL_TWO_MINUTE_WARNING',
-        'NFL_RED_ZONE', 'NFL_FOURTH_DOWN', 'NFL_RED_ZONE_OPPORTUNITY', 'NFL_TURNOVER_LIKELIHOOD',
-        'NFL_MASSIVE_WEATHER'
-      ];
+      const validNFLAlerts = await this.getAvailableAlertTypes();
 
       const nflEnabledTypes = enabledTypes.filter(alertType =>
         validNFLAlerts.includes(alertType)
@@ -580,17 +572,5 @@ export class NFLEngine extends BaseSportEngine {
     };
   }
 
-  // Override to return all available NFL alert types
-  async getAvailableAlertTypes(): Promise<string[]> {
-    return [
-      'NFL_GAME_START',
-      'NFL_SECOND_HALF_KICKOFF',
-      'NFL_TWO_MINUTE_WARNING',
-      'NFL_RED_ZONE',
-      'NFL_FOURTH_DOWN',
-      'NFL_RED_ZONE_OPPORTUNITY',
-      'NFL_TURNOVER_LIKELIHOOD',
-      'NFL_MASSIVE_WEATHER'
-    ];
-  }
+  // Use base engine's dynamic discovery - no override needed
 }

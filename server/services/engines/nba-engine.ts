@@ -54,8 +54,10 @@ export class NBAEngine extends BaseSportEngine {
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
-      // Only allow NBA_* types
-      if (!/^NBA_[A-Z0-9_]+$/.test(alertType)) {
+      // Validate against dynamically discovered alert types
+      const validAlerts = await this.getAvailableAlertTypes();
+      
+      if (!validAlerts.includes(alertType)) {
         if (DEBUG) console.log(`❌ ${alertType} is not a valid NBA alert type - rejecting`);
         return false;
       }

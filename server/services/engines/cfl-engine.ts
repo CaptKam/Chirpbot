@@ -30,17 +30,10 @@ export class CFLEngine extends BaseSportEngine {
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
-      // V3-15: Complete CFL alert types with Canadian football specifics
-      const validCFLAlerts = [
-        'CFL_GAME_START', 'CFL_SECOND_HALF_KICKOFF', 'CFL_TWO_MINUTE_WARNING',
-        // V3-15: Core CFL professional Canadian football alert types
-        'CFL_FOURTH_QUARTER', 'CFL_FINAL_MINUTES', 'CFL_GREY_CUP_IMPLICATIONS',
-        // V3-15: Advanced CFL Canadian-specific alert types  
-        'CFL_THIRD_DOWN_SITUATION', 'CFL_ROUGE_OPPORTUNITY', 'CFL_OVERTIME',
-        'CFL_MASSIVE_WEATHER'
-      ];
-
-      if (!validCFLAlerts.includes(alertType)) {
+      // Validate against dynamically discovered alert types
+      const validAlerts = await this.getAvailableAlertTypes();
+      
+      if (!validAlerts.includes(alertType)) {
         console.log(`❌ ${alertType} is not a valid CFL alert type - rejecting`);
         return false;
       }
@@ -296,11 +289,7 @@ export class CFLEngine extends BaseSportEngine {
       console.log(`✅ CFL Enabled alert types: ${enabledTypes.join(', ')}`);
 
       // Filter to only valid CFL alerts that we have modules for
-      const validCFLAlerts = [
-        'CFL_GAME_START', 'CFL_TWO_MINUTE_WARNING', 'CFL_FOURTH_QUARTER', 
-        'CFL_FINAL_MINUTES', 'CFL_GREY_CUP_IMPLICATIONS', 'CFL_THIRD_DOWN_SITUATION',
-        'CFL_ROUGE_OPPORTUNITY', 'CFL_OVERTIME', 'CFL_MASSIVE_WEATHER'
-      ];
+      const validCFLAlerts = await this.getAvailableAlertTypes();
 
       const cflEnabledTypes = enabledTypes.filter(alertType =>
         validCFLAlerts.includes(alertType)

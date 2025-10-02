@@ -29,16 +29,10 @@ export class WNBAEngine extends BaseSportEngine {
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
-      // Only check settings for actual WNBA alert types
-      const validWNBAAlerts = [
-        'WNBA_GAME_START', 'WNBA_TWO_MINUTE_WARNING', 'WNBA_FINAL_MINUTES',
-        'WNBA_HIGH_SCORING_QUARTER', 'WNBA_LOW_SCORING_QUARTER', 'WNBA_FOURTH_QUARTER',
-        // V3-10: New WNBA predictive alert types
-        'WNBA_CLUTCH_TIME_OPPORTUNITY', 'WNBA_COMEBACK_POTENTIAL',
-        'WNBA_CRUNCH_TIME_DEFENSE', 'WNBA_CHAMPIONSHIP_IMPLICATIONS'
-      ];
-
-      if (!validWNBAAlerts.includes(alertType)) {
+      // Validate against dynamically discovered alert types
+      const validAlerts = await this.getAvailableAlertTypes();
+      
+      if (!validAlerts.includes(alertType)) {
         console.log(`❌ ${alertType} is not a valid WNBA alert type - rejecting`);
         return false;
       }
@@ -325,13 +319,7 @@ export class WNBAEngine extends BaseSportEngine {
       console.log(`✅ WNBA Enabled alert types: ${enabledTypes.join(', ')}`);
 
       // Filter to only valid WNBA alerts that have corresponding module files
-      const validWNBAAlerts = [
-        'WNBA_GAME_START', 'WNBA_TWO_MINUTE_WARNING', 'WNBA_FINAL_MINUTES',
-        'WNBA_HIGH_SCORING_QUARTER', 'WNBA_LOW_SCORING_QUARTER', 'WNBA_FOURTH_QUARTER',
-        // V3-10: New WNBA predictive alert types
-        'WNBA_CLUTCH_TIME_OPPORTUNITY', 'WNBA_COMEBACK_POTENTIAL',
-        'WNBA_CRUNCH_TIME_DEFENSE', 'WNBA_CHAMPIONSHIP_IMPLICATIONS'
-      ];
+      const validWNBAAlerts = await this.getAvailableAlertTypes();
 
       const wnbaEnabledTypes = enabledTypes.filter(alertType =>
         validWNBAAlerts.includes(alertType)
@@ -484,20 +472,5 @@ export class WNBAEngine extends BaseSportEngine {
     }
   }
 
-  // Override to return only valid WNBA alert types
-  async getAvailableAlertTypes(): Promise<string[]> {
-    return [
-      'WNBA_GAME_START',
-      'WNBA_TWO_MINUTE_WARNING',
-      'WNBA_FINAL_MINUTES',
-      'WNBA_HIGH_SCORING_QUARTER',
-      'WNBA_LOW_SCORING_QUARTER',
-      'WNBA_FOURTH_QUARTER',
-      // V3-10: New WNBA predictive alert types
-      'WNBA_CLUTCH_TIME_OPPORTUNITY',
-      'WNBA_COMEBACK_POTENTIAL',
-      'WNBA_CRUNCH_TIME_DEFENSE',
-      'WNBA_CHAMPIONSHIP_IMPLICATIONS'
-    ];
-  }
+  // Use base engine's dynamic discovery - no override needed
 }

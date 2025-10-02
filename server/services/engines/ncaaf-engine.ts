@@ -360,12 +360,7 @@ export class NCAAFEngine extends BaseSportEngine {
       }
 
       // CRITICAL FIX: Only include NCAAF alerts that have actual cylinder modules implemented
-      const validNCAAFAlerts = [
-        'NCAAF_GAME_START', 'NCAAF_TWO_MINUTE_WARNING', 'NCAAF_RED_ZONE',
-        'NCAAF_FOURTH_DOWN_DECISION', 'NCAAF_UPSET_OPPORTUNITY',
-        'NCAAF_RED_ZONE_EFFICIENCY', 'NCAAF_COMEBACK_POTENTIAL',
-        'NCAAF_SECOND_HALF_KICKOFF', 'NCAAF_MASSIVE_WEATHER'
-      ];
+      const validNCAAFAlerts = await this.getAvailableAlertTypes();
 
       const ncaafEnabledTypes = enabledTypes.filter(alertType =>
         validNCAAFAlerts.includes(alertType)
