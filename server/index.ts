@@ -43,7 +43,7 @@ const instanceLock = new SingleInstanceLock();
 console.log("🚀 V3 Alert System: Starting unified pipeline");
 if (!(globalThis as any).__v3_alert_system_bootstrapped__) {
   (globalThis as any).__v3_alert_system_bootstrapped__ = true;
-  
+
   void (async () => {
     try {
       // === EXISTING SERVICES (V3.0) ===
@@ -56,23 +56,31 @@ if (!(globalThis as any).__v3_alert_system_bootstrapped__) {
       gameStateManager.setEngineLifecycleManager(engineLifecycleManager);
       await gameStateManager.start();
 
-      const calendarSyncService = CalendarSyncService.getInstance({
+      const { migrationAdapter } = await import('./services/migration-adapter');
+      const getCalendarSyncService = () => CalendarSyncService.getInstance({
         sports: ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL'],
         enableMetrics: true
       });
-      
-      calendarSyncService.setGameStateManager(gameStateManager);
-      gameStateManager.setCalendarSyncService(calendarSyncService);
-      await calendarSyncService.start();
 
-      const { migrationAdapter } = await import('./services/migration-adapter');
+      // Initialize calendar sync service
+      const calendarSyncService = getCalendarSyncService();
+
+      // Connect GameStateManager to CalendarSyncService
+      calendarSyncService.setGameStateManager(gameStateManager);
+
+      // Initialize MigrationAdapter with both services
       migrationAdapter.initialize(calendarSyncService, gameStateManager);
+      console.log('✅ MigrationAdapter initialized with CalendarSyncService and GameStateManager');
+
+      // Start calendar sync
+      await calendarSyncService.start();
+      console.log('✅ Calendar sync service started');
 
       (global as any).calendarSyncService = calendarSyncService;
       (global as any).gameStateManager = gameStateManager;
       (global as any).engineLifecycleManager = engineLifecycleManager;
       (global as any).migrationAdapter = migrationAdapter;
-      
+
       // === V3 ALERT SYSTEM ACTIVE ===
       // CalendarSyncService → GameStateManager → Engines pipeline
       console.log("✅ V3 Alert System: CalendarSyncService → GameStateManager → Engines pipeline active");
@@ -205,7 +213,7 @@ function validateSecurityConfig() {
   // SESSION_SECRET is absolutely critical for security
   if (!process.env.SESSION_SECRET) {
     console.error('❌ CRITICAL SECURITY ERROR: SESSION_SECRET environment variable is not set!');
-    console.error('   This is required for secure session management.');
+    console.error('   This is required for session management.');
     console.error('   Please set SESSION_SECRET to a strong random value (at least 32 characters).');
     if (process.env.NODE_ENV === 'production') {
       console.error('   FATAL: Cannot start in production without SESSION_SECRET.');
@@ -356,20 +364,20 @@ async function startServer() {
       console.log('✅ Static SPA serving configured - frontend ready');
     } else {
       console.log('🔧 No built assets found - will use Vite dev middleware');
-      
+
       // Prevent duplicate setupVite calls
       if (!(globalThis as any).__VITE_ATTACHED__) {
         // Temporarily override PORT for Vite HMR to avoid conflict
         const originalPort = process.env.PORT;
         const hmrPort = String(parseInt(process.env.PORT || "5000", 10) + 1000);
         process.env.PORT = hmrPort;
-        
+
         await setupVite(app, server);
-        
+
         // Restore original PORT for Express server
         process.env.PORT = originalPort;
         (globalThis as any).__VITE_ATTACHED__ = true;
-        
+
         console.log(`✅ Vite dev server configured - HMR on port ${hmrPort}, frontend ready`);
       } else {
         console.log('✅ Vite dev server already attached - skipping duplicate setup');
