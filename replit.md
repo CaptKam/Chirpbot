@@ -4,6 +4,11 @@ ChirpBot V3 is an advanced multi-sport betting intelligence platform that provid
 
 # Recent Changes
 
+## October 2, 2025 - AI Enhancement Gate Removed
+- **Universal AI Enhancement**: Removed 60% probability threshold from `shouldEnhanceAlert()` in unified-ai-processor.ts. ALL alerts now receive AI enhancement, regardless of hardcoded probability values.
+- **Impact**: Low-probability alerts (previously <60% like 42% "Runner on Third, 2 Outs") now get full AI betting context and gambling insights.
+- **System Status**: All alerts that pass `isTriggered()` gate now proceed to AI enhancement pipeline. Performance metrics simplified, queue depth monitoring active.
+
 ## October 2, 2025 - MLB Alert Cylinder Bug Fixes
 - **Deduplication Fixed**: Resolved critical bug where 5 MLB cylinders (momentum-shift, high-scoring-situation, wind-change, clutch-situation, pitching-change) used `Date.now()` in alertKeys, causing deduplication to fail and alert spam. Now using stable game context (inning + top/bottom).
 - **Late-Inning Logic Fixed**: Fixed late-inning-close module that fired for all Top 7 games regardless of score. Now properly checks if game is close (≤3 runs difference) before triggering.
