@@ -84,7 +84,7 @@ export default class PitchingChangeModule extends BaseAlertModule {
     }
     
     const alertResult = {
-      alertKey: `${gameState.gameId}_pitching_change_${gameState.currentPitcher}_${Date.now()}`,
+      alertKey: `${gameState.gameId}_pitching_change_${gameState.inning}_${gameState.isTopInning ? 'top' : 'bot'}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | Pitching change`,
       context: {
@@ -102,7 +102,6 @@ export default class PitchingChangeModule extends BaseAlertModule {
     };
 
     return alertResult;
-    };
   }
 
   calculateProbability(gameState: GameState): number {

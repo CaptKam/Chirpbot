@@ -81,7 +81,7 @@ export default class WindChangeModule extends BaseAlertModule {
       gameState
     );
 
-    const alertKey = `${gameId}_wind_change_${currentWind.windSpeed}_${currentWind.windDirection}_${Date.now()}`;
+    const alertKey = `${gameId}_wind_change_${gameState.inning}_${gameState.isTopInning ? 'top' : 'bot'}`;
 
     const alertResult = {
       alertKey,

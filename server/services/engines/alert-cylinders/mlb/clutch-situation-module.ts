@@ -55,7 +55,7 @@ export default class ClutchSituationModule extends BaseAlertModule {
     }
 
     return {
-      alertKey: `${gameState.gameId}_clutch_${inning}_${outs}_${Date.now()}`,
+      alertKey: `${gameState.gameId}_clutch_${inning}_${outs}_${gameState.isTopInning ? 'top' : 'bot'}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${situationDesc}`,
       context: {
