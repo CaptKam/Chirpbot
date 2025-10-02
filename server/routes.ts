@@ -3,6 +3,8 @@ import express from "express";
 import { createServer, type Server } from "http";
 // WebSocket imports removed - using HTTP polling architecture
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import { Pool } from "pg";
 import bcrypt from "bcryptjs";
 import csrf from "csrf";
 import { storage } from "./storage";
@@ -152,12 +154,24 @@ const updateUserProfileSchema = z.object({
   oddsApiKey: z.string().optional(),
 }).strict(); // strict() ensures no additional fields are allowed
 
+// CRITICAL FIX: Create PostgreSQL session store for session persistence across server restarts
+const PgSession = connectPgSimple(session);
+const sessionPool = new Pool({ connectionString: process.env.DATABASE_URL });
+const sessionStore = new PgSession({
+  pool: sessionPool,
+  tableName: 'user_sessions',
+  createTableIfMissing: true,
+});
+
+console.log('✅ PostgreSQL session store configured - sessions will persist across server restarts');
+
 // USER session parser - for regular app users only
 const userSessionParser = session({
   name: 'cb.sid',
   secret: process.env.SESSION_SECRET!,
   resave: false,
   saveUninitialized: false,
+  store: sessionStore, // CRITICAL: Use PostgreSQL store instead of MemoryStore
   cookie: {
     path: '/',
     secure: process.env.NODE_ENV === 'production',
@@ -174,6 +188,7 @@ const adminSessionParser = session({
   secret: process.env.SESSION_SECRET!,
   resave: false,
   saveUninitialized: false,
+  store: sessionStore, // CRITICAL: Use PostgreSQL store instead of MemoryStore
   cookie: {
     path: '/', // Admin cookie needs global access for both /admin and /api/admin* routes
     secure: process.env.NODE_ENV === 'production',
