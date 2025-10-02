@@ -6,12 +6,12 @@ export default class RedZoneModule extends BaseAlertModule {
   sport = 'NFL';
 
   isTriggered(gameState: GameState): boolean {
-    // Team is in red zone (within 20 yards of goal line)
+    // Team is in red zone (within 20 yards of goal line, including 0 = goal line)
     return gameState.status === 'live' && 
            gameState.fieldPosition !== undefined && 
            gameState.fieldPosition !== null &&
            (gameState.fieldPosition as number) <= 20 &&
-           (gameState.fieldPosition as number) > 0;
+           (gameState.fieldPosition as number) >= 0;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {

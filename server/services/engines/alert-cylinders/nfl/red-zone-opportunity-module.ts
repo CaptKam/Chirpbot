@@ -9,14 +9,15 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
 
   // Historical data for touchdown probability calculations
   private readonly DOWN_DISTANCE_MULTIPLIERS = {
-    1: { [1]: 1.3, [2]: 1.2, [3]: 1.1, [4]: 1.0, [5]: 0.95, [6]: 0.9, [7]: 0.85, [8]: 0.8, [9]: 0.75, [10]: 0.7 },
-    2: { [1]: 1.2, [2]: 1.1, [3]: 1.0, [4]: 0.95, [5]: 0.9, [6]: 0.85, [7]: 0.8, [8]: 0.75, [9]: 0.7, [10]: 0.65 },
-    3: { [1]: 1.1, [2]: 1.0, [3]: 0.95, [4]: 0.9, [5]: 0.85, [6]: 0.8, [7]: 0.75, [8]: 0.7, [9]: 0.65, [10]: 0.6 },
-    4: { [1]: 0.9, [2]: 0.85, [3]: 0.8, [4]: 0.75, [5]: 0.7, [6]: 0.65, [7]: 0.6, [8]: 0.55, [9]: 0.5, [10]: 0.45 }
+    1: { [0]: 1.4, [1]: 1.3, [2]: 1.2, [3]: 1.1, [4]: 1.0, [5]: 0.95, [6]: 0.9, [7]: 0.85, [8]: 0.8, [9]: 0.75, [10]: 0.7 },
+    2: { [0]: 1.3, [1]: 1.2, [2]: 1.1, [3]: 1.0, [4]: 0.95, [5]: 0.9, [6]: 0.85, [7]: 0.8, [8]: 0.75, [9]: 0.7, [10]: 0.65 },
+    3: { [0]: 1.2, [1]: 1.1, [2]: 1.0, [3]: 0.95, [4]: 0.9, [5]: 0.85, [6]: 0.8, [7]: 0.75, [8]: 0.7, [9]: 0.65, [10]: 0.6 },
+    4: { [0]: 1.0, [1]: 0.9, [2]: 0.85, [3]: 0.8, [4]: 0.75, [5]: 0.7, [6]: 0.65, [7]: 0.6, [8]: 0.55, [9]: 0.5, [10]: 0.45 }
   };
 
   private readonly FIELD_POSITION_BASE_PROBABILITY = {
-    1: 95,   // Goal line
+    0: 98,   // Goal line (0 yards to goal)
+    1: 95,   // 1-yard line
     2: 90,   // 2-yard line
     3: 85,   // 3-yard line
     4: 80,   // 4-yard line
@@ -51,16 +52,17 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
   isTriggered(gameState: GameState): boolean {
     const gameId = gameState.gameId;
     
-    // Check basic conditions first
+    // Check basic conditions first (includes goal line = 0)
     const meetsBasicConditions = gameState.status === 'live' && 
                                  gameState.fieldPosition !== undefined && 
+                                 gameState.fieldPosition !== null &&
                                  (gameState.fieldPosition as number) <= 30 &&
-                                 (gameState.fieldPosition as number) > 0 &&
+                                 (gameState.fieldPosition as number) >= 0 &&
                                  gameState.down !== undefined &&
                                  (gameState.down as number) <= 3;
 
     // If not in red zone anymore, clear the signature
-    if (!meetsBasicConditions || (gameState.fieldPosition && (gameState.fieldPosition as number) > 30)) {
+    if (!meetsBasicConditions || (gameState.fieldPosition !== undefined && gameState.fieldPosition !== null && (gameState.fieldPosition as number) > 30)) {
       this.lastSignatureByGame.delete(gameId);
       return false;
     }
@@ -133,7 +135,8 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
   }
 
   private calculateTouchdownProbability(gameState: GameState): number {
-    if (!gameState.fieldPosition || !gameState.down || !gameState.yardsToGo) return 0;
+    // Check for null/undefined, not truthiness (allows 0 values for goal line)
+    if (gameState.fieldPosition == null || gameState.down == null || gameState.yardsToGo == null) return 0;
 
     // Base probability from field position
     const fieldPosition = Math.min((gameState.fieldPosition as number), 30);
@@ -365,7 +368,7 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
 
   private getPlayCallingTendency(gameState: GameState): string {
     // Analyze down, distance, and field position to predict play type
-    if (!gameState.down || !gameState.yardsToGo || !gameState.fieldPosition) {
+    if (gameState.down == null || gameState.yardsToGo == null || gameState.fieldPosition == null) {
       return 'BALANCED';
     }
     

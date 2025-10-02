@@ -69,10 +69,10 @@ export class NFLEngine extends BaseSportEngine {
       else if (down === 4) probability += 25; // Fourth down is actually exciting!
 
       // Enhanced field position logic (optimized calculations)
-      if (fieldPosition && (fieldPosition as number) <= 20) {
-        probability += 20; // Red zone
+      if (fieldPosition !== undefined && fieldPosition !== null && (fieldPosition as number) <= 20) {
+        probability += 20; // Red zone (includes goal line = 0)
         if (down === 4) probability += 10; // Fourth down in red zone
-      } else if (fieldPosition && (fieldPosition as number) <= 40) {
+      } else if (fieldPosition !== undefined && fieldPosition !== null && (fieldPosition as number) <= 40) {
         probability += 10; // Scoring territory
       }
 
@@ -91,8 +91,8 @@ export class NFLEngine extends BaseSportEngine {
         if (quarter === 4) probability += 10; // End of game drama
       }
 
-      // Yards to go consideration
-      if (yardsToGo && (yardsToGo as number) <= 3) {
+      // Yards to go consideration (includes goal-to-go = 0)
+      if (yardsToGo !== undefined && yardsToGo !== null && (yardsToGo as number) <= 3) {
         probability += 10; // Short yardage situations are exciting
       }
 
@@ -120,7 +120,7 @@ export class NFLEngine extends BaseSportEngine {
         }
         
         // Red zone weather impact - field goal difficulty affects strategy
-        if (fieldPosition && (fieldPosition as number) <= 20 && weatherImpact.fieldGoalDifficulty === 'high') {
+        if (fieldPosition !== undefined && fieldPosition !== null && (fieldPosition as number) <= 20 && weatherImpact.fieldGoalDifficulty === 'high') {
           probability += 5; // Weather makes red zone decisions more critical
         }
       }
@@ -164,7 +164,7 @@ export class NFLEngine extends BaseSportEngine {
       }
 
       // Track NFL-specific metrics
-      if (enhancedGameState.fieldPosition && (enhancedGameState.fieldPosition as number) <= 20) {
+      if (enhancedGameState.fieldPosition !== undefined && enhancedGameState.fieldPosition !== null && (enhancedGameState.fieldPosition as number) <= 20) {
         this.performanceMetrics.redZoneOpportunities++;
       }
       if (enhancedGameState.down === 4) {

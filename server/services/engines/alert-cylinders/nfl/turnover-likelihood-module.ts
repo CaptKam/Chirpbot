@@ -23,7 +23,8 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
   };
 
   isTriggered(gs: GameState): boolean {
-    if (gs.status !== 'live' || !gs.down || !gs.yardsToGo || !gs.fieldPosition) return false;
+    // Check for null/undefined, not truthiness (allows 0 values for goal line/goal-to-go)
+    if (gs.status !== 'live' || gs.down == null || gs.yardsToGo == null || gs.fieldPosition == null) return false;
 
     // quick prefilter (cheap) – only consider classic turnover-prone moments
     const longThird = gs.down === 3 && (gs.yardsToGo as number) >= 8;
@@ -100,7 +101,8 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
   // ---------- Risk model ----------
 
   private calculateTurnoverRisk(gs: GameState): number {
-    if (!gs.down || !gs.yardsToGo || !gs.fieldPosition) return 0;
+    // Check for null/undefined, not truthiness (allows 0 values for goal line/goal-to-go)
+    if (gs.down == null || gs.yardsToGo == null || gs.fieldPosition == null) return 0;
 
     // 1) base from down & distance (capped at 10 yards)
     const down = Math.min((gs.down as number), 4);
