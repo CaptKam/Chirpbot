@@ -38,6 +38,10 @@ export default class LateInningCloseModule extends BaseAlertModule {
     const inning = gameState.inning ?? 0;
     const isTop = !!gameState.isTopInning;
 
+    // Check if game is actually close (≤3 runs)
+    const scoreDiff = Math.abs((gameState.homeScore || 0) - (gameState.awayScore || 0));
+    const isCloseGame = scoreDiff <= 3;
+
     // Update last seen (non-mutating for trigger decision)
     const prev = this.lastSeenHalf.get(gameId);
 
@@ -49,8 +53,8 @@ export default class LateInningCloseModule extends BaseAlertModule {
       return false;
     }
 
-    // Trigger as soon as we detect Top 7 (transition-friendly)
-    if (isTop7Now) {
+    // Trigger as soon as we detect Top 7 AND game is close (transition-friendly)
+    if (isTop7Now && isCloseGame) {
       this.top7Triggered.add(gameId);
       this.lastSeenHalf.set(gameId, { inning, isTop });
       return true;
