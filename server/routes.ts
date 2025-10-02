@@ -210,10 +210,24 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     next();
   });
 
-  // User session parser - CRITICAL: Skip admin paths to prevent session collision
+  // Special handling for /api/available-alerts - needs both session parsers
+  app.use('/api/available-alerts/*', (req, res, next) => {
+    // Try admin session first
+    adminSessionParser(req, res, (err) => {
+      if (err) return next(err);
+      // If no admin session, try user session
+      if (!req.session?.adminUserId) {
+        userSessionParser(req, res, next);
+      } else {
+        next();
+      }
+    });
+  });
+
+  // User session parser - CRITICAL: Skip admin paths to prevent session collision  
   app.use((req, res, next) => {
-    if (req.path.startsWith('/api/admin') || req.path.startsWith('/admin')) {
-      return next(); // Skip user session parser for admin paths
+    if (req.path.startsWith('/api/admin') || req.path.startsWith('/admin') || req.path.startsWith('/api/available-alerts')) {
+      return next(); // Skip user session parser for admin and available-alerts paths
     }
     return userSessionParser(req, res, next);
   });
