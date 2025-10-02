@@ -4,6 +4,13 @@ ChirpBot V3 is an advanced multi-sport betting intelligence platform that provid
 
 # Recent Changes
 
+## October 2, 2025 - MLB Alert Cylinder Bug Fixes
+- **Deduplication Fixed**: Resolved critical bug where 5 MLB cylinders (momentum-shift, high-scoring-situation, wind-change, clutch-situation, pitching-change) used `Date.now()` in alertKeys, causing deduplication to fail and alert spam. Now using stable game context (inning + top/bottom).
+- **Late-Inning Logic Fixed**: Fixed late-inning-close module that fired for all Top 7 games regardless of score. Now properly checks if game is close (≤3 runs difference) before triggering.
+- **RISP Module Registered**: Added orphaned RISP_PROB_ENHANCED module to mlb-engine.ts registry (was in codebase but never loaded).
+- **Code Cleanup**: Removed dead `buildEnhancedMessage()` method from bases-loaded-no-outs-module.ts. Fixed syntax error (extra brace) in high-scoring-situation-module.ts.
+- **System Status**: MLB now has 27 active cylinders (up from 26), all deduplication issues resolved, 6 engines healthy.
+
 ## October 1, 2025 - Services Folder Cleanup
 - **NHL Removal**: Completely removed NHL support (not a supported sport). Deleted `nhl-api.ts`, updated routes, schema, season-manager, and storage to only include the 6 supported sports: MLB, NFL, NCAAF, NBA, WNBA, CFL.
 - **Dead Code Removal**: Removed `telegram-examples.md` (unused documentation).
