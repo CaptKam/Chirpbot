@@ -120,9 +120,6 @@ export default function Settings() {
     retry: 0, // Disabled - p-retry handles all retry logic in apiRequest/getQueryFn
   });
 
-  // Odds API settings state
-  const [oddsApiEnabled, setOddsApiEnabled] = useState(false);
-  const [oddsApiKey, setOddsApiKey] = useState("");
   const [testingOddsConnection, setTestingOddsConnection] = useState(false);
   const [oddsConnectionTestResult, setOddsConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
@@ -135,7 +132,6 @@ export default function Settings() {
   const alertPreferencesRetry = useRetryState();
   const telegramSettingsRetry = useRetryState();
   const gamblingInsightsRetry = useRetryState();
-  const oddsApiRetry = useRetryState();
 
   // Global settings query to check admin-disabled alerts (now available for ALL authenticated users)
   const { data: globalSettingsResponse, isLoading: globalSettingsLoading, error: globalSettingsError } = useQuery({
@@ -197,14 +193,7 @@ export default function Settings() {
   });
 
   // REMOVED: Broken gambling insights query - replaced with single user profile query above
-
-  // Odds API settings query
-  const { data: oddsApiSettings, isLoading: oddsApiLoading, error: oddsApiError } = useQuery({
-    queryKey: [`/api/user/${user?.id}/settings/odds-api`],
-    enabled: !!user?.id && (isAuthenticated || isAdminSession),
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    retry: 0, // Disabled - p-retry handles all retry logic in apiRequest/getQueryFn
-  });
+  // REMOVED: Unused odds API settings query - gambling insights now managed through /api/users/me
 
   // REMOVED: Combined loading state that caused cascade failures
   // Each section now handles its own loading states independently

@@ -268,22 +268,7 @@ export const storage = {
     return result[0];
   },
 
-  async updateUserGamblingInsights(userId: string, enabled: boolean, oddsApiKey?: string) {
-    const updateData: any = {
-      oddsApiEnabled: enabled,
-      updatedAt: new Date()
-    };
-    
-    if (oddsApiKey !== undefined) {
-      updateData.oddsApiKey = oddsApiKey;
-    }
-
-    const result = await db.update(users)
-      .set(updateData)
-      .where(eq(users.id, userId))
-      .returning();
-    return result[0];
-  },
+  // REMOVED: updateUserGamblingInsights - now handled through generic updateUser method via PATCH /api/users/me
 
   async getUser(userId: string) {
     const result = await db.select().from(users).where(eq(users.id, userId));
