@@ -3505,15 +3505,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(500).json({ message: 'Server configuration error' });
       }
       
-      // Dual authentication: accept both regular users and admin sessions
+      // Unified authentication: check for userId in session (works for both users and admins)
       console.log('🔍 /api/available-alerts auth check:', {
         userId: req.session.userId,
-        adminUserId: req.session?.userId,
         sessionID: req.sessionID
       });
       
-      if (!req.session.userId && !req.session?.userId) {
-        console.log('❌ Authentication failed - no userId or adminUserId in session');
+      if (!req.session.userId) {
+        console.log('❌ Authentication failed - no userId in session');
         return res.status(401).json({ message: 'Authentication required' });
       }
 
