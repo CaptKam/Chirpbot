@@ -103,7 +103,7 @@ export default function Settings() {
   const sportColors = getSportTabColors(activeSport);
 
   // Authentication
-  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { user, isAuthenticated, isAdminSession, isLoading: isAuthLoading } = useAuth();
 
   // Telegram settings state
   const [telegramBotToken, setTelegramBotToken] = useState("");
@@ -115,7 +115,7 @@ export default function Settings() {
   // Single user profile query for gambling insights (replaces broken gambling insights query)
   const { data: userProfile, isLoading: userProfileLoading, error: userProfileError } = useQuery({
     queryKey: ['/api/users/me'],
-    enabled: !!user?.id && isAuthenticated,
+    enabled: !!user?.id && (isAuthenticated || isAdminSession),
     staleTime: 30000, // Cache for 30 seconds - reasonable freshness
     retry: 0, // Disabled - p-retry handles all retry logic in apiRequest/getQueryFn
   });
@@ -140,7 +140,7 @@ export default function Settings() {
   // Global settings query to check admin-disabled alerts (now available for ALL authenticated users)
   const { data: globalSettingsResponse, isLoading: globalSettingsLoading, error: globalSettingsError } = useQuery({
     queryKey: [`/api/global-alert-settings/${activeSport}`],
-    enabled: !!user?.id && isAuthenticated,
+    enabled: !!user?.id && (isAuthenticated || isAdminSession),
     staleTime: 10 * 60 * 1000, // Cache for 10 minutes (global settings rarely change)
     refetchInterval: false, // No polling - only refetch on manual invalidation
     refetchOnWindowFocus: false, // No refetch on window focus
@@ -154,7 +154,7 @@ export default function Settings() {
   // Available alert types query from cylinders (accessible to all authenticated users)
   const { data: availableAlerts, isLoading: availableAlertsLoading, error: availableAlertsError } = useQuery({
     queryKey: [`/api/available-alerts/${activeSport.toLowerCase()}`],
-    enabled: !!user?.id && isAuthenticated,
+    enabled: !!user?.id && (isAuthenticated || isAdminSession),
     staleTime: 10 * 60 * 1000, // Cache for 10 minutes (rarely changes)
     refetchInterval: false, // No polling - only refetch on manual invalidation
     refetchOnWindowFocus: false, // No refetch on window focus
@@ -175,7 +175,7 @@ export default function Settings() {
       const response = await apiRequest("GET", `/api/user/${user.id}/alert-preferences/${activeSport.toLowerCase()}`);
       return response.json();
     },
-    enabled: !!user?.id && isAuthenticated,
+    enabled: !!user?.id && (isAuthenticated || isAdminSession),
     staleTime: 30000, // Cache for 30 seconds - reasonable freshness
     gcTime: 5 * 60 * 1000, // 5 minute garbage collection
     refetchInterval: false, // No automatic refetching - only manual invalidation
@@ -192,7 +192,7 @@ export default function Settings() {
   // Telegram settings query
   const { data: telegramSettings, isLoading: telegramLoading, error: telegramError } = useQuery({
     queryKey: [`/api/user/${user?.id}/telegram`],
-    enabled: !!user?.id && isAuthenticated,
+    enabled: !!user?.id && (isAuthenticated || isAdminSession),
     retry: 0, // Disabled - p-retry handles all retry logic in apiRequest/getQueryFn
   });
 
@@ -201,7 +201,7 @@ export default function Settings() {
   // Odds API settings query
   const { data: oddsApiSettings, isLoading: oddsApiLoading, error: oddsApiError } = useQuery({
     queryKey: [`/api/user/${user?.id}/settings/odds-api`],
-    enabled: !!user?.id && isAuthenticated,
+    enabled: !!user?.id && (isAuthenticated || isAdminSession),
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     retry: 0, // Disabled - p-retry handles all retry logic in apiRequest/getQueryFn
   });
