@@ -34,7 +34,7 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     }
 
     // Must be exactly at 2:00 remaining (within 5 second window)
-    const exactlyTwoMinutes = this.isExactlyTwoMinutes(gameState.timeRemaining);
+    const exactlyTwoMinutes = this.isExactlyTwoMinutes(gameState.timeRemaining as string);
     if (!exactlyTwoMinutes) {
       console.log(`❌ Two Minute: Not exactly 2:00 remaining (${gameState.timeRemaining})`);
       return false;
@@ -48,7 +48,7 @@ export default class TwoMinuteWarningModule extends BaseAlertModule {
     // isTriggered() already called by engine - removed duplicate check
     const isFirstHalf = gameState.quarter === 2;
     const halfText = isFirstHalf ? '1st Half' : '2nd Half';
-    const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining);
+    const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining as string);
 
     const dynamicMessage = this.createDynamicMessage(gameState);
 

@@ -69,10 +69,10 @@ export class NFLEngine extends BaseSportEngine {
       else if (down === 4) probability += 25; // Fourth down is actually exciting!
 
       // Enhanced field position logic (optimized calculations)
-      if (fieldPosition && fieldPosition <= 20) {
+      if (fieldPosition && (fieldPosition as number) <= 20) {
         probability += 20; // Red zone
         if (down === 4) probability += 10; // Fourth down in red zone
-      } else if (fieldPosition && fieldPosition <= 40) {
+      } else if (fieldPosition && (fieldPosition as number) <= 40) {
         probability += 10; // Scoring territory
       }
 
@@ -85,20 +85,20 @@ export class NFLEngine extends BaseSportEngine {
       }
 
       // Time factors (optimized time parsing)
-      const timeSeconds = this.parseTimeToSeconds(timeRemaining);
+      const timeSeconds = this.parseTimeToSeconds(timeRemaining as string);
       if (timeSeconds <= 120) {
         probability += 20; // Two-minute warning
         if (quarter === 4) probability += 10; // End of game drama
       }
 
       // Yards to go consideration
-      if (yardsToGo && yardsToGo <= 3) {
+      if (yardsToGo && (yardsToGo as number) <= 3) {
         probability += 10; // Short yardage situations are exciting
       }
 
       // Weather impact adjustments (for outdoor stadiums only)
-      if (weather && weather.isOutdoorStadium) {
-        const weatherImpact = weather.impact;
+      if (weather && (weather as any).isOutdoorStadium) {
+        const weatherImpact = (weather as any).impact;
         
         // Extreme weather conditions increase excitement/unpredictability
         if (weatherImpact.weatherAlert) {
@@ -120,7 +120,7 @@ export class NFLEngine extends BaseSportEngine {
         }
         
         // Red zone weather impact - field goal difficulty affects strategy
-        if (fieldPosition && fieldPosition <= 20 && weatherImpact.fieldGoalDifficulty === 'high') {
+        if (fieldPosition && (fieldPosition as number) <= 20 && weatherImpact.fieldGoalDifficulty === 'high') {
           probability += 5; // Weather makes red zone decisions more critical
         }
       }
@@ -164,14 +164,14 @@ export class NFLEngine extends BaseSportEngine {
       }
 
       // Track NFL-specific metrics
-      if (enhancedGameState.fieldPosition && enhancedGameState.fieldPosition <= 20) {
+      if (enhancedGameState.fieldPosition && (enhancedGameState.fieldPosition as number) <= 20) {
         this.performanceMetrics.redZoneOpportunities++;
       }
       if (enhancedGameState.down === 4) {
         this.performanceMetrics.fourthDownSituations++;
       }
-      const timeSeconds = this.parseTimeToSeconds(enhancedGameState.timeRemaining || '');
-      if (timeSeconds <= 120 && enhancedGameState.quarter >= 4) {
+      const timeSeconds = this.parseTimeToSeconds((enhancedGameState.timeRemaining as string) || '');
+      if (timeSeconds <= 120 && (enhancedGameState.quarter as number) >= 4) {
         this.performanceMetrics.twoMinuteWarnings++;
       }
 
@@ -209,7 +209,8 @@ export class NFLEngine extends BaseSportEngine {
           // Add weather data for NFL games (for outdoor stadiums only)
           let weatherContext = gameState.weatherContext;
           try {
-            const weatherData = await weatherService.getWeatherForTeam(gameState.homeTeam);
+            const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : (gameState.homeTeam as any).name || '';
+            const weatherData = await weatherService.getWeatherForTeam(homeTeamName);
             const weatherImpact = weatherService.getNFLWeatherImpact(weatherData);
             
             // Only add weather context for meaningful weather conditions
@@ -222,7 +223,7 @@ export class NFLEngine extends BaseSportEngine {
                 fieldGoalFactor: weatherService.calculateFieldGoalWeatherFactor(weatherData),
                 passingFactor: weatherService.calculatePassingWeatherFactor(weatherData),
                 runningFactor: weatherService.calculateRunningWeatherFactor(weatherData),
-                isOutdoorStadium: !this.isIndoorStadium(gameState.homeTeam)
+                isOutdoorStadium: !this.isIndoorStadium(homeTeamName)
               };
             }
           } catch (error) {
@@ -313,31 +314,33 @@ export class NFLEngine extends BaseSportEngine {
         console.log(`🧠 NFL AI Enhancement: Processing ${alert.type} alert (${probability}%)`);
 
         // Build cross-sport context for NFL
+        const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : (gameState.homeTeam as any).name || '';
+        const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : (gameState.awayTeam as any).name || '';
         const aiContext: CrossSportContext = {
             sport: 'NFL',
             gameId: gameState.gameId,
             alertType: alert.type,
             priority: alert.priority,
             probability: probability,
-            homeTeam: gameState.homeTeam,
-            awayTeam: gameState.awayTeam,
+            homeTeam: homeTeamName,
+            awayTeam: awayTeamName,
             homeScore: gameState.homeScore,
             awayScore: gameState.awayScore,
             isLive: gameState.isLive,
-            quarter: gameState.quarter,
-            timeRemaining: gameState.timeRemaining,
-            down: gameState.down,
-            yardsToGo: gameState.yardsToGo,
-            fieldPosition: gameState.fieldPosition,
-            possession: gameState.possession,
-            redZone: gameState.fieldPosition ? gameState.fieldPosition <= 20 : false,
-            goalLine: gameState.fieldPosition ? gameState.fieldPosition <= 5 : false,
+            quarter: gameState.quarter as number | undefined,
+            timeRemaining: gameState.timeRemaining as string | undefined,
+            down: gameState.down as number | undefined,
+            yardsToGo: gameState.yardsToGo as number | undefined,
+            fieldPosition: gameState.fieldPosition as number | undefined,
+            possession: gameState.possession as string | undefined,
+            redZone: gameState.fieldPosition ? (gameState.fieldPosition as number) <= 20 : false,
+            goalLine: gameState.fieldPosition ? (gameState.fieldPosition as number) <= 5 : false,
             weather: gameState.weather ? {
-              temperature: gameState.weather.data?.temperature || 72,
-              condition: gameState.weather.data?.condition || 'Clear',
-              windSpeed: gameState.weather.data?.windSpeed || 0,
-              humidity: gameState.weather.data?.humidity || 50,
-              impact: gameState.weather.impact?.description || 'Minimal impact'
+              temperature: (gameState.weather as any).data?.temperature || 72,
+              condition: (gameState.weather as any).data?.condition || 'Clear',
+              windSpeed: (gameState.weather as any).data?.windSpeed || 0,
+              humidity: (gameState.weather as any).data?.humidity || 50,
+              impact: (gameState.weather as any).impact?.description || 'Minimal impact'
             } : undefined,
             originalMessage: alert.message,
             originalContext: alert.context
@@ -509,12 +512,12 @@ export class NFLEngine extends BaseSportEngine {
     // In production, this would use real betting data
     // Simulate based on game flow
     const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-    const quarter = gameState.quarter || 1;
+    const quarter = (gameState.quarter as number) || 1;
 
     if (scoreDiff <= 3 && quarter >= 4) {
       return { indicator: 'heavy', direction: 'over', confidence: 85 };
     }
-    if (gameState.fieldPosition && gameState.fieldPosition <= 20) {
+    if (gameState.fieldPosition && (gameState.fieldPosition as number) <= 20) {
       return { indicator: 'moderate', direction: 'over', confidence: 70 };
     }
 

@@ -9,8 +9,9 @@ export default class RedZoneModule extends BaseAlertModule {
     // Team is in red zone (within 20 yards of goal line)
     return gameState.status === 'live' && 
            gameState.fieldPosition !== undefined && 
-           gameState.fieldPosition <= 20 &&
-           gameState.fieldPosition > 0;
+           gameState.fieldPosition !== null &&
+           (gameState.fieldPosition as number) <= 20 &&
+           (gameState.fieldPosition as number) > 0;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
@@ -56,9 +57,9 @@ export default class RedZoneModule extends BaseAlertModule {
   }
 
   private createDynamicMessage(gameState: GameState): string {
-    const down = gameState.down || 1;
-    const yardsToGo = gameState.yardsToGo || 10;
-    const fieldPosition = gameState.fieldPosition || 20;
+    const down = (gameState.down as number) || 1;
+    const yardsToGo = (gameState.yardsToGo as number) || 10;
+    const fieldPosition = (gameState.fieldPosition as number) || 20;
     const downText = `${down}${this.getOrdinalSuffix(down)}`;
     
     // Create contextual position description
@@ -101,8 +102,8 @@ export default class RedZoneModule extends BaseAlertModule {
     let probability = 60; // Base red zone probability
 
     // Field position impact
-    if (gameState.fieldPosition <= 10) probability += 20; // Goal line area
-    else if (gameState.fieldPosition <= 15) probability += 10;
+    if ((gameState.fieldPosition as number) <= 10) probability += 20; // Goal line area
+    else if ((gameState.fieldPosition as number) <= 15) probability += 10;
 
     // Down and distance impact
     if (gameState.down === 1) probability += 15;
@@ -111,8 +112,8 @@ export default class RedZoneModule extends BaseAlertModule {
     else if (gameState.down === 4) probability += 10; // High stakes
 
     // Yards to go impact
-    if (gameState.yardsToGo <= 3) probability += 15;
-    else if (gameState.yardsToGo <= 7) probability += 5;
+    if ((gameState.yardsToGo as number) <= 3) probability += 15;
+    else if ((gameState.yardsToGo as number) <= 7) probability += 5;
 
     // Time pressure (4th quarter)
     if (gameState.quarter === 4) probability += 10;

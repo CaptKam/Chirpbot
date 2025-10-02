@@ -11,10 +11,10 @@ export default class GameStartModule extends BaseAlertModule {
     if (!gameState.gameId) return false;
 
     const currentState = this.gameStates.get(gameState.gameId);
-    const isLiveGame = gameState.status === 'live' && gameState.quarter <= 2; // First 2 quarters
+    const isActualGameStart = gameState.status === 'live' && gameState.quarter === 1; // Only Q1
 
-    // Only trigger if game is now live AND we haven't triggered for this game yet
-    if (isLiveGame) {
+    // Only trigger if game is now live in Q1 AND we haven't triggered for this game yet
+    if (isActualGameStart) {
       // If we haven't seen this game before, or if we've seen it but it wasn't live before
       if (!currentState || (!currentState.hasTriggered)) {
         // Update our tracking
@@ -85,9 +85,9 @@ export default class GameStartModule extends BaseAlertModule {
 
       // Weather and field conditions
       fieldConditions: gameState.weatherContext ? {
-        temperature: `${gameState.weatherContext.temperature}°F`,
-        wind: `${gameState.weatherContext.windSpeed}mph ${gameState.weatherContext.windDirection || ''}`,
-        impact: gameState.weatherContext.windSpeed > 15 ? 'Significant passing impact' : 'Minimal weather factor'
+        temperature: `${(gameState.weatherContext as any).temperature}°F`,
+        wind: `${(gameState.weatherContext as any).windSpeed}mph ${(gameState.weatherContext as any).windDirection || ''}`,
+        impact: (gameState.weatherContext as any).windSpeed > 15 ? 'Significant passing impact' : 'Minimal weather factor'
       } : {
         conditions: 'Dome/controlled environment',
         impact: 'Weather neutral - pure skill matchup'
@@ -130,7 +130,7 @@ export default class GameStartModule extends BaseAlertModule {
     
     // Add weather context if available
     if (gameState.weatherContext) {
-      const weather = gameState.weatherContext;
+      const weather = gameState.weatherContext as any;
       let weatherDesc = '';
       
       if (weather.temperature !== undefined) {

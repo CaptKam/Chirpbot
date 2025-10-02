@@ -31,7 +31,7 @@ export default class MassiveWeatherModule extends BaseAlertModule {
     const previous = this.previousWeatherData[gameId];
 
     // Analyze weather condition for severity
-    const currentCondition = currentWeather.condition?.toLowerCase() || '';
+    const currentCondition = ((currentWeather as any).condition as string | undefined)?.toLowerCase() || '';
     const currentSeverity = this.calculateWeatherSeverity(currentCondition, currentWeather);
     
     // First measurement for this game
@@ -71,7 +71,7 @@ export default class MassiveWeatherModule extends BaseAlertModule {
     // Determine impact level
     const impact = this.determineGameImpact(current.severity, currentWeather);
 
-    const alertKey = `${gameId}_massive_weather_${current.severity}_${Date.now()}`;
+    const alertKey = `${gameId}_massive_weather_Q${gameState.quarter}_${current.condition}_${current.severity}`;
 
     const dynamicMessage = this.createDynamicMessage(gameState, current);
 
@@ -92,7 +92,7 @@ export default class MassiveWeatherModule extends BaseAlertModule {
         weatherCondition: current.condition,
         weatherSeverity: current.severity,
         gameImpact: impact,
-        temperature: currentWeather.temperature,
+        temperature: (currentWeather as any).temperature,
         situationType: 'MASSIVE_WEATHER'
       },
       priority: this.calculatePriority(current.severity, impact)
@@ -119,13 +119,13 @@ export default class MassiveWeatherModule extends BaseAlertModule {
     if (condition.includes('extreme')) severity += 4;
     
     // Temperature extremes (for football)
-    if (weatherContext.temperature !== undefined) {
-      if (weatherContext.temperature <= 20) severity += 2; // Extreme cold
-      if (weatherContext.temperature >= 100) severity += 2; // Extreme heat
+    if ((weatherContext as any).temperature !== undefined) {
+      if ((weatherContext as any).temperature <= 20) severity += 2; // Extreme cold
+      if ((weatherContext as any).temperature >= 100) severity += 2; // Extreme heat
     }
     
     // Wind factor (less important but still relevant for extreme conditions)
-    if (weatherContext.windSpeed !== undefined && weatherContext.windSpeed >= 30) {
+    if ((weatherContext as any).windSpeed !== undefined && (weatherContext as any).windSpeed >= 30) {
       severity += 2; // Extreme winds
     }
     
@@ -193,17 +193,17 @@ export default class MassiveWeatherModule extends BaseAlertModule {
     let weatherDesc = condition.charAt(0).toUpperCase() + condition.slice(1);
     
     // Add temperature if extreme
-    if (currentWeather.temperature !== undefined) {
-      if (currentWeather.temperature <= 20) {
-        weatherDesc = `${weatherDesc}, ${currentWeather.temperature}°F`;
-      } else if (currentWeather.temperature >= 95) {
-        weatherDesc = `${weatherDesc}, ${currentWeather.temperature}°F`;
+    if ((currentWeather as any).temperature !== undefined) {
+      if ((currentWeather as any).temperature <= 20) {
+        weatherDesc = `${weatherDesc}, ${(currentWeather as any).temperature}°F`;
+      } else if ((currentWeather as any).temperature >= 95) {
+        weatherDesc = `${weatherDesc}, ${(currentWeather as any).temperature}°F`;
       }
     }
     
     // Add wind information if significant
-    if (currentWeather.windSpeed !== undefined && currentWeather.windSpeed >= 20) {
-      weatherDesc = `${weatherDesc}, ${currentWeather.windSpeed}mph winds`;
+    if ((currentWeather as any).windSpeed !== undefined && (currentWeather as any).windSpeed >= 20) {
+      weatherDesc = `${weatherDesc}, ${(currentWeather as any).windSpeed}mph winds`;
     }
     
     // Create impact description

@@ -54,13 +54,13 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
     // Check basic conditions first
     const meetsBasicConditions = gameState.status === 'live' && 
                                  gameState.fieldPosition !== undefined && 
-                                 gameState.fieldPosition <= 30 &&
-                                 gameState.fieldPosition > 0 &&
+                                 (gameState.fieldPosition as number) <= 30 &&
+                                 (gameState.fieldPosition as number) > 0 &&
                                  gameState.down !== undefined &&
-                                 gameState.down <= 3;
+                                 (gameState.down as number) <= 3;
 
     // If not in red zone anymore, clear the signature
-    if (!meetsBasicConditions || (gameState.fieldPosition && gameState.fieldPosition > 30)) {
+    if (!meetsBasicConditions || (gameState.fieldPosition && (gameState.fieldPosition as number) > 30)) {
       this.lastSignatureByGame.delete(gameId);
       return false;
     }
@@ -117,8 +117,8 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
         // NFL-specific context for AI enhancement
         nflContext: {
           isRedZone: true,
-          isGoalLine: gameState.fieldPosition <= 5,
-          isShortYardage: gameState.yardsToGo <= 3,
+          isGoalLine: (gameState.fieldPosition as number) <= 5,
+          isShortYardage: (gameState.yardsToGo as number) <= 3,
           scoreDifferential: Math.abs(gameState.homeScore - gameState.awayScore),
           timePressure: this.getTimePressureLevel(gameState),
           playCalling: this.getPlayCallingTendency(gameState)
@@ -136,19 +136,19 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
     if (!gameState.fieldPosition || !gameState.down || !gameState.yardsToGo) return 0;
 
     // Base probability from field position
-    const fieldPosition = Math.min(gameState.fieldPosition, 30);
+    const fieldPosition = Math.min((gameState.fieldPosition as number), 30);
     let baseProbability = this.FIELD_POSITION_BASE_PROBABILITY[fieldPosition as keyof typeof this.FIELD_POSITION_BASE_PROBABILITY] || 25;
 
     // Down and distance multiplier
-    const down = Math.min(gameState.down, 4) as keyof typeof this.DOWN_DISTANCE_MULTIPLIERS;
-    const yardsToGo = Math.min(gameState.yardsToGo, 10);
+    const down = Math.min((gameState.down as number), 4) as keyof typeof this.DOWN_DISTANCE_MULTIPLIERS;
+    const yardsToGo = Math.min((gameState.yardsToGo as number), 10);
     const downDistanceMultiplier = this.DOWN_DISTANCE_MULTIPLIERS[down]?.[yardsToGo as keyof typeof this.DOWN_DISTANCE_MULTIPLIERS[1]] || 0.5;
     
     let probability = baseProbability * downDistanceMultiplier;
 
     // Weather impact adjustments (for outdoor stadiums only)
-    if (gameState.weather && gameState.weather.isOutdoorStadium) {
-      const weatherImpact = gameState.weather.impact;
+    if (gameState.weather && (gameState.weather as any).isOutdoorStadium) {
+      const weatherImpact = (gameState.weather as any).impact;
       
       // If field goals are difficult due to weather, touchdown attempts become more attractive
       if (weatherImpact.fieldGoalDifficulty === 'extreme') {
@@ -162,9 +162,9 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
       // Wind/weather conditions affecting play strategy
       if (weatherImpact.preferredStrategy === 'run-heavy') {
         // Heavy running weather - easier to score rushing touchdowns in red zone
-        if (gameState.fieldPosition <= 10) {
+        if ((gameState.fieldPosition as number) <= 10) {
           probability += 8; // Goal line running is very effective
-        } else if (gameState.fieldPosition <= 20) {
+        } else if ((gameState.fieldPosition as number) <= 20) {
           probability += 5; // Red zone running still good
         }
       } else if (weatherImpact.preferredStrategy === 'conservative') {
@@ -177,15 +177,15 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
         probability += 8; // Weather makes field goals unreliable
         
         // Special case: Very close to goal line in bad weather
-        if (gameState.fieldPosition <= 5 && weatherImpact.passingConditions !== 'dangerous') {
+        if ((gameState.fieldPosition as number) <= 5 && weatherImpact.passingConditions !== 'dangerous') {
           probability += 5; // Short yardage touchdowns still achievable
         }
       }
       
       // Passing conditions impact on red zone strategy
-      if (weatherImpact.passingConditions === 'dangerous' && gameState.fieldPosition > 10) {
+      if (weatherImpact.passingConditions === 'dangerous' && (gameState.fieldPosition as number) > 10) {
         probability -= 8; // Harder to pass in far red zone
-      } else if (weatherImpact.passingConditions === 'poor' && gameState.fieldPosition > 15) {
+      } else if (weatherImpact.passingConditions === 'poor' && (gameState.fieldPosition as number) > 15) {
         probability -= 4; // Moderate passing difficulty
       }
     }
@@ -199,17 +199,17 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
     probability *= scoreAdjustment;
 
     // Goal line situations are special
-    if (gameState.fieldPosition <= 3 && gameState.down <= 2) {
+    if ((gameState.fieldPosition as number) <= 3 && (gameState.down as number) <= 2) {
       probability += 15; // Goal line boost
     }
 
     // First and goal situations
-    if (gameState.fieldPosition <= 10 && gameState.down === 1) {
+    if ((gameState.fieldPosition as number) <= 10 && gameState.down === 1) {
       probability += 10; // First and goal boost
     }
 
     // Short yardage in red zone
-    if (gameState.fieldPosition <= 20 && gameState.yardsToGo <= 3) {
+    if ((gameState.fieldPosition as number) <= 20 && (gameState.yardsToGo as number) <= 3) {
       probability += 8; // Short yardage boost
     }
 
@@ -219,7 +219,7 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
   private getTimePressureAdjustment(gameState: GameState): number {
     if (!gameState.quarter || !gameState.timeRemaining) return 1.0;
 
-    const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining);
+    const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining as string);
     
     // Fourth quarter urgency
     if (gameState.quarter === 4) {
@@ -252,17 +252,18 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
     // In a real system, this would be determined from game data
     // For now, we'll use a placeholder approach
     if (gameState.possession) {
-      return gameState.possession;
+      return gameState.possession as string;
     }
     
     // Default assumption based on typical patterns
-    return gameState.awayTeam; // Default to away team for simplicity
+    const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : (gameState.awayTeam as any).name || '';
+    return awayTeamName; // Default to away team for simplicity
   }
 
   private getSituationDescription(gameState: GameState): string {
-    const down = this.getOrdinal(gameState.down || 1);
-    const distance = gameState.yardsToGo || 10;
-    const position = gameState.fieldPosition || 20;
+    const down = this.getOrdinal((gameState.down as number) || 1);
+    const distance = (gameState.yardsToGo as number) || 10;
+    const position = (gameState.fieldPosition as number) || 20;
     
     return `${down} & ${distance} at ${position}-yard line`;
   }
@@ -293,16 +294,16 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
 
   private buildGameSignature(gameState: GameState): string {
     const possessionTeam = this.getPossessionTeam(gameState);
-    const quarter = gameState.quarter || 0;
-    const down = gameState.down || 0;
-    const yardsToGo = gameState.yardsToGo || 0;
-    const fieldPosition = gameState.fieldPosition || 0;
+    const quarter = (gameState.quarter as number) || 0;
+    const down = (gameState.down as number) || 0;
+    const yardsToGo = (gameState.yardsToGo as number) || 0;
+    const fieldPosition = (gameState.fieldPosition as number) || 0;
     
     // Field position bucket: group yards into buckets (1-5, 6-10, 11-15, 16-20, 21-25, 26-30)
     const fieldPositionBucket = Math.ceil(fieldPosition / 5) * 5;
     
     // Clock bucket: round time to 30-second intervals to avoid jitter
-    const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining || '0:00');
+    const timeSeconds = this.parseTimeToSeconds((gameState.timeRemaining as string) || '0:00');
     const clockBucket = Math.floor(timeSeconds / 30) * 30;
     
     return `${possessionTeam}|Q${quarter}|${down}&${yardsToGo}|${fieldPositionBucket}|${clockBucket}`;
@@ -311,7 +312,7 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
   private getTimePressureLevel(gameState: GameState): string {
     if (!gameState.quarter || !gameState.timeRemaining) return 'NORMAL';
     
-    const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining);
+    const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining as string);
     
     if (gameState.quarter === 4) {
       if (timeSeconds <= 120) return 'CRITICAL';  // Two-minute warning
@@ -328,9 +329,9 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
   
   private createDynamicMessage(gameState: GameState): string {
     const touchdownProbability = this.calculateTouchdownProbability(gameState);
-    const down = this.getOrdinal(gameState.down || 1);
-    const yardsToGo = gameState.yardsToGo || 10;
-    const fieldPosition = gameState.fieldPosition || 20;
+    const down = this.getOrdinal((gameState.down as number) || 1);
+    const yardsToGo = (gameState.yardsToGo as number) || 10;
+    const fieldPosition = (gameState.fieldPosition as number) || 20;
     
     // Create contextual field position description
     let situationDesc = '';
@@ -368,19 +369,19 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
       return 'BALANCED';
     }
     
-    if (gameState.fieldPosition <= 3) {
+    if ((gameState.fieldPosition as number) <= 3) {
       return 'POWER_RUN';  // Goal line situations favor power running
     }
     
-    if (gameState.down === 1 && gameState.yardsToGo <= 3) {
+    if (gameState.down === 1 && (gameState.yardsToGo as number) <= 3) {
       return 'RUN_HEAVY';  // Short yardage on first down
     }
     
-    if (gameState.down === 3 && gameState.yardsToGo >= 7) {
+    if (gameState.down === 3 && (gameState.yardsToGo as number) >= 7) {
       return 'PASS_HEAVY';  // Long third down
     }
     
-    if (gameState.down === 2 && gameState.yardsToGo <= 3) {
+    if (gameState.down === 2 && (gameState.yardsToGo as number) <= 3) {
       return 'RUN_LIKELY';  // Second and short
     }
     

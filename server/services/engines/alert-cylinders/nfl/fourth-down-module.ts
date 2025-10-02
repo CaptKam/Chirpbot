@@ -9,19 +9,19 @@ export default class FourthDownModule extends BaseAlertModule {
     // Fourth down situations - game must be live and down must be 4
     return gameState.status === 'live' && 
            gameState.down === 4 &&
-           gameState.yardsToGo !== undefined &&
-           gameState.fieldPosition !== undefined;
+           (gameState.yardsToGo as number | undefined) !== undefined &&
+           (gameState.fieldPosition as number | undefined) !== undefined;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
     // isTriggered() already called by engine - removed duplicate check
-    const priority = gameState.yardsToGo <= 3 ? 95 : 85; // Higher priority for short yardage
-    const fieldPosition = gameState.fieldPosition || 50;
-    const yardsToGo = gameState.yardsToGo || 10;
+    const priority = (gameState.yardsToGo as number) <= 3 ? 95 : 85; // Higher priority for short yardage
+    const fieldPosition = (gameState.fieldPosition as number) || 50;
+    const yardsToGo = (gameState.yardsToGo as number) || 10;
     const dynamicMessage = this.createDynamicMessage(gameState);
 
     return {
-      alertKey: `${gameState.gameId}_fourth_down_${yardsToGo}_${fieldPosition}`,
+      alertKey: `${gameState.gameId}_fourth_down_Q${gameState.quarter}_${yardsToGo}_${fieldPosition}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${dynamicMessage}`,
       displayMessage: `🏈 ${dynamicMessage} | Q${gameState.quarter}`,
@@ -60,12 +60,12 @@ export default class FourthDownModule extends BaseAlertModule {
     let probability = 90; // Base high probability for fourth down
 
     // Higher probability for shorter yardage
-    if (gameState.yardsToGo <= 1) probability = 100;
-    else if (gameState.yardsToGo <= 3) probability = 95;
-    else if (gameState.yardsToGo <= 5) probability = 90;
+    if ((gameState.yardsToGo as number) <= 1) probability = 100;
+    else if ((gameState.yardsToGo as number) <= 3) probability = 95;
+    else if ((gameState.yardsToGo as number) <= 5) probability = 90;
 
     // Higher probability in red zone
-    if (gameState.fieldPosition <= 20) probability += 5;
+    if ((gameState.fieldPosition as number) <= 20) probability += 5;
 
     // Higher probability in fourth quarter
     if (gameState.quarter === 4) probability += 5;
@@ -76,7 +76,7 @@ export default class FourthDownModule extends BaseAlertModule {
   private getTimePressureLevel(gameState: GameState): string {
     if (!gameState.quarter || !gameState.timeRemaining) return 'NORMAL';
     
-    const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining);
+    const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining as string);
     
     if (gameState.quarter === 4) {
       if (timeSeconds <= 60) return 'CRITICAL';   // Final minute
@@ -96,22 +96,25 @@ export default class FourthDownModule extends BaseAlertModule {
     
     let probability = 50; // Base conversion rate
     
+    const yardsToGo = gameState.yardsToGo as number;
+    const fieldPosition = gameState.fieldPosition as number;
+    
     // Distance factors
-    if (gameState.yardsToGo <= 1) probability = 85;
-    else if (gameState.yardsToGo <= 3) probability = 70;
-    else if (gameState.yardsToGo <= 5) probability = 55;
+    if (yardsToGo <= 1) probability = 85;
+    else if (yardsToGo <= 3) probability = 70;
+    else if (yardsToGo <= 5) probability = 55;
     else probability = 35;
     
     // Field position adjustments
-    if (gameState.fieldPosition <= 10) probability += 10; // Goal line boost
-    else if (gameState.fieldPosition <= 30) probability += 5; // Red zone boost
+    if (fieldPosition <= 10) probability += 10; // Goal line boost
+    else if (fieldPosition <= 30) probability += 5; // Red zone boost
     
     // Weather impact adjustments (for outdoor stadiums only)
-    if (gameState.weather && gameState.weather.isOutdoorStadium) {
-      const weatherImpact = gameState.weather.impact;
+    if (gameState.weather && (gameState.weather as any).isOutdoorStadium) {
+      const weatherImpact = (gameState.weather as any).impact;
       
       // Weather affects conversion strategies differently based on distance
-      if (gameState.yardsToGo <= 3) {
+      if (yardsToGo <= 3) {
         // Short yardage - weather favors running
         if (weatherImpact.preferredStrategy === 'run-heavy') {
           probability += 8; // Weather favors short yardage running
@@ -138,7 +141,7 @@ export default class FourthDownModule extends BaseAlertModule {
   
   private getDecisionRecommendation(gameState: GameState): string {
     const conversionProb = this.getConversionProbability(gameState);
-    const fieldPosition = gameState.fieldPosition || 50;
+    const fieldPosition = (gameState.fieldPosition as number) || 50;
     const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
     const timePressure = this.getTimePressureLevel(gameState);
     
@@ -165,8 +168,8 @@ export default class FourthDownModule extends BaseAlertModule {
   }
   
   private createDynamicMessage(gameState: GameState): string {
-    const yardsToGo = gameState.yardsToGo || 10;
-    const fieldPosition = gameState.fieldPosition || 50;
+    const yardsToGo = (gameState.yardsToGo as number) || 10;
+    const fieldPosition = (gameState.fieldPosition as number) || 50;
     const recommendation = this.getDecisionRecommendation(gameState);
     const conversionProb = this.getConversionProbability(gameState);
     

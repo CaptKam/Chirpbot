@@ -8,7 +8,7 @@ export default class SecondHalfKickoffModule extends BaseAlertModule {
     // Second half kickoff - quarter 3 with kickoff time (15:00 or close to it)
     return gameState.status === 'live' && 
            gameState.quarter === 3 && 
-           this.isKickoffTime(gameState.timeRemaining);
+           this.isKickoffTime(gameState.timeRemaining as string);
   }
 
   generateAlert(gameState: GameState): AlertResult | null {

@@ -26,10 +26,10 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
     if (gs.status !== 'live' || !gs.down || !gs.yardsToGo || !gs.fieldPosition) return false;
 
     // quick prefilter (cheap) – only consider classic turnover-prone moments
-    const longThird = gs.down === 3 && gs.yardsToGo >= 8;
+    const longThird = gs.down === 3 && (gs.yardsToGo as number) >= 8;
     const fourth = gs.down === 4;
-    const deepOwn = gs.fieldPosition >= 65;             // own 35 or worse
-    const endgame = gs.quarter === 4 && this.parseTimeToSeconds(gs.timeRemaining) <= 120;
+    const deepOwn = (gs.fieldPosition as number) >= 65;             // own 35 or worse
+    const endgame = gs.quarter === 4 && this.parseTimeToSeconds(gs.timeRemaining as string) <= 120;
 
     // Only wake the heavy logic when any of these is true.
     return longThird || fourth || deepOwn || endgame;
@@ -84,7 +84,7 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
         predictionCategory: 'TURNOVER_RISK',
         nflContext: {
           isFourthDown: gs.down === 4,
-          isDeepInOwnTerritory: (gs.fieldPosition ?? 0) >= 80,
+          isDeepInOwnTerritory: ((gs.fieldPosition as number) ?? 0) >= 80,
           scoreDifferential: Math.abs((gs.homeScore ?? 0) - (gs.awayScore ?? 0)),
           timePressure: this.classifyTimePressure(gs)
         }
@@ -103,12 +103,12 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
     if (!gs.down || !gs.yardsToGo || !gs.fieldPosition) return 0;
 
     // 1) base from down & distance (capped at 10 yards)
-    const down = Math.min(gs.down, 4);
-    const ytg = Math.min(Math.max(gs.yardsToGo, 1), 10);
+    const down = Math.min((gs.down as number), 4);
+    const ytg = Math.min(Math.max((gs.yardsToGo as number), 1), 10);
     let score = this.DOWN_DISTANCE_RISK[down]?.[ytg] ?? 5;
 
     // 2) field position (unified semantics)
-    score += this.fieldPositionRisk(gs.fieldPosition);
+    score += this.fieldPositionRisk(gs.fieldPosition as number);
 
     // 3) situational adders (additive, not multiplicative to avoid blowups)
     score += this.situationAdders(gs);
@@ -139,12 +139,12 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
   private situationAdders(gs: GameState): number {
     let add = 0;
     if (gs.down === 4) {
-      add += gs.yardsToGo >= 5 ? 15 : 8;      // 4th-down urgency
+      add += (gs.yardsToGo as number) >= 5 ? 15 : 8;      // 4th-down urgency
     }
-    if (gs.down === 3 && gs.yardsToGo >= 15) add += 8;       // 3rd & very long
-    if (gs.down === 3 && gs.yardsToGo >= 8)  add += 4;       // 3rd & long
+    if (gs.down === 3 && (gs.yardsToGo as number) >= 15) add += 8;       // 3rd & very long
+    if (gs.down === 3 && (gs.yardsToGo as number) >= 8)  add += 4;       // 3rd & long
     // Goal line stand: defense has leverage on 3rd/4th & <=2 inside the 5
-    if (gs.fieldPosition && gs.fieldPosition <= 5 && gs.down >= 3 && (gs.yardsToGo ?? 0) <= 2) {
+    if (gs.fieldPosition && (gs.fieldPosition as number) <= 5 && (gs.down as number) >= 3 && ((gs.yardsToGo as number) ?? 0) <= 2) {
       add += 6;
     }
     return add;
@@ -152,7 +152,7 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
 
   private timePressureAdder(gs: GameState): number {
     if (!gs.quarter || !gs.timeRemaining) return 0;
-    const t = this.parseTimeToSeconds(gs.timeRemaining);
+    const t = this.parseTimeToSeconds(gs.timeRemaining as string);
     if (gs.quarter === 4) {
       if (t <= 60) return 12;
       if (t <= 120) return 8;
@@ -166,7 +166,7 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
   private desperationAdder(gs: GameState): number {
     const h = gs.homeScore ?? 0, a = gs.awayScore ?? 0;
     if (!gs.quarter || !gs.timeRemaining) return 0;
-    const t = this.parseTimeToSeconds(gs.timeRemaining);
+    const t = this.parseTimeToSeconds(gs.timeRemaining as string);
     const diff = Math.abs(h - a);
     if (gs.quarter === 4 && t <= 300) {
       if (diff >= 14) return 10;
@@ -192,12 +192,12 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
   private identifyRiskFactors(gs: GameState): string[] {
     const f: string[] = [];
     if (gs.down === 4) f.push('Fourth Down Conversion');
-    if (gs.down === 3 && gs.yardsToGo! >= 15) f.push('Very Long Third Down');
-    else if (gs.down === 3 && gs.yardsToGo! >= 8) f.push('Long Third Down');
-    if ((gs.fieldPosition ?? 0) >= 80) f.push('Deep Own Territory');
-    if ((gs.fieldPosition ?? 100) <= 10) f.push('Goal Line Pressure');
+    if (gs.down === 3 && (gs.yardsToGo as number) >= 15) f.push('Very Long Third Down');
+    else if (gs.down === 3 && (gs.yardsToGo as number) >= 8) f.push('Long Third Down');
+    if (((gs.fieldPosition as number) ?? 0) >= 80) f.push('Deep Own Territory');
+    if (((gs.fieldPosition as number) ?? 100) <= 10) f.push('Goal Line Pressure');
     if (gs.quarter === 4) {
-      const t = this.parseTimeToSeconds(gs.timeRemaining);
+      const t = this.parseTimeToSeconds(gs.timeRemaining as string);
       if (t <= 60) f.push('Final Minute');
       else if (t <= 120) f.push('Two-Minute Warning');
     }
@@ -207,9 +207,9 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
   }
 
   private composeMessage(gs: GameState, risk: number, level: RiskLevel, primary: string | undefined): string {
-    const down = this.getOrdinal(gs.down || 1);
-    const ytg = gs.yardsToGo || 10;
-    const fp = gs.fieldPosition || 50;
+    const down = this.getOrdinal((gs.down as number) || 1);
+    const ytg = (gs.yardsToGo as number) || 10;
+    const fp = (gs.fieldPosition as number) || 50;
 
     const posDesc =
       fp <= 20 ? `at opponent ${fp}-yard line` :
@@ -239,18 +239,24 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
 
   private buildSignature(gs: GameState): string {
     // Bucket time to 15s to reduce churn; include down/ytg/field/quarter/possession side
-    const t = this.bucketTime(this.parseTimeToSeconds(gs.timeRemaining), 15);
-    const side = (gs.possession && (gs.possession === gs.homeTeam || gs.possession === gs.awayTeam)) ? gs.possession : 'UNK';
-    return `Q${gs.quarter}|T${t}|D${gs.down}|Y${Math.min(gs.yardsToGo ?? 0, 10)}|FP${gs.fieldPosition}|P${side}`;
+    const t = this.bucketTime(this.parseTimeToSeconds(gs.timeRemaining as string), 15);
+    const possStr = gs.possession as string;
+    const homeTeamStr = typeof gs.homeTeam === 'string' ? gs.homeTeam : (gs.homeTeam as any).name || '';
+    const awayTeamStr = typeof gs.awayTeam === 'string' ? gs.awayTeam : (gs.awayTeam as any).name || '';
+    const side = (possStr && (possStr === homeTeamStr || possStr === awayTeamStr)) ? possStr : 'UNK';
+    return `Q${gs.quarter}|T${t}|D${gs.down}|Y${Math.min((gs.yardsToGo as number) ?? 0, 10)}|FP${gs.fieldPosition}|P${side}`;
   }
 
   private getPossessionTeam(gs: GameState): string {
-    if (gs.possession && (gs.possession === gs.homeTeam || gs.possession === gs.awayTeam)) return gs.possession;
+    const possStr = gs.possession as string;
+    const homeTeamStr = typeof gs.homeTeam === 'string' ? gs.homeTeam : (gs.homeTeam as any).name || '';
+    const awayTeamStr = typeof gs.awayTeam === 'string' ? gs.awayTeam : (gs.awayTeam as any).name || '';
+    if (possStr && (possStr === homeTeamStr || possStr === awayTeamStr)) return possStr;
     return 'Possessing Team';
   }
 
   private getSituationDescription(gs: GameState): string {
-    return `${this.getOrdinal(gs.down || 1)} & ${gs.yardsToGo || 10} at ${gs.fieldPosition || 50}-yard line`;
+    return `${this.getOrdinal((gs.down as number) || 1)} & ${(gs.yardsToGo as number) || 10} at ${(gs.fieldPosition as number) || 50}-yard line`;
   }
 
   private getOrdinal(n: number): string {
@@ -259,7 +265,7 @@ export default class TurnoverLikelihoodModule extends BaseAlertModule {
   }
 
   private classifyTimePressure(gs: GameState): 'normal'|'elevated'|'critical' {
-    const t = this.parseTimeToSeconds(gs.timeRemaining);
+    const t = this.parseTimeToSeconds(gs.timeRemaining as string);
     if (gs.quarter === 4 && t <= 60) return 'critical';
     if (gs.quarter === 4 && t <= 300) return 'elevated';
     if (gs.quarter === 2 && t <= 120) return 'elevated';
