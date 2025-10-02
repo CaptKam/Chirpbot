@@ -201,9 +201,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     next();
   });
 
-  // Apply session parsers - admin sessions first, then user sessions as fallback
-  app.use('/api/admin*', adminSessionParser);  // Admin routes use admin session
-  app.use('/admin*', adminSessionParser);      // Admin static files use admin session
+  // Apply admin session parser to admin routes
+  app.use('/api/admin*', adminSessionParser);
+  app.use('/admin*', adminSessionParser);
 
   // Universal CSRF protection for all admin API routes
   app.use('/api/admin/*', requireAdminAuth, generateCSRFToken, (req, res, next) => {
@@ -214,20 +214,27 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     next();
   });
 
-  // Apply BOTH session parsers to /api/available-alerts - try admin first, then user
-  app.use('/api/available-alerts/*', (req, res, next) => {
-    adminSessionParser(req, res, (err) => {
-      if (err) return next(err);
-      // If admin session exists, we're done
-      if (req.session?.adminUserId) {
-        return next();
-      }
-      // Otherwise try user session
-      userSessionParser(req, res, next);
-    });
+  // Create dedicated router for /api/available-alerts with session middleware
+  const availableAlertsRouter = express.Router();
+  
+  // Cookie-based session parser selection for available-alerts
+  availableAlertsRouter.use((req, res, next) => {
+    const hasAdminCookie = req.cookies && req.cookies['cb_admin.sid'];
+    const hasUserCookie = req.cookies && req.cookies['cb.sid'];
+    
+    if (hasAdminCookie) {
+      return adminSessionParser(req, res, next);
+    } else if (hasUserCookie) {
+      return userSessionParser(req, res, next);
+    } else {
+      next();
+    }
   });
 
-  // User session parser for all other routes - skip admin and available-alerts paths  
+  // Mount the available-alerts router
+  app.use('/api/available-alerts', availableAlertsRouter);
+
+  // Apply user session parser to all non-admin routes
   app.use((req, res, next) => {
     if (req.path.startsWith('/api/admin') || req.path.startsWith('/admin') || req.path.startsWith('/api/available-alerts')) {
       return next(); // Skip - these paths already have session parsers
@@ -3539,8 +3546,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Get available alert types from cylinders - accessible to all authenticated users and admins
-  app.get('/api/available-alerts/:sport', async (req, res) => {
+  availableAlertsRouter.get('/:sport', async (req, res) => {
     try {
+      // Defensive check - bail if session wasn't set by middleware
+      if (!req.session) {
+        console.error('❌ Session object missing - middleware ordering issue');
+        return res.status(500).json({ message: 'Server configuration error' });
+      }
+      
       // Dual authentication: accept both regular users and admin sessions
       console.log('🔍 /api/available-alerts auth check:', {
         userId: req.session.userId,
