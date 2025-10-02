@@ -123,6 +123,16 @@ export class SingleInstanceLock {
     
     if (this.isProcessAlive(pid)) {
       console.log(`⚠️ Process ${pid} still running after ${maxWaitMs}ms wait`);
+      console.log(`🔧 Force removing stale lock to allow new instance to start`);
+      // In development, force remove the lock after waiting
+      if (process.env.NODE_ENV === 'development') {
+        try {
+          fs.unlinkSync(this.lockPath);
+          console.log(`✅ Stale lock removed - new instance can now start`);
+        } catch (error) {
+          console.log(`⚠️ Could not remove stale lock:`, error);
+        }
+      }
     } else {
       console.log(`✅ Process ${pid} successfully shutdown`);
     }
