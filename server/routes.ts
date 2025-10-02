@@ -160,7 +160,7 @@ const sessionPool = new Pool({ connectionString: process.env.DATABASE_URL });
 const sessionStore = new PgSession({
   pool: sessionPool,
   tableName: 'user_sessions',
-  createTableIfMissing: true,
+  createTableIfMissing: false, // Table already exists - don't try to create it
 });
 
 console.log('✅ PostgreSQL session store configured - sessions will persist across server restarts');
