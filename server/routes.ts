@@ -3524,6 +3524,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Get available alert types from cylinders - accessible to all authenticated users and admins
   app.get('/api/available-alerts/:sport', async (req, res) => {
     try {
+      // Dual authentication: accept both regular users and admin sessions
       if (!req.session.userId && !req.session.adminUserId) {
         return res.status(401).json({ message: 'Authentication required' });
       }
