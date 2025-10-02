@@ -637,7 +637,8 @@ export class MLBEngine extends BaseSportEngine {
         'MLB_HIGH_SCORING_SITUATION': './alert-cylinders/mlb/high-scoring-situation-module.ts',
         'MLB_STRIKEOUT': './alert-cylinders/mlb/strikeout-module.ts',
         'MLB_MOMENTUM_SHIFT': './alert-cylinders/mlb/momentum-shift-module.ts',
-        'MLB_CLUTCH_SITUATION': './alert-cylinders/mlb/clutch-situation-module.ts'
+        'MLB_CLUTCH_SITUATION': './alert-cylinders/mlb/clutch-situation-module.ts',
+        'MLB_RISP_PROB_ENHANCED': './alert-cylinders/mlb/risp-prob-enhanced-module.ts'
       };
 
       const modulePath = moduleMap[alertType];
