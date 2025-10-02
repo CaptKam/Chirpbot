@@ -4,6 +4,13 @@ ChirpBot V3 is an advanced multi-sport betting intelligence platform that provid
 
 # Recent Changes
 
+## October 2, 2025 - NFL Alert Cylinder Bug Fixes & TypeScript Resolution
+- **Deduplication Fixed**: Resolved critical bug where massive-weather-module.ts used `Date.now()` in alertKey (same pattern as MLB bugs), causing alert spam. Changed to stable context: `Q${quarter}_${condition}_${severity}`.
+- **Fourth-Down Deduplication Improved**: Added quarter to alertKey for more granular tracking: `${gameId}_fourth_down_Q${quarter}_${yardsToGo}_${fieldPosition}`.
+- **Game-Start Logic Fixed**: Changed from triggering on quarters 1-2 to ONLY quarter 1. Now only fires once at actual kickoff, preventing false "game start" alerts in Q2.
+- **TypeScript Errors Resolved**: Fixed all 169 type errors across 9 NFL modules by adding proper type assertions for NFL-specific GameState properties (quarter, timeRemaining, down, yardsToGo, fieldPosition, weather, weatherContext, possession).
+- **System Status**: NFL alert cylinders now have proper deduplication, 0 TypeScript errors, all modules functioning correctly.
+
 ## October 2, 2025 - AI Enhancement Gate Removed
 - **Universal AI Enhancement**: Removed 60% probability threshold from `shouldEnhanceAlert()` in unified-ai-processor.ts. ALL alerts now receive AI enhancement, regardless of hardcoded probability values.
 - **Impact**: Low-probability alerts (previously <60% like 42% "Runner on Third, 2 Outs") now get full AI betting context and gambling insights.
