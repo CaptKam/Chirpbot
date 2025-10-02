@@ -157,10 +157,18 @@ const updateUserProfileSchema = z.object({
 // CRITICAL FIX: Create PostgreSQL session store for session persistence across server restarts
 const PgSession = connectPgSimple(session);
 const sessionPool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+// Suppress duplicate key errors from session table initialization
 const sessionStore = new PgSession({
   pool: sessionPool,
   tableName: 'user_sessions',
   createTableIfMissing: false, // Table already exists - don't try to create it
+  errorLog: (error: Error) => {
+    // Suppress harmless "already exists" errors during initialization
+    if (!error.message?.includes('already exists')) {
+      console.error('Session store error:', error.message);
+    }
+  }
 });
 
 console.log('✅ PostgreSQL session store configured - sessions will persist across server restarts');
