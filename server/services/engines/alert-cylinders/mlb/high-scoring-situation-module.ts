@@ -84,7 +84,7 @@ export default class RunnersOnHighScoringModule extends BaseAlertModule {
     let priority = 85 + (windImpact === 'favorable' ? 5 : 0) + (gameState.onDeckBatter ? 5 : 0);
 
     const alertResult = {
-      alertKey: `${gameState.gameId}_high_scoring_${baseKey}_${outs}_${Date.now()}`,
+      alertKey: `${gameState.gameId}_high_scoring_${baseKey}_${outs}_${gameState.inning}_${gameState.isTopInning ? 'top' : 'bot'}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | High scoring situation`,
       context: {
@@ -108,7 +108,6 @@ export default class RunnersOnHighScoringModule extends BaseAlertModule {
     };
 
     return alertResult;
-    };
   }
 
   calculateProbability(): number {
