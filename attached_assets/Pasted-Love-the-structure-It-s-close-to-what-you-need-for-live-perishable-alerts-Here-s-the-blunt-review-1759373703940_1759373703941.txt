@@ -1,0 +1,114 @@
+Love the structure. It’s close to what you need for live, perishable alerts. Here’s the blunt review + what I’d change first.
+
+What’s strong
+
+Clear state machines (Game + Engine) — good anchor for reliability.
+
+Weather-on-Live + lazy loading — keeps idle costs down.
+
+Cylinders as hot-swappable modules — perfect for rapid tuning.
+
+Unified dedupe + settings cache — right direction.
+
+Non-blocking AI — essential for sub-250ms paths.
+
+Biggest risks (ranked)
+
+P0 – Must fix now
+
+5s frontend polling
+For “5-minute max value” alerts, polling will miss edges and spike load. Switch client to SSE (preferred) or WS for alert streams, keep HTTP for queries. Keep an auto-fallback to polling.
+
+Exactly-once semantics
+You say “idempotent,” but I don’t see an explicit alertKey contract at the DB/API boundary. Define a canonical alert_key (e.g., sport:gameId:module:frameHash) and enforce a unique index so retries can’t double-deliver.
+
+Backpressure & queueing
+Enhancement pipeline is “async with timeouts,” but no mention of queues. Add a bounded queue per sport with rate limits and drop/merge policy (e.g., keep latest by module per game). Otherwise AI costs and latency spike during surges.
+
+Cold-start storms
+Calendar → PREWARM for many games at once can thrash CPU/mem on Replit. Stagger with jitter and concurrency caps per sport.
+
+Health loops
+1-minute checks + auto-recovery can flap. Add failure budgets (e.g., trip after N consecutive errors or >X% in 5 min) and cooldowns with exponential backoff.
+
+P1 – Should tackle next
+6) Dedupe window uniformity
+5-minute TTL may be too long/short depending on module. Make TTL module-aware (e.g., “Bases Loaded” 90–180s; “Two-Minute Warning” 30–60s).
+
+State transition proofs
+Add invariant tests: SCHEDULED→PREWARM→LIVE only; forbid skip (e.g., SCHEDULED→LIVE without PREWARM) unless flagged. Persist state transitions to a small audit table to debug race conditions.
+
+Engine isolation
+Circuit breakers per sport are good; add per-module fuses so one bad cylinder can’t tank its engine.
+
+Config sprawl
+Centralize all tunables in /config/ with per-env overrides (poll intervals, queue sizes, AI on/off, dedupe TTLs). No magic numbers in code.
+
+Observability gaps
+You have monitors, but you need business metrics: alerts/sec, drop reasons (dedupe/rate-limit/queue-full), AI utilization %, median/95p end-to-end time, socket reconnect rate.
+
+P2 – Nice wins
+11) Precompute context
+For hot cylinders, cache precomputed features (RE24, base/out state) so modules do O(1) reads.
+
+Schema: time-series hygiene
+Partition alerts by day; index (game_id, module, created_at); store alert_key unique; store prior_alert_key for merges.
+
+Frontend steadiness
+UniversalAlertCard should accept immutable payloads; render AI-enhanced updates as a replacement event (same alert_key) to stop flicker.
+
+Minimal concrete changes
+
+1) Define the alert key + DB guard
+
+-- migration
+ALTER TABLE alerts ADD COLUMN alert_key TEXT NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS alerts_alert_key_uq ON alerts(alert_key);
+
+-- server: build once, reuse everywhere
+function makeAlertKey(sport, gameId, module, contextHash) {
+  return `${sport}:${gameId}:${module}:${contextHash}`;
+}
+
+
+2) SSE for client delivery (keep HTTP for history)
+
+/api/alerts/stream (SSE): emits {alert_key, payload, is_update}.
+
+Server keeps a per-sport fan-out buffer (e.g., last 100 events) for late joiners.
+
+3) Bounded queues + rate limits (per sport, per module)
+
+Max in-flight AI jobs per sport (e.g., 8).
+
+Drop rule: if a newer alert with same alert_key arrives and queue is full, replace the older queued item.
+
+4) Jittered prewarm
+
+const jitter = Math.random() * 15000; // up to 15s
+setTimeout(startPrewarm, Math.max(0, msUntilKickoff - 5*60*1000 + jitter));
+
+
+5) Failure budgets
+
+if (errorRate('MLBEngine', 5*60_000) > 0.2 && consecutiveFailures > 5) tripBreaker('MLBEngine');
+
+Test plan (run these before/after refactors)
+
+State machine: simulate 100 games; verify no illegal transitions, engines start once, stop once.
+
+Exactly-once: fire 1,000 duplicate alerts (same key) → DB rows stay at 1; client receives at most 1 create + N updates.
+
+Dedupe TTL: send same cylinder within and outside TTL; ensure suppression then re-emit.
+
+SSE soak: 500 fake alerts/min for 10 min; client sees ordered, gapless stream; reconnect resumes without duplicates.
+
+AI backpressure: flood enhancements; verify queue caps, drop/replace counts, and stable p95 latency for non-AI path.
+
+Cost & performance guardrails
+
+AI: per-minute hard caps + per-module sampling (e.g., only enhance top 30% by expected value).
+
+Compute: engine concurrency caps per sport; memory ceiling watchdog kills oldest inactive engines first.
+
+Network: push via SSE; no 5s polling except as emergency fallback.

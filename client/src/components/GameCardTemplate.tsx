@@ -2,7 +2,7 @@ import React from 'react';
 import { TeamLogo } from '@/components/team-logo';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Clock, Play, CheckCircle } from 'lucide-react';
+import { Clock, Play } from 'lucide-react';
 import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
 import { useQuery } from '@tanstack/react-query';
 
@@ -277,22 +277,17 @@ export function GameCardTemplate({
 
         {/* Center - Game Info & Status */}
         <div className="flex-1 flex flex-col items-center space-y-3">
-          {/* Status & Selection Indicator */}
-          <div className="flex items-center space-x-2">
-            {(status === 'live' || status === 'final') && (
-              <Badge className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                status === 'live' 
-                  ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30' 
-                  : 'bg-slate-700/50 text-slate-300 ring-1 ring-slate-600'
-              }`}>
-                {status === 'live' && <Play className="w-3 h-3 mr-1" />}
-                {status === 'live' ? 'LIVE' : 'FINAL'}
-              </Badge>
-            )}
-            {isSelected && (
-              <CheckCircle className="w-5 h-5 text-emerald-400" data-testid={`game-selected-${gameId}`} />
-            )}
-          </div>
+          {/* Status Badge */}
+          {(status === 'live' || status === 'final') && (
+            <Badge className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+              status === 'live' 
+                ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30' 
+                : 'bg-slate-700/50 text-slate-300 ring-1 ring-slate-600'
+            }`}>
+              {status === 'live' && <Play className="w-3 h-3 mr-1" />}
+              {status === 'live' ? 'LIVE' : 'FINAL'}
+            </Badge>
+          )}
 
           {/* Game State for all sports */}
           {getGameState()}
