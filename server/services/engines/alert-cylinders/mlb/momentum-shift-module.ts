@@ -60,7 +60,7 @@ export default class MomentumShiftModule extends BaseAlertModule {
     }
 
     return {
-      alertKey: `${gameState.gameId}_momentum_${gameState.inning}_${Date.now()}`,
+      alertKey: `${gameState.gameId}_momentum_${gameState.inning}_${gameState.isTopInning ? 'top' : 'bot'}`,
       type: this.alertType,
       message,
       context: {
