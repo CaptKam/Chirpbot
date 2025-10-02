@@ -1,4 +1,5 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
+// import { unifiedDeduplicator } from '../../unified-deduplicator'; // if available
 import { mlbPerformanceTracker } from '../../mlb-performance-tracker';
 
 export default class SeventhInningStretchModule extends BaseAlertModule {
@@ -6,157 +7,103 @@ export default class SeventhInningStretchModule extends BaseAlertModule {
   sport = 'MLB';
   private triggeredGames = new Set<string>();
 
+  // Fire exactly at the CHANGEOVER into bottom 7th:
+  // outs just reset to 0, inning === 7, isTopInning === false, and game is live.
+  private atStretchMoment(gs: GameState): boolean {
+    return !!(gs.isLive && gs.inning === 7 && gs.isTopInning === false && gs.outs === 0);
+  }
+
   isTriggered(gameState: GameState): boolean {
-    // Only trigger once per game, specifically at top of 7th inning
-    if (this.triggeredGames.has(gameState.gameId)) {
-      return false; // Already triggered for this game
+    const id = gameState.gameId;
+    if (!id || !gameState.isLive) return false;
+
+    // Hygiene: clear memory hint if the feed marks final
+    if ((gameState.status || '').toLowerCase().includes('final')) {
+      this.triggeredGames.delete(id);
+      return false;
     }
-    
-    // Trigger only for inning 7, top half
-    return gameState.inning === 7 && gameState.isTopInning === true && gameState.isLive;
+    if (this.triggeredGames.has(id)) return false;
+
+    return this.atStretchMoment(gameState);
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
-    // Validate required game state fields to prevent constraint violations
-    if (!gameState || !gameState.gameId || typeof gameState.inning !== 'number' || !gameState.isLive) {
-      console.warn(`⚠️ SeventhInningStretchModule: Invalid game state - gameId: ${gameState?.gameId}, inning: ${gameState?.inning}, isLive: ${gameState?.isLive}`);
-      return null;
-    }
+    // assume engine checked isTriggered() already; avoid a second check to prevent races
+    if (!gameState?.gameId) return null;
 
-    // Validate team names and scores
-    const homeTeam = this.getTeamName(gameState.homeTeam) || 'Home Team';
-    const awayTeam = this.getTeamName(gameState.awayTeam) || 'Away Team';
-    const homeScore = typeof gameState.homeScore === 'number' ? gameState.homeScore : 0;
-    const awayScore = typeof gameState.awayScore === 'number' ? gameState.awayScore : 0;
-
-    // Only generate alert if we meet the trigger conditions
-    if (!this.isTriggered(gameState)) {
-      return null;
-    }
+    const homeTeam = (gameState.homeTeam || 'Home Team').toString();
+    const awayTeam = (gameState.awayTeam || 'Away Team').toString();
+    const homeScore = Number.isFinite(gameState.homeScore) ? gameState.homeScore : 0;
+    const awayScore = Number.isFinite(gameState.awayScore) ? gameState.awayScore : 0;
 
     const alertKey = `mlb_seventh_inning_stretch_${gameState.gameId}`;
-
     const scoreDiff = Math.abs(homeScore - awayScore);
-    const isCloseGame = scoreDiff <= 2;
     const totalRuns = homeScore + awayScore;
+    const isCloseGame = scoreDiff <= 2;
 
-    // Strategic context for late-game dynamics
-    const context = {
-      gameId: gameState.gameId,
-      sport: 'MLB',
-      inning: gameState.inning,
-      homeTeam: homeTeam,
-      awayTeam: awayTeam,
-      homeScore: homeScore,
-      awayScore: awayScore,
+    // Optional: durable dedupe (best place is DB unique index on alert_key)
+    // this.tryDedupe?.(alertKey, { ttlMs: Number.MAX_SAFE_INTEGER });
 
-      // Late-game strategic context
-      reasons: [
-        'Bullpen era begins - fresh arms vs tired starters',
-        'Managerial decisions intensify (pinch hitters, defensive subs)',
-        isCloseGame ? 'Close game - every at-bat matters' : 'Score differential may drive aggressive play',
-        'Historical: 31% of game-winning runs scored in final 3 innings'
-      ],
+    const enhancedMsg = this.generateEnhancedSeventhInningMessage(gameState);
 
-      // Betting dynamics
-      bettingShifts: [
-        'Live totals adjust for bullpen tendencies',
-        'Closer availability impacts late-inning props',
-        'Pinch hitter props become available'
-      ],
-
-      // Game state analysis
-      gameState: {
-        competitiveness: isCloseGame ? 'Highly competitive' : scoreDiff > 5 ? 'Blowout territory' : 'Moderate lead',
-        totalPace: totalRuns > 8 ? 'High-scoring affair' : totalRuns < 4 ? 'Pitcher duel' : 'Average scoring',
-        momentum: homeScore > awayScore ? 'Home team leading' : 'Away team ahead'
-      },
-
-      // Strategic factors
-      lateGameFactors: [
-        'Starter pitch counts becoming critical',
-        'Bullpen matchups favor left/right splits',
-        'Home field advantage amplifies in final innings',
-        'Pressure situations create hero/goat moments'
-      ],
-
-      // Urgency and timing
-      urgency: 'Critical transition point - next 45 minutes determine game outcome',
-
-      // Statistical context
-      historical: `Close games (≤2 run diff) in 7th: 67% decided by 1 run, 23% go to extras`,
-
-      // Weather impact continuation
-      weatherImpact: gameState.weatherContext?.windSpeed ? 
-        `Late-game wind patterns: ${gameState.weatherContext.windSpeed}mph may affect fly balls` : 
-        'Controlled conditions maintain consistency'
-    };
-
-    // Ensure all required fields are properly set to prevent constraint violations
-    const alertResult: AlertResult = {
+    const alert: AlertResult = {
       alertKey,
-      type: 'MLB_SEVENTH_INNING_STRETCH',
+      type: this.alertType,
       priority: isCloseGame ? 45 : 35,
-      message: `${awayTeam} @ ${homeTeam} | 7th inning stretch`,
-      context
+      message: `${awayTeam} @ ${homeTeam} • Seventh-inning stretch`,
+      context: {
+        gameId: gameState.gameId,
+        sport: this.sport,
+        inning: gameState.inning,
+        half: 'B7', // changeover into bottom 7th
+        homeTeam,
+        awayTeam,
+        homeScore,
+        awayScore,
+        // Clear, non-speculative context only:
+        gameState: {
+          competitiveness: isCloseGame ? 'High' : scoreDiff > 5 ? 'Low' : 'Medium',
+          runPace: totalRuns > 8 ? 'High' : totalRuns < 4 ? 'Low' : 'Average',
+          leader: homeScore === awayScore ? 'Tied' : (homeScore > awayScore ? 'Home' : 'Away')
+        },
+        performance: {
+          batter: gameState.currentBatter
+            ? mlbPerformanceTracker.generateBatterContext(gameState.gameId, gameState.currentBatter) : null,
+          pitcher: gameState.currentPitcher
+            ? mlbPerformanceTracker.generatePitcherContext(gameState.gameId, gameState.currentPitcher) : null,
+          momentum: mlbPerformanceTracker.generateTeamMomentumContext(gameState.gameId, homeTeam)
+        },
+        weatherImpact: gameState.weatherContext?.windSpeed
+          ? `Wind ${gameState.weatherContext.windSpeed} mph`
+          : null,
+        ai_hint: enhancedMsg // let AI enhancer use it; UI can ignore
+      }
     };
 
-    // Final validation to ensure no undefined fields
-    if (!alertResult.type || !alertResult.alertKey || !alertResult.message) {
-      console.error('❌ SeventhInningStretchModule: Invalid AlertResult object generated', alertResult);
-      return null;
-    }
-
-    // Mark this game as triggered to prevent duplicates
+    // Memory hint: mark emitted. (Durability should be in DB/deduper.)
     this.triggeredGames.add(gameState.gameId);
-
-    return alertResult;
+    return alert;
   }
 
   calculateProbability(gameState: GameState): number {
-    return this.isTriggered(gameState) ? 100 : 0;
+    return this.atStretchMoment(gameState) ? 100 : 0;
   }
 
-  private generateEnhancedSeventhInningMessage(gameState: GameState): string {
-    const awayTeam = gameState.awayTeam;
-    const homeTeam = gameState.homeTeam;
-    const awayScore = gameState.awayScore;
-    const homeScore = gameState.homeScore;
-    
-    // Get performance context
-    const batterContext = gameState.currentBatter ? 
-      mlbPerformanceTracker.generateBatterContext(gameState.gameId, gameState.currentBatter) : null;
-    const pitcherContext = gameState.currentPitcher ? 
-      mlbPerformanceTracker.generatePitcherContext(gameState.gameId, gameState.currentPitcher) : null;
-    const teamContext = mlbPerformanceTracker.generateTeamMomentumContext(gameState.gameId, awayTeam);
-    
-    // Build enhanced message (team names and scores removed - already in header)
-    let message = `Seventh inning stretch`;
-    
-    // Add performance insights
-    const contexts: string[] = [];
-    if (pitcherContext) {
-      contexts.push(`P: ${pitcherContext}`);
-    }
-    if (batterContext) {
-      contexts.push(`Batter: ${batterContext}`);
-    }
-    if (teamContext) {
-      contexts.push(`Momentum: ${teamContext}`);
-    }
-    
-    // Add standard late game context
-    const scoreDiff = Math.abs(homeScore - awayScore);
-    if (scoreDiff <= 2) {
-      contexts.push('Close game - clutch time');
-    } else {
-      contexts.push('Lead to protect/overcome');
-    }
-    
-    if (contexts.length > 0) {
-      message += ` | ${contexts.join(' | ')}`;
-    }
-    
-    return message;
+  private generateEnhancedSeventhInningMessage(gs: GameState): string {
+    const contexts: string[] = ['Seventh-inning stretch'];
+    const batter = gs.currentBatter
+      ? mlbPerformanceTracker.generateBatterContext(gs.gameId, gs.currentBatter) : null;
+    const pitcher = gs.currentPitcher
+      ? mlbPerformanceTracker.generatePitcherContext(gs.gameId, gs.currentPitcher) : null;
+    const momentum = mlbPerformanceTracker.generateTeamMomentumContext(gs.gameId, gs.homeTeam);
+
+    if (pitcher) contexts.push(`P: ${pitcher}`);
+    if (batter) contexts.push(`B: ${batter}`);
+    if (momentum) contexts.push(`Momentum: ${momentum}`);
+
+    const diff = Math.abs((gs.homeScore ?? 0) - (gs.awayScore ?? 0));
+    contexts.push(diff <= 2 ? 'Close game—clutch time' : 'Manage the lead');
+
+    return contexts.join(' | ');
   }
 }
