@@ -3525,7 +3525,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/available-alerts/:sport', async (req, res) => {
     try {
       // Dual authentication: accept both regular users and admin sessions
+      console.log('🔍 /api/available-alerts auth check:', {
+        userId: req.session.userId,
+        adminUserId: req.session.adminUserId,
+        sessionID: req.sessionID
+      });
+      
       if (!req.session.userId && !req.session.adminUserId) {
+        console.log('❌ Authentication failed - no userId or adminUserId in session');
         return res.status(401).json({ message: 'Authentication required' });
       }
 
