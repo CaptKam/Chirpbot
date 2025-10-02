@@ -1,0 +1,89 @@
+AI-Data Integration Flow
+1. Data Collection → AI Enhancement
+The system collects live game data from multiple sources (multi_source_aggregator.py) and MLB APIs, then passes specific data contexts to the AI for analysis:
+
+# From mlb_monitor.py - Example of data flow to AI
+game_data = {
+    'away_team': away_team,
+    'home_team': home_team,
+    'away_score': away_score,
+    'home_score': home_score,
+    'inning': inning,
+    'inning_state': inning_state,
+    'base_runners': bases_occupied,
+    'outs': outs
+}
+# AI analyzes the game situation
+ai_analysis = self.openai_helper.analyze_game_situation(game_data)
+2. Conditional AI Processing
+AI features are conditionally applied based on user preferences stored in persistent_settings.py:
+
+Hit/HR alerts: Uses ai_analyze_hits preference
+Runner alerts: Uses ai_analyze_runners + ai_predict_scoring
+Power hitter alerts: Uses ai_analyze_power_hitter
+Game events: Uses ai_enhance_alerts + ai_summarize_events
+Example from the code:
+
+# AI analysis only runs if enabled
+if self.openai_helper.is_available() and self.notification_preferences.get('ai_analyze_hits', True):
+    ai_analysis = self.openai_helper.enhance_alert_message(
+        "home_run",
+        f"{away_team} @ {home_team}",
+        description
+    )
+    if ai_analysis:
+        alert_msg += f"\n\n🤖 AI Insight: {ai_analysis}"
+3. AI Processing Pipeline
+The openai_helper.py module provides several specialized functions:
+
+analyze_game_situation() - Analyzes current game state (10 words max)
+predict_scoring_probability() - Returns JSON with probability % and key factor
+predict_at_bat_outcome() - Predicts what might happen (8 words max)
+enhance_alert_message() - Adds context to alerts (10 words max)
+summarize_game_events() - Summarizes recent plays (15 words max)
+4. Data → AI → Alert Flow
+Live Game Data (MLB API)
+    ↓
+mlb_monitor.py detects event
+    ↓
+Checks user preferences (persistent_settings.json)
+    ↓
+If AI feature enabled → Passes data to openai_helper.py
+    ↓
+OpenAI GPT-4o processes with constraints (word limits, JSON format)
+    ↓
+AI response appended to alert message
+    ↓
+Alert sent via telegram_notifier.py
+5. Key Integration Points
+Power Hitter Alerts (mlb_monitor.py line ~1653):
+
+if self.openai_helper.is_available():
+    elite_context = {
+        'elite_power': True,
+        'season_hrs': season_hrs,
+        'confidence_level': 'high',
+        'bases': bases_occupied,
+        'inning': inning
+    }
+    ai_prediction = self.openai_helper.predict_at_bat_outcome(current_batter, elite_context)
+Scoring Situations (line ~1489):
+
+if self.openai_helper.is_available() and self.notification_preferences.get('ai_predict_scoring', False):
+    game_data = {
+        'inning': linescore.get('currentInning', 0),
+        'outs': outs,
+        'base_runners': bases_occupied,
+        # ... more context
+    }
+    scoring_prediction = self.openai_helper.predict_scoring_probability(game_data)
+6. Model Used
+All AI features use GPT-4o (OpenAI's latest model as of May 2024) with strict token limits to keep responses concise and cost-effective:
+
+response = self.client.chat.completions.create(
+    model="gpt-4o",
+    messages=[...],
+    max_tokens=15-50,  # Varies by function
+    temperature=0.3-0.8  # Varies by use case
+)
+The system is designed to enhance alerts with AI insights without slowing down the core monitoring, only calling OpenAI when enabled and relevant to the specific alert type.
