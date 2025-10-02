@@ -4,6 +4,16 @@ ChirpBot V3 is an advanced multi-sport betting intelligence platform that provid
 
 # Recent Changes
 
+## October 2, 2025 - NFL Goal Line Critical Bug Fixes
+- **Goal Line Alert Failures Fixed**: Resolved critical bugs where fieldPosition = 0 (goal line) and yardsToGo = 0 (goal-to-go) were treated as false due to JavaScript truthiness checks, causing alerts to completely miss the most important plays.
+- **Modules Fixed**: red-zone-module.ts, nfl-engine.ts (calculateProbability), red-zone-opportunity-module.ts, turnover-likelihood-module.ts - all now use proper null checks (`!== null` and `== null`) instead of truthiness.
+- **Probability Tables Updated**: Added goal line entries to red-zone-opportunity lookup tables:
+  - FIELD_POSITION_BASE_PROBABILITY[0] = 98% (highest in table)
+  - DOWN_DISTANCE_MULTIPLIERS with [0] entries for all downs (goal-to-go situations)
+- **Message Formatting Fixed**: Changed `||` to `??` (nullish coalescing) in message builders to preserve 0 values in alert text.
+- **Impact**: Goal line plays (1st & goal at 0-yard line) now correctly trigger alerts with 98% base probability instead of being silently ignored.
+- **System Status**: All NFL cylinders now properly handle goal line scenarios, probability calculations accurate for 0-yard situations.
+
 ## October 2, 2025 - NFL Alert Cylinder Bug Fixes & TypeScript Resolution
 - **Deduplication Fixed**: Resolved critical bug where massive-weather-module.ts used `Date.now()` in alertKey (same pattern as MLB bugs), causing alert spam. Changed to stable context: `Q${quarter}_${condition}_${severity}`.
 - **Fourth-Down Deduplication Improved**: Added quarter to alertKey for more granular tracking: `${gameId}_fourth_down_Q${quarter}_${yardsToGo}_${fieldPosition}`.

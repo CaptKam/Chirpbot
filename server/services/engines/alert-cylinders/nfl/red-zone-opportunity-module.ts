@@ -264,9 +264,9 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
   }
 
   private getSituationDescription(gameState: GameState): string {
-    const down = this.getOrdinal((gameState.down as number) || 1);
-    const distance = (gameState.yardsToGo as number) || 10;
-    const position = (gameState.fieldPosition as number) || 20;
+    const down = this.getOrdinal((gameState.down as number) ?? 1);
+    const distance = (gameState.yardsToGo as number) ?? 10;
+    const position = (gameState.fieldPosition as number) ?? 20;
     
     return `${down} & ${distance} at ${position}-yard line`;
   }
@@ -297,10 +297,10 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
 
   private buildGameSignature(gameState: GameState): string {
     const possessionTeam = this.getPossessionTeam(gameState);
-    const quarter = (gameState.quarter as number) || 0;
-    const down = (gameState.down as number) || 0;
-    const yardsToGo = (gameState.yardsToGo as number) || 0;
-    const fieldPosition = (gameState.fieldPosition as number) || 0;
+    const quarter = (gameState.quarter as number) ?? 0;
+    const down = (gameState.down as number) ?? 0;
+    const yardsToGo = (gameState.yardsToGo as number) ?? 0;
+    const fieldPosition = (gameState.fieldPosition as number) ?? 0;
     
     // Field position bucket: group yards into buckets (1-5, 6-10, 11-15, 16-20, 21-25, 26-30)
     const fieldPositionBucket = Math.ceil(fieldPosition / 5) * 5;
@@ -332,9 +332,9 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
   
   private createDynamicMessage(gameState: GameState): string {
     const touchdownProbability = this.calculateTouchdownProbability(gameState);
-    const down = this.getOrdinal((gameState.down as number) || 1);
-    const yardsToGo = (gameState.yardsToGo as number) || 10;
-    const fieldPosition = (gameState.fieldPosition as number) || 20;
+    const down = this.getOrdinal((gameState.down as number) ?? 1);
+    const yardsToGo = (gameState.yardsToGo as number) ?? 10;
+    const fieldPosition = (gameState.fieldPosition as number) ?? 20;
     
     // Create contextual field position description
     let situationDesc = '';

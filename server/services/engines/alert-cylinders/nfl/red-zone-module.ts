@@ -57,9 +57,9 @@ export default class RedZoneModule extends BaseAlertModule {
   }
 
   private createDynamicMessage(gameState: GameState): string {
-    const down = (gameState.down as number) || 1;
-    const yardsToGo = (gameState.yardsToGo as number) || 10;
-    const fieldPosition = (gameState.fieldPosition as number) || 20;
+    const down = (gameState.down as number) ?? 1;
+    const yardsToGo = (gameState.yardsToGo as number) ?? 10;
+    const fieldPosition = (gameState.fieldPosition as number) ?? 20;
     const downText = `${down}${this.getOrdinalSuffix(down)}`;
     
     // Create contextual position description
