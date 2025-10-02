@@ -1203,24 +1203,46 @@ ${context.championshipContext ? `- CHAMPIONSHIP CONTEXT: ${context.championshipC
     switch (context.sport) {
       case 'MLB': {
         const ordInning = this.getOrdinal(context.inning ?? 1);
+        const windSpeed = context.weather?.windSpeed ?? context.originalContext?.weatherContext?.windSpeed ?? 0;
+        const batterName = context.originalContext?.currentBatter ?? 'Unknown';
+        const pitcherName = context.originalContext?.currentPitcher ?? 'Unknown';
+        const alertType = context.alertType;
+        
+        // Alert-type specific guidance - tell AI what matters for THIS situation
+        let focusGuidance = '';
+        
+        if (alertType.includes('BASES_LOADED')) {
+          focusGuidance = `FOCUS: Batter's clutch hitting ability. Include wind ONLY if >15mph. Mention outs context.
+Example: {"primary": "${batterName} at bat with bases loaded", "secondary": "Bats .340 with RISP, 1 out"}`;
+        } else if (alertType.includes('RISP') || alertType.includes('SCORING_OPPORTUNITY')) {
+          focusGuidance = `FOCUS: Scoring setup. Mention batter IF known power hitter. Include runners detail only if 2nd+3rd.
+Example: {"primary": "RBI scoring chance, ${batterName} at bat", "secondary": "Runners on 2nd & 3rd"}`;
+        } else if (alertType.includes('HIGH_SCORING') || alertType.includes('RALLY')) {
+          focusGuidance = `FOCUS: Recent momentum or pitcher fatigue. Skip individual batter details.
+Example: {"primary": "Rally building: 3 runs already scored", "secondary": "Pitcher at 95 pitches, tiring"}`;
+        } else if (alertType.includes('LATE') || alertType.includes('PRESSURE') || alertType.includes('SEVENTH_INNING')) {
+          focusGuidance = `FOCUS: Game situation stakes. Mention closer/bullpen IF relevant. Skip weather.
+Example: {"primary": "Late-game pressure: tie game in 8th", "secondary": "Bullpen depleted from yesterday"}`;
+        } else if (alertType.includes('WIND') || alertType.includes('WEATHER')) {
+          focusGuidance = `FOCUS: Wind impact on play. Mention direction (out/in/across). Include batter IF power hitter.
+Example: {"primary": "Strong wind affecting fly balls", "secondary": "20mph out to center, favors power hitters"}`;
+        } else {
+          focusGuidance = `FOCUS: Most impactful factor for this situation. Keep it simple.
+Example: {"primary": "${batterName} at bat", "secondary": "${context.outs} out${context.outs === 1 ? '' : 's'}"}`;
+        }
+        
         const user = `${baseContext}MLB SITUATION:
 - ${ordInning} inning, ${context.outs ?? 0} outs
 - Count: ${context.balls ?? 0}-${context.strikes ?? 0}
 - Runners: ${this.describeBaseRunners(context.baseRunners)}
-- Current Batter: ${context.originalContext?.currentBatter ?? 'Unknown'}
-- Pitcher: ${context.originalContext?.currentPitcher ?? 'Unknown'}
+- Batter: ${batterName}
+- Pitcher: ${pitcherName}
 - Pitch Count: ${context.originalContext?.pitchCount ?? 'Unknown'}
-- Wind: ${context.weather?.windSpeed ?? context.originalContext?.weatherContext?.windSpeed ?? 'NA'}mph ${context.originalContext?.weatherContext?.windDirection ?? ''}
+- Wind: ${windSpeed}mph ${context.originalContext?.weatherContext?.windDirection ?? ''}
 
-Return JSON:
-{
-  "primary": "[Batter name] at bat: [RBI/scoring/strikeout] chance",
-  "secondary": "[runners on base detail, OR wind impact if >15mph, OR momentum factor] OR omit if nothing impactful"
-}
+${focusGuidance}
 
-Example: 
-{"primary": "Bregman at bat: RBI scoring chance", "secondary": "2 runners on base"}
-{"primary": "Judge at bat: power hitter opportunity", "secondary": "Strong wind blowing out to center"}`;
+REMEMBER: Users are watching multiple games. Give them ONLY what matters for THIS specific situation. Skip generic info.`;
         return { system, user };
       }
 
