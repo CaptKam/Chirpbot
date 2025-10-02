@@ -201,7 +201,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     next();
   });
 
-  // Apply separate session parsers for admin vs user routes
+  // Apply session parsers - admin sessions first, then user sessions as fallback
   app.use('/api/admin*', adminSessionParser);  // Admin routes use admin session
   app.use('/admin*', adminSessionParser);      // Admin static files use admin session
 
@@ -214,28 +214,23 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     next();
   });
 
-  // Special handling for /api/available-alerts - needs both session parsers
+  // Apply BOTH session parsers to /api/available-alerts - try admin first, then user
   app.use('/api/available-alerts/*', (req, res, next) => {
-    // Check if there's an admin session cookie
-    const adminCookie = req.cookies?.['cb_admin.sid'];
-    const userCookie = req.cookies?.['cb.sid'];
-    
-    if (adminCookie) {
-      // Use admin session parser if admin cookie exists
-      adminSessionParser(req, res, next);
-    } else if (userCookie) {
-      // Use user session parser if user cookie exists
+    adminSessionParser(req, res, (err) => {
+      if (err) return next(err);
+      // If admin session exists, we're done
+      if (req.session?.adminUserId) {
+        return next();
+      }
+      // Otherwise try user session
       userSessionParser(req, res, next);
-    } else {
-      // No session cookies, continue without session
-      next();
-    }
+    });
   });
 
-  // User session parser - CRITICAL: Skip admin paths to prevent session collision  
+  // User session parser for all other routes - skip admin and available-alerts paths  
   app.use((req, res, next) => {
     if (req.path.startsWith('/api/admin') || req.path.startsWith('/admin') || req.path.startsWith('/api/available-alerts')) {
-      return next(); // Skip user session parser for admin and available-alerts paths
+      return next(); // Skip - these paths already have session parsers
     }
     return userSessionParser(req, res, next);
   });
