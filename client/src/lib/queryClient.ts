@@ -155,9 +155,39 @@ export const queryClient = new QueryClient({
     mutations: {
       retry: 0, // Disable React Query retries - p-retry handles all retry logic
       retryDelay: undefined, // No retry delay needed since retry is disabled
-      onError: (error) => {
-        console.error('Mutation error:', error);
-      }
     },
   },
 });
+
+// Global 401 handler: listen to query and mutation errors
+queryClient.getQueryCache().config.onError = (error: any) => {
+  const statusMatch = error?.message?.match(/^(\d{3}):/);
+  if (statusMatch && parseInt(statusMatch[1]) === 401) {
+    console.log('🔒 401 Unauthorized detected - clearing auth cache and redirecting to login');
+    
+    // Clear auth-related cache
+    queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
+    queryClient.removeQueries({ queryKey: ["/api/admin-auth/verify"] });
+    
+    // Redirect to login page if not already there
+    if (window.location.pathname !== '/login' && window.location.pathname !== '/admin-login') {
+      window.location.href = '/login';
+    }
+  }
+};
+
+queryClient.getMutationCache().config.onError = (error: any) => {
+  const statusMatch = error?.message?.match(/^(\d{3}):/);
+  if (statusMatch && parseInt(statusMatch[1]) === 401) {
+    console.log('🔒 401 Unauthorized detected - clearing auth cache and redirecting to login');
+    
+    // Clear auth-related cache
+    queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
+    queryClient.removeQueries({ queryKey: ["/api/admin-auth/verify"] });
+    
+    // Redirect to login page if not already there
+    if (window.location.pathname !== '/login' && window.location.pathname !== '/admin-login') {
+      window.location.href = '/login';
+    }
+  }
+};

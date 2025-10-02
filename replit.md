@@ -4,6 +4,12 @@ ChirpBot V3 is an advanced multi-sport betting intelligence platform that provid
 
 # Recent Changes
 
+## October 2, 2025 - Authentication & Session Management Fix
+- **Stale Cache Bug Fixed**: Resolved issue where expired sessions caused "Failed to load settings" errors without redirecting to login. Frontend showed as authenticated due to stale React Query cache while server rejected requests with 401.
+- **Global 401 Handler Added**: Implemented global error handler in queryClient.ts that detects any 401 error from queries/mutations, clears auth cache, and automatically redirects to login page.
+- **Impact**: Users with expired sessions now automatically redirected to login instead of seeing confusing error messages. Improved UX and security.
+- **Files Modified**: client/src/lib/queryClient.ts - added QueryCache and MutationCache error listeners.
+
 ## October 2, 2025 - NFL Goal Line Critical Bug Fixes
 - **Goal Line Alert Failures Fixed**: Resolved critical bugs where fieldPosition = 0 (goal line) and yardsToGo = 0 (goal-to-go) were treated as false due to JavaScript truthiness checks, causing alerts to completely miss the most important plays.
 - **Modules Fixed**: red-zone-module.ts, nfl-engine.ts (calculateProbability), red-zone-opportunity-module.ts, turnover-likelihood-module.ts - all now use proper null checks (`!== null` and `== null`) instead of truthiness.
