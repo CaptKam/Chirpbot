@@ -3,6 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 // WebSocket imports removed - using HTTP polling architecture
 import session from "express-session";
+import createMemoryStore from "memorystore";
 import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
 import csrf from "csrf";
@@ -152,12 +153,18 @@ const updateUserProfileSchema = z.object({
   oddsApiKey: z.string().optional(),
 }).strict(); // strict() ensures no additional fields are allowed
 
+// Initialize MemoryStore for session persistence
+const MemoryStore = createMemoryStore(session);
+
 // UNIFIED session parser - for both regular users AND admins
 const unifiedSessionParser = session({
   name: 'cb.sid',
   secret: process.env.SESSION_SECRET!,
   resave: false,
   saveUninitialized: false,
+  store: new MemoryStore({
+    checkPeriod: 86400000  // Prune expired entries every 24h
+  }),
   cookie: {
     path: '/',
     secure: process.env.NODE_ENV === 'production',
