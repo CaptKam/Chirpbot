@@ -1321,12 +1321,20 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
-      // Create session
+      // Create session and explicitly save it
       req.session.userId = user.id;
-
-      // Return user data without password
-      const { password: _, ...userWithoutPassword } = user;
-      res.json({ message: 'Login successful', user: userWithoutPassword });
+      
+      // Save session before sending response
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({ message: 'Failed to save session' });
+        }
+        
+        // Return user data without password
+        const { password: _, ...userWithoutPassword } = user;
+        res.json({ message: 'Login successful', user: userWithoutPassword });
+      });
     } catch (error) {
       console.error('Error during login:', error);
       res.status(500).json({ message: 'Login failed' });
@@ -1403,12 +1411,20 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         role: 'user'
       });
 
-      // Create session
+      // Create session and explicitly save it
       req.session.userId = newUser.id;
-
-      // Return user data without password
-      const { password: _, ...userWithoutPassword } = newUser;
-      res.status(201).json({ message: 'Account created successfully', user: userWithoutPassword });
+      
+      // Save session before sending response
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error on signup:', err);
+          return res.status(500).json({ message: 'Account created but failed to save session' });
+        }
+        
+        // Return user data without password
+        const { password: _, ...userWithoutPassword } = newUser;
+        res.status(201).json({ message: 'Account created successfully', user: userWithoutPassword });
+      });
     } catch (error) {
       console.error('Error during signup:', error);
       res.status(500).json({ message: 'Signup failed' });
@@ -2726,15 +2742,23 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Store userId in unified session (role will determine permissions)
       req.session.userId = user.id;
 
-      console.log('✅ Admin login successful:', username);
-      res.json({
-        success: true,
-        message: 'Admin login successful',
-        user: {
-          id: user.id,
-          username: user.username,
-          role: user.role
+      // Save session before sending response
+      req.session.save((err) => {
+        if (err) {
+          console.error('Admin session save error:', err);
+          return res.status(500).json({ success: false, message: 'Failed to save session' });
         }
+
+        console.log('✅ Admin login successful:', username);
+        res.json({
+          success: true,
+          message: 'Admin login successful',
+          user: {
+            id: user.id,
+            username: user.username,
+            role: user.role
+          }
+        });
       });
     } catch (error) {
       console.error('Admin login error:', error);
