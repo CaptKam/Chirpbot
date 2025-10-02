@@ -3,6 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 // WebSocket imports removed - using HTTP polling architecture
 import session from "express-session";
+import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
 import csrf from "csrf";
 import { storage } from "./storage";
@@ -189,6 +190,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   // Add memory management middleware FIRST (before any logging)
   app.use(memoryManager.middleware());
+  
+  // Add cookie parser to read cookies
+  app.use(cookieParser());
 
   // CRITICAL FIX: Ensure API routes are protected from Vite catch-all
   app.use('/api/*', (req, res, next) => {
@@ -212,16 +216,20 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   // Special handling for /api/available-alerts - needs both session parsers
   app.use('/api/available-alerts/*', (req, res, next) => {
-    // Try admin session first
-    adminSessionParser(req, res, (err) => {
-      if (err) return next(err);
-      // If no admin session, try user session
-      if (!req.session?.adminUserId) {
-        userSessionParser(req, res, next);
-      } else {
-        next();
-      }
-    });
+    // Check if there's an admin session cookie
+    const adminCookie = req.cookies?.['cb_admin.sid'];
+    const userCookie = req.cookies?.['cb.sid'];
+    
+    if (adminCookie) {
+      // Use admin session parser if admin cookie exists
+      adminSessionParser(req, res, next);
+    } else if (userCookie) {
+      // Use user session parser if user cookie exists
+      userSessionParser(req, res, next);
+    } else {
+      // No session cookies, continue without session
+      next();
+    }
   });
 
   // User session parser - CRITICAL: Skip admin paths to prevent session collision  
