@@ -734,7 +734,7 @@ export class UnifiedAIProcessor {
       context.balls !== undefined && context.strikes !== undefined ? `${context.balls}-${context.strikes}` : '-',
       scoreBucket,
       windBucket,
-      'v3.1' // Version marker
+      'v3.2' // Version marker - bumped to invalidate old generic AI responses
     ];
     return keyParts.join(':');
   }
