@@ -248,37 +248,10 @@ export class MLBEngine extends BaseSportEngine {
 
   async isAlertEnabled(alertType: string): Promise<boolean> {
     try {
-      // Only check settings for actual MLB alert types that have corresponding modules
-      const validMLBAlerts = [
-        'MLB_GAME_START',
-        'MLB_SEVENTH_INNING_STRETCH',
-        'MLB_RUNNER_ON_THIRD_NO_OUTS',
-        'MLB_FIRST_AND_THIRD_NO_OUTS',
-        'MLB_SECOND_AND_THIRD_NO_OUTS',
-        'MLB_FIRST_AND_SECOND',
-        'MLB_BASES_LOADED_NO_OUTS',
-        'MLB_RUNNER_ON_THIRD_ONE_OUT',
-        'MLB_FIRST_AND_THIRD_ONE_OUT',
-        'MLB_SECOND_AND_THIRD_ONE_OUT',
-        'MLB_BASES_LOADED_ONE_OUT',
-        'MLB_RUNNER_ON_THIRD_TWO_OUTS',
-        'MLB_FIRST_AND_THIRD_TWO_OUTS',
-        'MLB_RUNNER_ON_SECOND_NO_OUTS',
-        'MLB_BATTER_DUE',
-        'MLB_STEAL_LIKELIHOOD',
-        'MLB_ON_DECK_PREDICTION',
-        'MLB_WIND_CHANGE',
-        'MLB_LATE_INNING_CLOSE',
-        'MLB_SCORING_OPPORTUNITY',
-        'MLB_PITCHING_CHANGE',
-        'MLB_BASES_LOADED_TWO_OUTS',
-        'MLB_HIGH_SCORING_SITUATION',
-        'MLB_STRIKEOUT',
-        'MLB_MOMENTUM_SHIFT',
-        'MLB_CLUTCH_SITUATION'
-      ];
-
-      if (!validMLBAlerts.includes(alertType)) {
+      // Validate against dynamically discovered alert types
+      const validAlerts = await this.getAvailableAlertTypes();
+      
+      if (!validAlerts.includes(alertType)) {
         console.log(`❌ ${alertType} is not a valid MLB alert type - rejecting`);
         return false;
       }
@@ -609,34 +582,7 @@ export class MLBEngine extends BaseSportEngine {
       console.log(`✅ MLB Enabled alert types: ${enabledTypes.join(', ')}`);
 
       // Filter to only valid MLB alerts that have corresponding module files
-      const validMLBAlerts = [
-        'MLB_GAME_START',
-        'MLB_SEVENTH_INNING_STRETCH',
-        'MLB_RUNNER_ON_THIRD_NO_OUTS',
-        'MLB_FIRST_AND_THIRD_NO_OUTS',
-        'MLB_SECOND_AND_THIRD_NO_OUTS',
-        'MLB_FIRST_AND_SECOND',
-        'MLB_BASES_LOADED_NO_OUTS',
-        'MLB_RUNNER_ON_THIRD_ONE_OUT',
-        'MLB_FIRST_AND_THIRD_ONE_OUT',
-        'MLB_SECOND_AND_THIRD_ONE_OUT',
-        'MLB_BASES_LOADED_ONE_OUT',
-        'MLB_RUNNER_ON_THIRD_TWO_OUTS',
-        'MLB_FIRST_AND_THIRD_TWO_OUTS',
-        'MLB_RUNNER_ON_SECOND_NO_OUTS',
-        'MLB_BATTER_DUE',
-        'MLB_STEAL_LIKELIHOOD',
-        'MLB_ON_DECK_PREDICTION',
-        'MLB_WIND_CHANGE',
-        'MLB_LATE_INNING_CLOSE',
-        'MLB_SCORING_OPPORTUNITY',
-        'MLB_PITCHING_CHANGE',
-        'MLB_BASES_LOADED_TWO_OUTS',
-        'MLB_HIGH_SCORING_SITUATION',
-        'MLB_STRIKEOUT',
-        'MLB_MOMENTUM_SHIFT',
-        'MLB_CLUTCH_SITUATION'
-      ];
+      const validMLBAlerts = await this.getAvailableAlertTypes();
 
       const mlbEnabledTypes = enabledTypes.filter(alertType =>
         validMLBAlerts.includes(alertType)
@@ -800,37 +746,7 @@ export class MLBEngine extends BaseSportEngine {
 
 
 
-  // Override to return all available MLB alert types
-  async getAvailableAlertTypes(): Promise<string[]> {
-    return [
-      'MLB_GAME_START',
-      'MLB_SEVENTH_INNING_STRETCH',
-      'MLB_RUNNER_ON_THIRD_NO_OUTS',
-      'MLB_FIRST_AND_THIRD_NO_OUTS',
-      'MLB_SECOND_AND_THIRD_NO_OUTS',
-      'MLB_FIRST_AND_SECOND',
-      'MLB_BASES_LOADED_NO_OUTS',
-      'MLB_RUNNER_ON_THIRD_ONE_OUT',
-      'MLB_FIRST_AND_THIRD_ONE_OUT',
-      'MLB_SECOND_AND_THIRD_ONE_OUT',
-      'MLB_BASES_LOADED_ONE_OUT',
-      'MLB_RUNNER_ON_THIRD_TWO_OUTS',
-      'MLB_FIRST_AND_THIRD_TWO_OUTS',
-      'MLB_RUNNER_ON_SECOND_NO_OUTS',
-      'MLB_BATTER_DUE',
-      'MLB_STEAL_LIKELIHOOD',
-      'MLB_ON_DECK_PREDICTION',
-      'MLB_WIND_CHANGE',
-      'MLB_LATE_INNING_CLOSE',
-      'MLB_SCORING_OPPORTUNITY',
-      'MLB_PITCHING_CHANGE',
-      'MLB_BASES_LOADED_TWO_OUTS',
-      'MLB_HIGH_SCORING_SITUATION',
-      'MLB_STRIKEOUT',
-      'MLB_MOMENTUM_SHIFT',
-      'MLB_CLUTCH_SITUATION'
-    ];
-  }
+  // Use base engine's dynamic discovery - no override needed
 
   getPerformanceMetrics() {
     const avgCalculationTime = this.performanceMetrics.probabilityCalculationTime.length > 0
