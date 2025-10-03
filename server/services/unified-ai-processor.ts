@@ -171,7 +171,7 @@ export class UnifiedAIProcessor {
   private jobQueue = new Map<string, AIJob>();
   private processingQueue = new Set<string>();
   private results = new Map<string, AIResult>();
-  
+
   // Configuration constants
   private readonly CACHE_TTL = 30000; // 30 seconds
   private readonly MAX_CACHE_SIZE = 500;
@@ -198,7 +198,7 @@ export class UnifiedAIProcessor {
     highValueAlerts: 0,
     gatedAlerts: 0,
     fallbacksUsed: 0, // Track when we fallback to original alerts
-    
+
     // Per-sport metrics
     sportMetrics: {
       MLB: { requests: 0, avgTime: 0, successes: 0, fallbacks: 0 },
@@ -255,10 +255,10 @@ export class UnifiedAIProcessor {
   constructor() {
     // Clear ALL cache entries on startup to ensure clean state
     this.clearAllCache();
-    
+
     // Force clear cache to eliminate pre-unified enhancement responses
     this.clearUnifiedEnhancementCache();
-    
+
     // Start background cleanup
     setInterval(() => this.cleanup(), this.CLEANUP_INTERVAL);
     console.log(`🤖 Unified AI Processor: Initialized with clean cache and unified enhancement pipeline v3.0`);
@@ -279,7 +279,7 @@ export class UnifiedAIProcessor {
         keysToDelete.push(key);
       }
     }
-    
+
     keysToDelete.forEach(key => this.cache.delete(key));
     console.log(`🧹 Unified AI: Cleared ${keysToDelete.length} pre-v3.0 cache entries for consistency`);
   }
@@ -301,17 +301,17 @@ export class UnifiedAIProcessor {
     userId: string
   ): Promise<string> {
     const jobId = this.generateJobId(alert, context);
-    
+
     console.log(`🎯 Unified Enhancement: Queuing ${context.sport} ${context.alertType} for complete enhancement pipeline`);
-    
+
     try {
       // Always apply gambling and weather enhancement, only gate AI portion
       const shouldApplyAI = this.shouldEnhanceAlert(context.alertType, context.sport, context.probability);
-      
+
       if (!shouldApplyAI) {
         console.log(`🚪 AI Gating: ${context.sport} ${context.alertType} not high-value - applying gambling+weather only`);
         this.performanceMetrics.gatedAlerts++;
-        
+
         // Apply non-AI enhancements immediately (gambling + weather only)
         this.applyLimitedUnifiedEnhancement(alert, context).then(limitedEnhancement => {
           // Send limited enhanced version via WebSocket (non-blocking)
@@ -320,13 +320,13 @@ export class UnifiedAIProcessor {
               console.error(`❌ Failed to send limited enhanced alert via WebSocket:`, error);
             });
           }
-          
+
           console.log(`✅ Applied gambling+weather enhancement for gated ${context.sport} ${context.alertType}`);
         }).catch(error => {
           console.warn(`⚠️ Limited enhancement failed for ${context.sport} ${context.alertType}:`, error);
           this.performanceMetrics.fallbacksUsed++;
         });
-        
+
         return Promise.resolve(jobId);
       }
 
@@ -340,9 +340,9 @@ export class UnifiedAIProcessor {
             cached.enhancedMessage !== context.originalMessage) {
           console.log(`💨 Unified AI Cache Hit: ${context.sport} ${context.alertType} - valid cached content found`);
           this.performanceMetrics.cacheHits++;
-          
+
           const startTime = Date.now();
-          
+
           // Apply gambling insights and weather enhancement even for cache hits
           let enhancedAlert = { ...alert };
           this.applyGamblingInsightsEnhancement(enhancedAlert, context)
@@ -358,7 +358,7 @@ export class UnifiedAIProcessor {
                   enhancementTypes: ['gambling', 'weather', 'ai']
                 }
               }, startTime);
-              
+
               // Send enhanced version via WebSocket (non-blocking)
               if (this.onEnhancedAlert) {
                 this.onEnhancedAlert(finalAlert, userId, context.sport, true).catch(error => {
@@ -375,7 +375,7 @@ export class UnifiedAIProcessor {
                 });
               }
             });
-          
+
           return Promise.resolve(jobId);
         } else {
           console.log(`⚠️ Unified AI: Cache hit but response was invalid/mock, deleting and proceeding with fresh enhancement`);
@@ -390,7 +390,7 @@ export class UnifiedAIProcessor {
         this.performanceMetrics.failedEnhancements++;
         this.performanceMetrics.fallbacksUsed++;
       });
-      
+
       console.log(`📥 Unified AI: Alert queued for background enhancement - original was already sent`);
 
     } catch (error) {
@@ -418,18 +418,18 @@ export class UnifiedAIProcessor {
   private shouldEnhanceAlert(alertType: string, sport: string, probability?: number): boolean {
     const normalizedSport = sport.toUpperCase();
     const highValueTypes = this.highValueAlertTypes[normalizedSport] || [];
-    
+
     // ALL alerts get AI enhancement - no probability gating
     const isHighValue = highValueTypes.includes(alertType);
     const isGameStart = alertType.includes('GAME_START');
-    
+
     // Always enhance - alert already passed isTriggered() gate
     const shouldEnhance = true;
-    
+
     if (isHighValue) {
       this.performanceMetrics.highValueAlerts++;
     }
-    
+
     return shouldEnhance;
   }
 
@@ -460,9 +460,9 @@ export class UnifiedAIProcessor {
     this.jobQueue.set(jobId, job);
     this.performanceMetrics.totalJobs++;
     this.performanceMetrics.queuedJobs = this.jobQueue.size;
-    
+
     console.log(`📥 Unified AI Queued: ${context.sport} ${context.alertType} for async enhancement`);
-    
+
     // Start processing immediately (non-blocking)
     this.processJobAsync(jobId).catch(error => {
       console.error(`❌ Unified AI Background processing failed for job ${jobId}:`, error);
@@ -486,9 +486,9 @@ export class UnifiedAIProcessor {
 
     this.processingQueue.add(jobId);
     this.performanceMetrics.processingJobs = this.processingQueue.size;
-    
+
     const startTime = Date.now();
-    
+
     try {
       console.log(`🧠 Unified AI Processing: ${job.sport} ${job.context.alertType} (Timeout: ${this.AI_TIMEOUT_MS}ms)`);
 
@@ -504,7 +504,7 @@ export class UnifiedAIProcessor {
       ]);
 
       const processingTime = Date.now() - startTime;
-      
+
       // Verify unified enhancement provided enhanced content
       if (!enhancementResponse.enhancedMessage || enhancementResponse.enhancedMessage.trim().length === 0) {
         throw new Error('UNIFIED_ENHANCEMENT_FAILED_NO_MESSAGE');
@@ -512,7 +512,7 @@ export class UnifiedAIProcessor {
 
       // Build enhanced alert from unified enhancement
       const enhancedAlert = this.buildEnhancedAlert(job.originalAlert, enhancementResponse, startTime);
-      
+
       // Store result
       this.results.set(jobId, {
         jobId,
@@ -538,13 +538,13 @@ export class UnifiedAIProcessor {
       this.performanceMetrics.successfulEnhancements++;
       const sportKey = job.sport as keyof typeof this.performanceMetrics.sportMetrics;
       this.performanceMetrics.sportMetrics[sportKey].successes++;
-      
+
       console.log(`✅ Unified AI Enhanced: ${job.sport} ${job.context.alertType} in ${processingTime}ms`);
 
     } catch (error) {
       const processingTime = Date.now() - startTime;
       const isTimeout = error instanceof Error && error.message === 'AI_TIMEOUT';
-      
+
       if (isTimeout) {
         console.warn(`⏱️ Unified AI Timeout: ${job.sport} ${job.context.alertType} after ${processingTime}ms`);
         this.performanceMetrics.timeoutJobs++;
@@ -657,27 +657,27 @@ export class UnifiedAIProcessor {
       completedJobs: this.performanceMetrics.completedJobs,
       failedJobs: this.performanceMetrics.failedJobs,
       timeoutJobs: this.performanceMetrics.timeoutJobs,
-      
+
       // Cache Metrics
       cacheHits: this.performanceMetrics.cacheHits,
       cacheMisses: this.performanceMetrics.cacheMisses,
-      
+
       // Performance Metrics
       avgProcessingTime: avgTime,
-      
+
       // Enhancement Metrics
       successfulEnhancements: this.performanceMetrics.successfulEnhancements,
       failedEnhancements: this.performanceMetrics.failedEnhancements,
-      
+
       // Queue Status
       queuedJobs: this.performanceMetrics.queuedJobs,
       processingJobs: this.performanceMetrics.processingJobs,
-      
+
       // Quality Metrics
       highValueAlerts: this.performanceMetrics.highValueAlerts,
       gatedAlerts: this.performanceMetrics.gatedAlerts,
       fallbacksUsed: this.performanceMetrics.fallbacksUsed,
-      
+
       // Sport-specific metrics
       sportMetrics: this.performanceMetrics.sportMetrics
     };
@@ -689,7 +689,7 @@ export class UnifiedAIProcessor {
     const successRate = this.performanceMetrics.totalRequests > 0 
       ? (this.performanceMetrics.successfulEnhancements / this.performanceMetrics.totalRequests) * 100 
       : 100;
-    
+
     const status = this.configured ? 
       (successRate > 80 ? 'healthy' : successRate > 60 ? 'degraded' : 'unhealthy') :
       'disabled';
@@ -718,10 +718,10 @@ export class UnifiedAIProcessor {
     // Richer cache key with sport-specific buckets for better reuse
     const scoreBucket = Math.min(5, Math.floor(Math.abs((context.homeScore - context.awayScore)) / 2));
     const windBucket = Math.round((context.weather?.windSpeed ?? 0) / 5) * 5;
-    
+
     // Add team signature to prevent cross-game content contamination
     const teamSig = this.getTeamSignature(context.homeTeam, context.awayTeam);
-    
+
     const keyParts = [
       context.sport,
       teamSig, // Bind cached content to specific teams
@@ -736,7 +736,7 @@ export class UnifiedAIProcessor {
     ];
     return keyParts.join(':');
   }
-  
+
   private getTeamSignature(homeTeam: string, awayTeam: string): string {
     // Create a short hash of team names to bind cache to specific matchup
     const combined = `${homeTeam}-${awayTeam}`.toLowerCase();
@@ -747,7 +747,7 @@ export class UnifiedAIProcessor {
     }
     return Math.abs(hash).toString(36).slice(0, 6); // 6-char base-36 hash
   }
-  
+
   private getRunnersSignature(runners?: { first: boolean; second: boolean; third: boolean }): string {
     if (!runners) return '-';
     const sig = [];
@@ -774,12 +774,12 @@ export class UnifiedAIProcessor {
     }
     return null;
   }
-  
+
   private getAdaptiveTTL(context: CrossSportContext): number {
     // Adaptive TTL based on game tempo
     const isHighTempo = this.isHighTempoSituation(context);
     const isNormalTempo = this.isNormalTempoSituation(context);
-    
+
     if (isHighTempo) {
       return 7000; // 7 seconds for high-tempo (2-min warning, late innings)
     } else if (isNormalTempo) {
@@ -788,7 +788,7 @@ export class UnifiedAIProcessor {
       return 90000; // 90 seconds for low-tempo (early game, blowouts)
     }
   }
-  
+
   private isHighTempoSituation(context: CrossSportContext): boolean {
     // MLB: Late innings with close score
     if (context.sport === 'MLB') {
@@ -796,23 +796,23 @@ export class UnifiedAIProcessor {
       const isClose = Math.abs(context.homeScore - context.awayScore) <= 2;
       return isLateInning && isClose;
     }
-    
+
     // Football: 2-minute warning or final quarter
     if (['NFL', 'NCAAF', 'CFL'].includes(context.sport)) {
       const isFinalQuarter = (context.quarter ?? 0) === 4;
       const twoMinWarning = context.alertType.includes('TWO_MINUTE');
       return isFinalQuarter || twoMinWarning;
     }
-    
+
     // Basketball: Final 2 minutes
     if (['NBA', 'WNBA'].includes(context.sport)) {
       const timeLeft = context.timeLeft ?? '';
       return timeLeft.includes('0:') || timeLeft.includes('1:');
     }
-    
+
     return false;
   }
-  
+
   private isNormalTempoSituation(context: CrossSportContext): boolean {
     // Check if not high tempo and not blowout
     const scoreDiff = Math.abs(context.homeScore - context.awayScore);
@@ -825,13 +825,13 @@ export class UnifiedAIProcessor {
       console.log(`🚫 Unified AI: Refusing to cache empty response for key ${key}`);
       return;
     }
-    
+
     // For fallback responses, just ensure basic content exists
     if (isFallback && response.enhancedMessage.trim().length < 5) {
       console.log(`🚫 Unified AI: Refusing to cache invalid fallback response for key ${key}`);
       return;
     }
-    
+
     // Allow all responses that have valid content - let AI generate what it wants
 
     // LRU-style cache management
@@ -846,7 +846,7 @@ export class UnifiedAIProcessor {
       timestamp: Date.now(),
       sport: response.sport
     });
-    
+
     console.log(`💾 Unified AI: Cached valid response for ${response.sport} alert (${key})`);
   }
 
@@ -877,30 +877,30 @@ export class UnifiedAIProcessor {
       },
       priority: originalAlert.priority // Keep original priority - AI enhancement shouldn't artificially inflate urgency
     };
-    
+
     // Add logging to track enhancement flags being set
     console.log(`🏷️ Enhanced Alert Context: ${enhancedAlert.context?.unifiedEnhancement ? '✅ UNIFIED' : '❌ MISSING UNIFIED'}, ${enhancedAlert.context?.hasGamblingInsights ? '✅ GAMBLING' : '❌ NO GAMBLING'}, ${enhancedAlert.context?.hasWeatherEnhancement ? '✅ WEATHER' : '❌ NO WEATHER'}, ${enhancedAlert.context?.aiEnhanced ? '✅ AI' : '❌ NO AI'}`);
-    
+
     return enhancedAlert;
   }
 
   // UNIFIED ENHANCEMENT METHOD: Applies all enhancement types in single pipeline
   async applyUnifiedEnhancement(alert: AlertResult, context: CrossSportContext): Promise<UnifiedAIResponse> {
     console.log(`🔗 Unified Enhancement: Starting complete enhancement pipeline for ${context.sport} ${context.alertType}`);
-    
+
     let enhancedAlert = { ...alert };
     const startTime = Date.now();
-    
+
     try {
       // Step 1: Apply gambling insights enhancement
       enhancedAlert = await this.applyGamblingInsightsEnhancement(enhancedAlert, context);
-      
+
       // Step 2: Apply weather enhancement (for outdoor sports)
       enhancedAlert = await this.applyWeatherEnhancement(enhancedAlert, context);
-      
+
       // Step 3: Apply AI enhancement  
       const aiResponse = await this.enhanceAlert(context);
-      
+
       // Combine all enhancements into final result
       return {
         sport: aiResponse.sport,
@@ -921,7 +921,7 @@ export class UnifiedAIProcessor {
         tags: aiResponse.tags,
         analysis: aiResponse.analysis
       };
-      
+
     } catch (error) {
       console.error(`❌ Unified Enhancement failed for ${context.sport} ${context.alertType}:`, error);
       return this.getFallbackResponse(context, startTime);
@@ -931,16 +931,16 @@ export class UnifiedAIProcessor {
   // LIMITED ENHANCEMENT: Apply gambling + weather only (for gated alerts)
   async applyLimitedUnifiedEnhancement(alert: AlertResult, context: CrossSportContext): Promise<AlertResult> {
     console.log(`🔗 Limited Enhancement: Applying gambling+weather only for ${context.sport} ${context.alertType}`);
-    
+
     let enhancedAlert = { ...alert };
-    
+
     try {
       // Step 1: Apply gambling insights enhancement
       enhancedAlert = await this.applyGamblingInsightsEnhancement(enhancedAlert, context);
-      
+
       // Step 2: Apply weather enhancement (for outdoor sports)
       enhancedAlert = await this.applyWeatherEnhancement(enhancedAlert, context);
-      
+
       // Mark as having limited enhancement
       enhancedAlert.context = {
         ...enhancedAlert.context,
@@ -948,10 +948,10 @@ export class UnifiedAIProcessor {
         enhancementTypes: ['gambling', 'weather'],
         aiGated: true
       };
-      
+
       console.log(`✅ Limited enhancement complete for ${context.sport} ${context.alertType}`);
       return enhancedAlert;
-      
+
     } catch (error) {
       console.error(`❌ Limited enhancement failed for ${context.sport} ${context.alertType}:`, error);
       return alert; // Return original on failure
@@ -962,7 +962,7 @@ export class UnifiedAIProcessor {
   private async applyGamblingInsightsEnhancement(alert: AlertResult, context: CrossSportContext): Promise<AlertResult> {
     try {
       console.log(`🎰 Applying gambling insights enhancement for ${context.sport} ${context.alertType}`);
-      
+
       // Convert context to format expected by gambling insights composer
       const gameStateData = {
         sport: context.sport,
@@ -984,10 +984,10 @@ export class UnifiedAIProcessor {
           hasThird: context.baseRunners.third
         })
       };
-      
+
       // Apply gambling insights enhancement
       const enhancedAlerts = await gamblingInsightsComposer.enhanceAlertsWithGamblingInsights([alert], context.sport);
-      
+
       if (enhancedAlerts && enhancedAlerts.length > 0) {
         const enhanced = enhancedAlerts[0];
         console.log(`✅ Gambling insights enhancement applied for ${context.sport} ${context.alertType}`);
@@ -999,7 +999,7 @@ export class UnifiedAIProcessor {
           }
         };
       }
-      
+
       return alert;
     } catch (error) {
       console.warn(`⚠️ Gambling insights enhancement failed for ${context.sport} ${context.alertType}:`, error);
@@ -1014,9 +1014,9 @@ export class UnifiedAIProcessor {
       if (!outdoorSports.includes(context.sport)) {
         return alert; // Indoor sports don't need weather enhancement
       }
-      
+
       console.log(`🌤️ Applying weather enhancement for ${context.sport} ${context.alertType}`);
-      
+
       // Weather enhancement logic would go here
       // For now, just mark that weather enhancement was attempted
       return {
@@ -1027,7 +1027,7 @@ export class UnifiedAIProcessor {
           weatherChecked: true
         }
       };
-      
+
     } catch (error) {
       console.warn(`⚠️ Weather enhancement failed for ${context.sport} ${context.alertType}:`, error);
       return alert;
@@ -1038,7 +1038,7 @@ export class UnifiedAIProcessor {
     // Generate better fallback content to avoid cache rejection
     const actionWords = ['Watch for', 'Monitor', 'Key moment in', 'Developing situation in'];
     const randomAction = actionWords[Math.floor(Math.random() * actionWords.length)];
-    
+
     return {
       sport: context.sport,
       enhancedTitle: `${context.sport} Game Alert`,
@@ -1057,11 +1057,11 @@ export class UnifiedAIProcessor {
   }
 
   // === SECURITY METHODS ===
-  
+
   // 🛡️ SECURITY: Input sanitization to prevent injection attacks
   private sanitizeInput(input: string): string {
     if (!input) return '';
-    
+
     // Remove potentially dangerous characters and sequences
     return input
       .replace(/<script[^>]*>.*?<\/script>/gi, '') // Remove script tags
@@ -1076,7 +1076,7 @@ export class UnifiedAIProcessor {
   // 🛡️ SECURITY: AI response sanitization to prevent XSS
   private sanitizeAIResponse(response: string): string {
     if (!response) return '';
-    
+
     // Sanitize AI response content
     return response
       .replace(/<script[^>]*>.*?<\/script>/gi, '') // Remove script tags
@@ -1090,7 +1090,7 @@ export class UnifiedAIProcessor {
   }
 
   // === PLACEHOLDER METHODS (to be implemented) ===
-  
+
   private async callOpenAI(payload: { system: string; user: string }): Promise<any | null> {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -1131,7 +1131,7 @@ export class UnifiedAIProcessor {
           if (resp.ok) {
             const data = await resp.json();
             const text = data.choices?.[0]?.message?.content || '';
-            
+
             if (!text || text.trim().length === 0) {
               console.warn('⚠️ Unified AI: Empty response from OpenAI');
               return null;
@@ -1140,7 +1140,7 @@ export class UnifiedAIProcessor {
             // Parse and validate JSON
             const parsed = JSON.parse(text);
             const validated = AIJSONResponseSchema.parse(parsed);
-            
+
             console.log('✅ Unified AI: Successfully got and validated AI response');
             return validated;
           }
@@ -1176,6 +1176,7 @@ export class UnifiedAIProcessor {
     }
   }
 
+  // Build sport-specific prompt for OpenAI
   private buildSportSpecificPrompt(context: CrossSportContext): { system: string; user: string } {
     const system = `You are a concise sports alert writer.
 - Never fabricate player names or odds.
@@ -1205,10 +1206,10 @@ ${context.championshipContext ? `- CHAMPIONSHIP CONTEXT: ${context.championshipC
         const batterName = context.originalContext?.currentBatter ?? 'Unknown';
         const pitcherName = context.originalContext?.currentPitcher ?? 'Unknown';
         const alertType = context.alertType;
-        
+
         // Alert-type specific guidance - tell AI what matters for THIS situation
         let focusGuidance = '';
-        
+
         if (alertType.includes('BASES_LOADED')) {
           focusGuidance = `FOCUS: Batter's clutch hitting ability. Include wind ONLY if >15mph. Mention outs context.
 Example: {"primary": "${batterName} at bat with bases loaded", "secondary": "Bats .340 with RISP, 1 out"}`;
@@ -1226,9 +1227,9 @@ Example: {"primary": "Late-game pressure: tie game in 8th", "secondary": "Bullpe
 Example: {"primary": "Strong wind affecting fly balls", "secondary": "20mph out to center, favors power hitters"}`;
         } else {
           focusGuidance = `FOCUS: Most impactful factor for this situation. Keep it simple.
-Example: {"primary": "${batterName} at bat", "secondary": "${context.outs} out${context.outs === 1 ? '' : 's'}"}`;
+Example: {"primary": "${batterName} at bat", "secondary": "${context.outs ?? 0} out${context.outs === 1 ? '' : 's'}"}`;
         }
-        
+
         const user = `${baseContext}MLB SITUATION:
 - ${ordInning} inning, ${context.outs ?? 0} outs
 - Count: ${context.balls ?? 0}-${context.strikes ?? 0}
@@ -1250,9 +1251,9 @@ REMEMBER: Users are watching multiple games. Give them ONLY what matters for THI
         const ordDown = context.down ? this.getOrdinal(context.down) : '';
         const user = `${baseContext}FOOTBALL SITUATION:
 - Q${context.quarter ?? 1}${context.timeRemaining ? `, ${context.timeRemaining} remaining` : ''}
-${context.down && context.yardsToGo ? `- ${ordDown} & ${context.yardsToGo}` : ''}
+${context.down && context.yardsToGo !== undefined ? `- ${ordDown} & ${context.yardsToGo}` : ''}
 ${context.redZone ? '- RED ZONE: High scoring probability' : ''}
-${context.fieldPosition ? `- Field Position: ${context.fieldPosition} yard line` : ''}
+${context.fieldPosition !== undefined ? `- Field Position: ${context.fieldPosition} yard line` : ''}
 ${context.timeRemaining ? `- Time Pressure: ${context.timeRemaining}` : ''}
 
 Return JSON:
@@ -1300,7 +1301,7 @@ Provide analysis in JSON format.`;
     const enhancedMessage = jsonResponse.secondary 
       ? `${jsonResponse.primary}\n${jsonResponse.secondary}`
       : jsonResponse.primary;
-    
+
     return {
       sport: context.sport,
       enhancedTitle: `${context.sport} Alert`,
@@ -1310,7 +1311,7 @@ Provide analysis in JSON format.`;
         jsonResponse.secondary || ''
       ].filter(Boolean),
       actionableRecommendation: jsonResponse.primary,
-      urgencyLevel: context.priority >= 80 ? 'HIGH' : 'MEDIUM',
+      urgencyLevel: context.priority >= 80 ? 'HIGH' as const : 'MEDIUM' as const,
       bettingContext: {
         recommendation: jsonResponse.primary,
         confidence: 80,
@@ -1330,7 +1331,7 @@ Provide analysis in JSON format.`;
   private parseAIResponse(aiResponse: string, context: CrossSportContext, startTime: number): UnifiedAIResponse {
     // Simple parsing - extract key information from AI response
     const lines = aiResponse.split('\n');
-    
+
     const getSection = (marker: string): string => {
       const line = lines.find(l => l.includes(marker));
       return line ? line.split(':').slice(1).join(':').trim() : '';
@@ -1367,41 +1368,46 @@ Provide analysis in JSON format.`;
     };
   }
 
-  private getOrdinal(num: number): string {
-    const suffix = ['th', 'st', 'nd', 'rd'];
-    const v = num % 100;
-    return num + (suffix[(v - 20) % 10] || suffix[v] || suffix[0]);
+  // Helper method for ordinal numbers (1st, 2nd, 3rd, 4th)
+  private getOrdinal(n: number): string {
+    const s = ['th', 'st', 'nd', 'rd'];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
   }
 
-  private describeBaseRunners(runners?: { first: boolean; second: boolean; third: boolean }): string {
-    if (!runners) return 'Unknown base situation';
-    
-    const occupied = [];
-    if (runners.first) occupied.push('1st');
-    if (runners.second) occupied.push('2nd');
-    if (runners.third) occupied.push('3rd');
-    
-    return occupied.length > 0 ? occupied.join(', ') : 'Bases empty';
+  // Helper method to parse time to seconds
+  private parseTimeToSeconds(timeString: string): number {
+    if (!timeString || timeString === '0:00') return 0;
+    try {
+      const clean = timeString.trim().split(' ')[0];
+      if (clean.includes(':')) {
+        const [m, s] = clean.split(':').map(n => parseInt(n, 10) || 0);
+        return m * 60 + s;
+      }
+      return parseInt(clean, 10) || 0;
+    } catch (e) {
+      return 0;
+    }
   }
 
-  // Cleanup old entries
+  // Cleanup old results and cache entries
   private cleanup(): void {
     const now = Date.now();
-    
+
     // Clean cache
     for (const [key, entry] of this.cache.entries()) {
       if (now - entry.timestamp > this.CACHE_TTL) {
         this.cache.delete(key);
       }
     }
-    
+
     // Clean results
     for (const [key, result] of this.results.entries()) {
       if (now - result.processedAt > this.RESULT_TTL) {
         this.results.delete(key);
       }
     }
-    
+
     // Clean old jobs
     for (const [key, job] of this.jobQueue.entries()) {
       if (now - job.timestamp > this.RESULT_TTL) {
