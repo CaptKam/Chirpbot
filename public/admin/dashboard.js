@@ -59,11 +59,15 @@ async function fetchCSRFToken() {
         if (response.ok) {
             const data = await response.json();
             csrfToken = data.csrfToken;
+            console.log('✅ CSRF token refreshed successfully');
+        } else if (response.status === 401) {
+            console.error('❌ CSRF token fetch failed - not authenticated');
+            window.location.href = '/admin/login.html';
         } else {
-            console.warn('Failed to fetch CSRF token:', response.status);
+            console.warn('⚠️ Failed to fetch CSRF token:', response.status);
         }
     } catch (error) {
-        console.warn('CSRF token fetch error:', error);
+        console.warn('⚠️ CSRF token fetch error:', error);
     }
 }
 
@@ -85,9 +89,16 @@ async function adminRequest(url, options = {}) {
         headers
     });
     
+    // Handle authentication errors
+    if (response.status === 401) {
+        console.error('Admin authentication failed - redirecting to login');
+        window.location.href = '/admin/login.html';
+        throw new Error('Authentication required');
+    }
+    
     // Handle CSRF token expiration
     if (response.status === 403) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         if (errorData.message && errorData.message.includes('CSRF')) {
             console.log('CSRF token expired, refreshing...');
             await fetchCSRFToken();
@@ -100,6 +111,8 @@ async function adminRequest(url, options = {}) {
                     headers
                 });
             }
+        } else {
+            console.error('Admin access denied:', errorData);
         }
     }
     
@@ -818,6 +831,9 @@ function getAlertDescription(alertKey) {
 
 async function toggleGlobalAlertSetting(sport, alertType, enabled) {
     try {
+        // Ensure we have a fresh CSRF token before making the request
+        await fetchCSRFToken();
+        
         const response = await adminRequest('/api/admin/global-alert-setting', {
             method: 'PUT',
             body: JSON.stringify({ 
@@ -833,6 +849,17 @@ async function toggleGlobalAlertSetting(sport, alertType, enabled) {
             loadAlertStatistics();
         } else {
             const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+            console.error('Toggle error response:', errorData);
+            
+            // Check if it's an authentication error
+            if (response.status === 401 || response.status === 403) {
+                showNotification('Session expired. Please log in again.', 'error');
+                setTimeout(() => {
+                    window.location.href = '/admin/login.html';
+                }, 2000);
+                return;
+            }
+            
             showNotification(`Failed to update ${formatAlertName(alertType)}: ${errorData.message}`, 'error');
             // Revert toggle
             const toggle = document.querySelector(`[onchange*="${alertType}"]`);
@@ -840,7 +867,7 @@ async function toggleGlobalAlertSetting(sport, alertType, enabled) {
         }
     } catch (error) {
         console.error('Failed to toggle alert setting:', error);
-        showNotification(`Failed to update ${formatAlertName(alertType)}`, 'error');
+        showNotification(`Network error: Failed to update ${formatAlertName(alertType)}`, 'error');
         // Revert toggle
         const toggle = document.querySelector(`[onchange*="${alertType}"]`);
         if (toggle) toggle.checked = !enabled;
