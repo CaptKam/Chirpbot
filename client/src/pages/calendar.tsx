@@ -167,7 +167,6 @@ function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?
 export default function Calendar() {
   const [activeSport, setActiveSport] = useState("MLB");
   const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
-  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [teamFilter, setTeamFilter] = useState<{homeTeam?: string, awayTeam?: string} | null>(null);
 
@@ -185,8 +184,13 @@ export default function Calendar() {
   });
 
   // Initialize selectedDates with server date once it's available
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(() => {
+    // Start with empty set - will be populated by useEffect
+    return new Set<string>();
+  });
+
   useEffect(() => {
-    if (serverDate?.date && selectedDates.size === 0) {
+    if (serverDate?.date) {
       const dates = new Set<string>();
       const serverNow = new Date(serverDate.date);
       for (let i = 0; i < 4; i++) {
@@ -194,7 +198,7 @@ export default function Calendar() {
       }
       setSelectedDates(dates);
     }
-  }, [serverDate]);
+  }, [serverDate?.date]);
 
   // Fetch games for all selected dates
   const { data: allGamesData, isLoading: isLoadingGames } = useQuery({
