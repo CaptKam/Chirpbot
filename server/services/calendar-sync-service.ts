@@ -274,11 +274,6 @@ export class CalendarSyncService implements ICalendarSyncService {
     );
   }
 
-  // Alias method for backward compatibility with MigrationAdapter
-  getGamesBySource(sport: string): CalendarGameData[] {
-    return this.getCalendarData(sport);
-  }
-
   // Get specific game data
   getGameData(gameId: string): CalendarGameData | null {
     for (const sportState of this.sportStates.values()) {

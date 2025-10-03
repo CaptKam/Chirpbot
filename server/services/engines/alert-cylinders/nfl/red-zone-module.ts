@@ -6,12 +6,12 @@ export default class RedZoneModule extends BaseAlertModule {
   sport = 'NFL';
 
   isTriggered(gameState: GameState): boolean {
-    // Team is in red zone (within 20 yards of goal line, including 0 = goal line)
+    // Team is in red zone (within 20 yards of goal line)
     return gameState.status === 'live' && 
            gameState.fieldPosition !== undefined && 
            gameState.fieldPosition !== null &&
            (gameState.fieldPosition as number) <= 20 &&
-           (gameState.fieldPosition as number) >= 0;
+           (gameState.fieldPosition as number) > 0;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
@@ -57,9 +57,9 @@ export default class RedZoneModule extends BaseAlertModule {
   }
 
   private createDynamicMessage(gameState: GameState): string {
-    const down = (gameState.down as number) ?? 1;
-    const yardsToGo = (gameState.yardsToGo as number) ?? 10;
-    const fieldPosition = (gameState.fieldPosition as number) ?? 20;
+    const down = (gameState.down as number) || 1;
+    const yardsToGo = (gameState.yardsToGo as number) || 10;
+    const fieldPosition = (gameState.fieldPosition as number) || 20;
     const downText = `${down}${this.getOrdinalSuffix(down)}`;
     
     // Create contextual position description
