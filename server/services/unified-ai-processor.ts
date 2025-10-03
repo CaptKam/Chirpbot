@@ -1046,7 +1046,7 @@ export class UnifiedAIProcessor {
       contextualInsights: [
         `${context.sport} matchup: ${context.awayTeam} @ ${context.homeTeam}`,
         `Current score: ${context.awayScore}-${context.homeScore}`,
-        'Situation worth monitoring for betting opportunities'
+        'Game situation developing'
       ].filter(insight => insight && !insight.includes('undefined')),
       actionableRecommendation: `${randomAction} this ${context.sport} game development`,
       urgencyLevel: context.priority >= 80 ? 'HIGH' as const : 'MEDIUM' as const,
@@ -1178,13 +1178,14 @@ export class UnifiedAIProcessor {
 
   // Build sport-specific prompt for OpenAI
   private buildSportSpecificPrompt(context: CrossSportContext): { system: string; user: string } {
-    const system = `You are a concise sports alert writer.
-- Never fabricate player names or odds.
+    const system = `You are a concise sports alert writer focused on game context.
+- Never fabricate player names or statistics.
 - Output JSON with keys: primary, secondary.
-- Primary line: [Player/Team] + [Action] + [Opportunity] (one clear sentence)
+- Primary line: [Player/Team] + [Action] + [Game Situation] (one clear sentence)
 - Secondary line: ONLY impactful factors (runners on base, weather IF significant, momentum). Omit if nothing meaningful.
+- Focus on game situation and strategic implications only.
+- NO betting/gambling advice - gambling insights are handled separately.
 - NO fluff phrases: no "key moment", "high confidence", "watch for"
-- NO defensive disclaimers: no "no fabricated odds", "evaluate carefully"
 - NO time windows: no "next 5min", "this at-bat" (already known from timestamp)
 - NO neutral info: only mention weather/conditions if they actively impact play
 `;
@@ -1312,11 +1313,7 @@ Provide analysis in JSON format.`;
       ].filter(Boolean),
       actionableRecommendation: jsonResponse.primary,
       urgencyLevel: context.priority >= 80 ? 'HIGH' as const : 'MEDIUM' as const,
-      bettingContext: {
-        recommendation: jsonResponse.primary,
-        confidence: 80,
-        reasoning: [jsonResponse.secondary || 'Situation analysis'].filter(Boolean)
-      },
+      // REMOVED: bettingContext - gambling insights come from gambling-insights-composer only
       gameProjection: {
         winProbability: { home: 50, away: 50 },
         keyFactors: [jsonResponse.secondary || 'Standard situation'].filter(Boolean),
