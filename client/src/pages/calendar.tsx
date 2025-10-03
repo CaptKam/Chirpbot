@@ -167,7 +167,15 @@ function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?
 export default function Calendar() {
   const [activeSport, setActiveSport] = useState("MLB");
   const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
-  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set([format(new Date(), 'yyyy-MM-dd')]));
+  // Initialize with 4 days of games (today + next 3 days)
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(() => {
+    const dates = new Set<string>();
+    const now = new Date();
+    for (let i = 0; i < 4; i++) {
+      dates.add(format(addDays(now, i), 'yyyy-MM-dd'));
+    }
+    return dates;
+  });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [teamFilter, setTeamFilter] = useState<{homeTeam?: string, awayTeam?: string} | null>(null);
 
@@ -374,6 +382,8 @@ export default function Calendar() {
                   ? "Today's Games"
                   : selectedDates.size === 1
                   ? format(new Date(Array.from(selectedDates)[0]), 'MMMM d, yyyy')
+                  : selectedDates.size === 4 && Array.from(selectedDates).includes(format(new Date(), 'yyyy-MM-dd'))
+                  ? "Next 4 Days"
                   : `${selectedDates.size} Days Selected`}
                 {teamFilter && (
                   <span className="text-sm font-normal text-emerald-400 ml-2">
@@ -489,12 +499,17 @@ export default function Calendar() {
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    setSelectedDates(new Set([format(new Date(), 'yyyy-MM-dd')]));
+                    const dates = new Set<string>();
+                    const now = new Date();
+                    for (let i = 0; i < 4; i++) {
+                      dates.add(format(addDays(now, i), 'yyyy-MM-dd'));
+                    }
+                    setSelectedDates(dates);
                   }}
                   className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 ring-1 ring-emerald-500/20 backdrop-blur-sm rounded-xl transition-all duration-200 font-semibold"
                   data-testid="button-today"
                 >
-                  Today Only
+                  Next 4 Days
                 </Button>
                 <Button
                   variant="outline"
