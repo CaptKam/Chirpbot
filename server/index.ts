@@ -23,7 +23,7 @@ const ALLOW_DYNAMIC_PORT = process.env.ALLOW_DYNAMIC_PORT === 'true';
 // Create and acquire singleton lock with development restart support
 const instanceLock = new SingleInstanceLock();
 
-// Use async IIFE to handle the promise
+// Main async startup function - everything waits for lock
 (async () => {
   const lockAcquired = await instanceLock.acquire(TARGET_PORT);
 
@@ -34,60 +34,56 @@ const instanceLock = new SingleInstanceLock();
   }
 
   console.log(`🔒 Single instance lock acquired for PID ${process.pid}`);
-})().catch((error) => {
-  console.error('❌ Failed to acquire singleton lock:', error);
-  process.exit(1);
-});
 
-// 🔄 V3 ALERT GENERATION SYSTEM: SINGLE PIPELINE
-console.log("🚀 V3 Alert System: Starting unified pipeline");
-if (!(globalThis as any).__v3_alert_system_bootstrapped__) {
-  (globalThis as any).__v3_alert_system_bootstrapped__ = true;
-  
-  void (async () => {
-    try {
-      // === EXISTING SERVICES (V3.0) ===
-      const { CalendarSyncService } = await import('./services/calendar-sync-service');
-      const { GameStateManager } = await import('./services/game-state-manager');
-      const { EngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
+  // 🔄 V3 ALERT GENERATION SYSTEM: SINGLE PIPELINE
+  console.log("🚀 V3 Alert System: Starting unified pipeline");
+  if (!(globalThis as any).__v3_alert_system_bootstrapped__) {
+    (globalThis as any).__v3_alert_system_bootstrapped__ = true;
+    
+    void (async () => {
+      try {
+        // === EXISTING SERVICES (V3.0) ===
+        const { CalendarSyncService } = await import('./services/calendar-sync-service');
+        const { GameStateManager } = await import('./services/game-state-manager');
+        const { EngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
 
-      const engineLifecycleManager = new EngineLifecycleManager();
-      const gameStateManager = new GameStateManager();
-      gameStateManager.setEngineLifecycleManager(engineLifecycleManager);
-      await gameStateManager.start();
+        const engineLifecycleManager = new EngineLifecycleManager();
+        const gameStateManager = new GameStateManager();
+        gameStateManager.setEngineLifecycleManager(engineLifecycleManager);
+        await gameStateManager.start();
 
-      const calendarSyncService = CalendarSyncService.getInstance({
-        sports: ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL'],
-        enableMetrics: true
-      });
-      
-      calendarSyncService.setGameStateManager(gameStateManager);
-      gameStateManager.setCalendarSyncService(calendarSyncService);
-      await calendarSyncService.start();
+        const calendarSyncService = CalendarSyncService.getInstance({
+          sports: ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL'],
+          enableMetrics: true
+        });
+        
+        calendarSyncService.setGameStateManager(gameStateManager);
+        gameStateManager.setCalendarSyncService(calendarSyncService);
+        await calendarSyncService.start();
 
-      const { migrationAdapter } = await import('./services/migration-adapter');
-      migrationAdapter.initialize(calendarSyncService, gameStateManager);
+        const { migrationAdapter } = await import('./services/migration-adapter');
+        migrationAdapter.initialize(calendarSyncService, gameStateManager);
 
-      (global as any).calendarSyncService = calendarSyncService;
-      (global as any).gameStateManager = gameStateManager;
-      (global as any).engineLifecycleManager = engineLifecycleManager;
-      (global as any).migrationAdapter = migrationAdapter;
-      
-      // === V3 ALERT SYSTEM ACTIVE ===
-      // CalendarSyncService → GameStateManager → Engines pipeline
-      console.log("✅ V3 Alert System: CalendarSyncService → GameStateManager → Engines pipeline active");
-    } catch (e) {
-      console.error("❌ V3 Alert System: Failed to initialize", e);
-    }
-  })();
-}
+        (global as any).calendarSyncService = calendarSyncService;
+        (global as any).gameStateManager = gameStateManager;
+        (global as any).engineLifecycleManager = engineLifecycleManager;
+        (global as any).migrationAdapter = migrationAdapter;
+        
+        // === V3 ALERT SYSTEM ACTIVE ===
+        // CalendarSyncService → GameStateManager → Engines pipeline
+        console.log("✅ V3 Alert System: CalendarSyncService → GameStateManager → Engines pipeline active");
+      } catch (e) {
+        console.error("❌ V3 Alert System: Failed to initialize", e);
+      }
+    })();
+  }
 
-// Startup guard to prevent double initialization within same process
-if ((globalThis as any).__SERVER_STARTED__) {
-  console.log('🔄 Server already started, skipping duplicate initialization');
-  process.exit(0);
-}
-(globalThis as any).__SERVER_STARTED__ = true;
+  // Startup guard to prevent double initialization within same process
+  if ((globalThis as any).__SERVER_STARTED__) {
+    console.log('🔄 Server already started, skipping duplicate initialization');
+    process.exit(0);
+  }
+  (globalThis as any).__SERVER_STARTED__ = true;
 
 // Keep track of server and monitoring timer for graceful shutdown
 let httpServer: any = null;
@@ -540,9 +536,13 @@ async function startServer() {
   }
 }
 
-// Only start server if this file is the main entry point
-startServer().catch((error) => {
-  console.error('⚠️ Non-critical error:', error);
-  console.log('🔄 Server continuing with auto-recovery...');
-  // DON'T EXIT - Keep running
+  // Only start server after lock is acquired
+  startServer().catch((error) => {
+    console.error('⚠️ Non-critical error:', error);
+    console.log('🔄 Server continuing with auto-recovery...');
+    // DON'T EXIT - Keep running
+  });
+})().catch((error) => {
+  console.error('❌ Failed to acquire singleton lock:', error);
+  process.exit(1);
 });
