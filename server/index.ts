@@ -355,18 +355,9 @@ async function startServer() {
       
       // Prevent duplicate setupVite calls
       if (!(globalThis as any).__VITE_ATTACHED__) {
-        // Temporarily override PORT for Vite HMR to avoid conflict
-        const originalPort = process.env.PORT;
-        const hmrPort = String(parseInt(process.env.PORT || "5000", 10) + 1000);
-        process.env.PORT = hmrPort;
-        
         await setupVite(app, server);
-        
-        // Restore original PORT for Express server
-        process.env.PORT = originalPort;
         (globalThis as any).__VITE_ATTACHED__ = true;
-        
-        console.log(`✅ Vite dev server configured - HMR on port ${hmrPort}, frontend ready`);
+        console.log(`✅ Vite dev server configured with HMR - frontend ready`);
       } else {
         console.log('✅ Vite dev server already attached - skipping duplicate setup');
       }
