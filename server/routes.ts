@@ -1046,6 +1046,23 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Games routes
+  app.get('/api/server-date', async (req, res) => {
+    try {
+      const { getPacificDate, getPacificDateTime } = await import('./utils/timezone');
+      const pacificDate = getPacificDate();
+      const pacificDateTime = getPacificDateTime();
+      
+      res.json({
+        date: pacificDate,
+        dateTime: pacificDateTime,
+        timezone: 'America/Los_Angeles'
+      });
+    } catch (error) {
+      console.error('Error fetching server date:', error);
+      res.status(500).json({ message: 'Failed to fetch server date' });
+    }
+  });
+
   app.get('/api/games/today', async (req, res) => {
     try {
       const { sport = 'MLB' } = req.query;
