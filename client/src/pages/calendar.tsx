@@ -76,7 +76,7 @@ import { WeatherImpactVisualizer } from '@/components/WeatherImpactVisualizer';
 import { SportTabs } from '@/components/SportTabs';
 import { PageHeader } from '@/components/PageHeader';
 
-import { getSeasonAwareSports } from '@shared/manager';
+import { getSeasonAwareSports } from '@shared/season-manager';
 
 const SPORTS = getSeasonAwareSports();
 

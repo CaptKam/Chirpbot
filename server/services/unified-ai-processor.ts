@@ -1035,23 +1035,56 @@ export class UnifiedAIProcessor {
   }
 
   private getFallbackResponse(context: CrossSportContext, startTime: number): UnifiedAIResponse {
-    // Generate better fallback content to avoid cache rejection
-    const actionWords = ['Watch for', 'Monitor', 'Key moment in', 'Developing situation in'];
-    const randomAction = actionWords[Math.floor(Math.random() * actionWords.length)];
+    // Smart fallback templates based on alert type and sport
+    let enhancedMessage = context.originalMessage || `${context.awayTeam} @ ${context.homeTeam}`;
+    
+    // MLB smart templates
+    if (context.sport === 'MLB') {
+      if (context.alertType.includes('BASES_LOADED')) {
+        enhancedMessage = `Bases full, ${context.outs ?? 0} out. RBI spot 🔥`;
+      } else if (context.alertType.includes('RISP')) {
+        enhancedMessage = `Ducks on the pond: RISP situation with ${context.outs ?? 0} out`;
+      } else if (context.alertType.includes('LATE') || context.alertType.includes('PRESSURE')) {
+        enhancedMessage = `Late-game pressure: ${context.homeScore}-${context.awayScore}`;
+      } else if (context.alertType.includes('WIND')) {
+        enhancedMessage = `Wind affecting play: ${context.weather?.windSpeed ?? 15}mph`;
+      }
+    }
+    
+    // NFL/NCAAF/CFL smart templates
+    if (['NFL', 'NCAAF', 'CFL'].includes(context.sport)) {
+      if (context.alertType.includes('RED_ZONE')) {
+        enhancedMessage = `${context.possession || 'Team'} threatening at ${context.fieldPosition ?? 15}-yard line`;
+      } else if (context.alertType.includes('FOURTH_DOWN')) {
+        enhancedMessage = `4th & ${context.yardsToGo ?? 1}: Go for it or kick? 💰`;
+      } else if (context.alertType.includes('TWO_MINUTE')) {
+        enhancedMessage = `2-minute warning: ${context.timeRemaining ?? '2:00'} left ⚡`;
+      }
+    }
+    
+    // NBA/WNBA smart templates
+    if (['NBA', 'WNBA'].includes(context.sport)) {
+      if (context.alertType.includes('CLUTCH') || context.alertType.includes('FINAL')) {
+        const scoreDiff = Math.abs(context.homeScore - context.awayScore);
+        enhancedMessage = `Crunch time: ${scoreDiff}pt game, ${context.timeLeft ?? 'under 2 min'}`;
+      } else if (context.alertType.includes('RUN') || context.alertType.includes('SURGE')) {
+        enhancedMessage = `Momentum shift: Team surging 🔥`;
+      }
+    }
 
     return {
       sport: context.sport,
-      enhancedTitle: `${context.sport} Game Alert`,
-      enhancedMessage: context.originalMessage || `${randomAction} ${context.sport} game between ${context.awayTeam} and ${context.homeTeam}`,
+      enhancedTitle: `${context.sport} Alert`,
+      enhancedMessage,
       contextualInsights: [
-        `${context.sport} matchup: ${context.awayTeam} @ ${context.homeTeam}`,
-        `Current score: ${context.awayScore}-${context.homeScore}`,
-        'Game situation developing'
+        `${context.awayTeam} @ ${context.homeTeam}`,
+        `Current: ${context.awayScore}-${context.homeScore}`,
+        enhancedMessage
       ].filter(insight => insight && !insight.includes('undefined')),
-      actionableRecommendation: `${randomAction} this ${context.sport} game development`,
+      actionableRecommendation: enhancedMessage,
       urgencyLevel: context.priority >= 80 ? 'HIGH' as const : 'MEDIUM' as const,
       aiProcessingTime: Date.now() - startTime,
-      confidence: Math.min(context.probability || 60, 75), // Use context probability but cap for fallbacks
+      confidence: Math.min(context.probability || 60, 75),
       sportSpecificData: context
     };
   }
@@ -1178,24 +1211,41 @@ export class UnifiedAIProcessor {
 
   // Build sport-specific prompt for OpenAI
   private buildSportSpecificPrompt(context: CrossSportContext): { system: string; user: string } {
-    const system = `You are a concise sports alert writer focused on game context.
-- Never fabricate player names or statistics.
-- Output JSON with keys: primary, secondary.
-- Primary line: [Player/Team] + [Action] + [Game Situation] (one clear sentence)
-- Secondary line: ONLY impactful factors (runners on base, weather IF significant, momentum). Omit if nothing meaningful.
-- Focus on game situation and strategic implications only.
-- NO betting/gambling advice - gambling insights are handled separately.
-- NO fluff phrases: no "key moment", "high confidence", "watch for"
-- NO time windows: no "next 5min", "this at-bat" (already known from timestamp)
-- NO neutral info: only mention weather/conditions if they actively impact play
+    const system = `You are a sharp sports betting analyst writing real-time alerts for experienced bettors.
+
+VOICE RULES:
+- Punchy, active voice only - every word must earn its place
+- Power words: threatening, dominating, surging, collapsing, heating up, gassed
+- Strategic emoji use: 🔥 (hot), ⚡ (speed/urgency), 💰 (value), only when truly impactful
+- NO fluff: "key moment", "developing", "watch for", "situation developing"
+- NO neutral filler: "high confidence", "worth monitoring"
+
+OUTPUT FORMAT:
+- JSON with keys: primary, secondary
+- Primary: One crisp sentence - what's happening RIGHT NOW
+- Secondary: ONLY if significantly impactful (weather >15mph, odds movement, momentum swing). Otherwise OMIT.
+- Never fabricate player names or stats
+- Focus on actionable game intel, not commentary
+
+BANNED PHRASES:
+❌ "Key moment in the game"
+❌ "Developing scoring opportunity"  
+❌ "Worth monitoring closely"
+❌ "Next 5 minutes critical"
+❌ "Watch for this play"
+
+GOOD EXAMPLES:
+✅ "Bases loaded, Judge up, 2 outs"
+✅ "Chiefs threatening at 8-yard line"
+✅ "Curry hot: 15 pts in Q3"
 `;
 
     const baseContext = `GAME CONTEXT:
 - ${context.awayTeam} @ ${context.homeTeam} (${context.awayScore}-${context.homeScore})
 - Alert: ${context.alertType} (${context.probability}% confidence)
 - Original: ${context.originalMessage}
-${context.playoffImplications ? '- PLAYOFF IMPLICATIONS: High stakes game' : ''}
-${context.championshipContext ? `- CHAMPIONSHIP CONTEXT: ${context.championshipContext}` : ''}
+${context.playoffImplications ? '- PLAYOFF STAKES: High-pressure game' : ''}
+${context.championshipContext ? `- CHAMPIONSHIP: ${context.championshipContext}` : ''}
 - Weather: ${context.weather?.temperature ?? 'NA'}°F, ${context.weather?.condition ?? 'Indoor'}, wind ${context.weather?.windSpeed ?? 'NA'} mph
 `;
 
@@ -1204,45 +1254,79 @@ ${context.championshipContext ? `- CHAMPIONSHIP CONTEXT: ${context.championshipC
       case 'MLB': {
         const ordInning = this.getOrdinal(context.inning ?? 1);
         const windSpeed = context.weather?.windSpeed ?? context.originalContext?.weatherContext?.windSpeed ?? 0;
-        const batterName = context.originalContext?.currentBatter ?? 'Unknown';
-        const pitcherName = context.originalContext?.currentPitcher ?? 'Unknown';
+        const batterName = context.originalContext?.currentBatter ?? 'Batter';
+        const pitcherName = context.originalContext?.currentPitcher ?? 'Pitcher';
         const alertType = context.alertType;
+        const outs = context.outs ?? 0;
+        const isLate = (context.inning ?? 1) >= 7;
 
-        // Alert-type specific guidance - tell AI what matters for THIS situation
+        // Alert-type specific guidance with baseball jargon
         let focusGuidance = '';
 
         if (alertType.includes('BASES_LOADED')) {
-          focusGuidance = `FOCUS: Batter's clutch hitting ability. Include wind ONLY if >15mph. Mention outs context.
-Example: {"primary": "${batterName} at bat with bases loaded", "secondary": "Bats .340 with RISP, 1 out"}`;
+          focusGuidance = `USE BASEBALL JARGON:
+- "Bases loaded" or "Sacks packed"
+- Include outs for urgency
+- Wind ONLY if >15mph
+
+EXAMPLES:
+{"primary": "Bases loaded, ${batterName} up, ${outs} out 🔥", "secondary": ""}
+{"primary": "Sacks packed: ${batterName} in RBI spot", "secondary": "${outs === 2 ? '2 outs - do or die' : ''}"}`;
         } else if (alertType.includes('RISP') || alertType.includes('SCORING_OPPORTUNITY')) {
-          focusGuidance = `FOCUS: Scoring setup. Mention batter IF known power hitter. Include runners detail only if 2nd+3rd.
-Example: {"primary": "RBI scoring chance, ${batterName} at bat", "secondary": "Runners on 2nd & 3rd"}`;
-        } else if (alertType.includes('HIGH_SCORING') || alertType.includes('RALLY')) {
-          focusGuidance = `FOCUS: Recent momentum or pitcher fatigue. Skip individual batter details.
-Example: {"primary": "Rally building: 3 runs already scored", "secondary": "Pitcher at 95 pitches, tiring"}`;
+          focusGuidance = `USE BASEBALL JARGON:
+- "Ducks on the pond" or "RISP situation"
+- "RBI spot" or "scoring position"
+- Keep it tight - no filler
+
+EXAMPLES:
+{"primary": "Ducks on the pond, ${batterName} up", "secondary": ""}
+{"primary": "${batterName} in RBI spot, ${outs} out", "secondary": "Runner on 3rd"}`;
+        } else if (alertType.includes('HIGH_SCORING') || alertType.includes('RALLY') || alertType.includes('MOMENTUM')) {
+          focusGuidance = `USE BASEBALL JARGON:
+- "Rally mode" or "Offense heating up"
+- "Pitcher gassed" if pitch count >90
+- Focus on momentum, not individual batters
+
+EXAMPLES:
+{"primary": "Rally mode: 3 runs scored this inning", "secondary": ""}
+{"primary": "Offense surging vs ${pitcherName}", "secondary": "Pitcher at ${context.originalContext?.pitchCount ?? 95} pitches"}`;
         } else if (alertType.includes('LATE') || alertType.includes('PRESSURE') || alertType.includes('SEVENTH_INNING')) {
-          focusGuidance = `FOCUS: Game situation stakes. Mention closer/bullpen IF relevant. Skip weather.
-Example: {"primary": "Late-game pressure: tie game in 8th", "secondary": "Bullpen depleted from yesterday"}`;
+          focusGuidance = `USE BASEBALL JARGON:
+- ${isLate ? '"Crunch time"' : ''} for late innings
+- "Bullpen" or "closer" if relevant
+- Focus on stakes/score
+
+EXAMPLES:
+{"primary": "Crunch time: Tie game in ${ordInning}", "secondary": ""}
+{"primary": "Late pressure: ${context.awayScore}-${context.homeScore}, ${ordInning} inning", "secondary": ""}`;
         } else if (alertType.includes('WIND') || alertType.includes('WEATHER')) {
-          focusGuidance = `FOCUS: Wind impact on play. Mention direction (out/in/across). Include batter IF power hitter.
-Example: {"primary": "Strong wind affecting fly balls", "secondary": "20mph out to center, favors power hitters"}`;
+          focusGuidance = `USE BASEBALL JARGON:
+- "Launch angle weather" for wind >15mph out
+- "Wind helping" or "Wind killing"
+- Direction matters: out/in/across
+
+EXAMPLES:
+{"primary": "Launch angle weather: ${windSpeed}mph out 💰", "secondary": ""}
+{"primary": "${windSpeed}mph wind helping home runs", "secondary": "Blowing out to left"}`;
+        } else if (alertType.includes('PITCHING_CHANGE')) {
+          focusGuidance = `EXAMPLES:
+{"primary": "Pitching change: ${pitcherName} in", "secondary": "Fresh arm"}`;
         } else {
-          focusGuidance = `FOCUS: Most impactful factor for this situation. Keep it simple.
-Example: {"primary": "${batterName} at bat", "secondary": "${context.outs ?? 0} out${context.outs === 1 ? '' : 's'}"}`;
+          focusGuidance = `KEEP IT SIMPLE:
+{"primary": "${batterName} up, ${outs} out", "secondary": ""}`;
         }
 
         const user = `${baseContext}MLB SITUATION:
-- ${ordInning} inning, ${context.outs ?? 0} outs
+- ${ordInning} inning, ${outs} out${outs !== 1 ? 's' : ''}
 - Count: ${context.balls ?? 0}-${context.strikes ?? 0}
-- Runners: ${this.describeBaseRunners(context.baseRunners)}
+- Runners: ${this.getRunnersSignature(context.baseRunners)}
 - Batter: ${batterName}
-- Pitcher: ${pitcherName}
-- Pitch Count: ${context.originalContext?.pitchCount ?? 'Unknown'}
+- Pitcher: ${pitcherName} (${context.originalContext?.pitchCount ?? '?'} pitches)
 - Wind: ${windSpeed}mph ${context.originalContext?.weatherContext?.windDirection ?? ''}
 
 ${focusGuidance}
 
-REMEMBER: Users are watching multiple games. Give them ONLY what matters for THIS specific situation. Skip generic info.`;
+SHARP BETTORS NEED: What's happening NOW. Not commentary, not predictions. Just the facts with urgency.`;
         return { system, user };
       }
 
@@ -1250,41 +1334,114 @@ REMEMBER: Users are watching multiple games. Give them ONLY what matters for THI
       case 'NCAAF':
       case 'CFL': {
         const ordDown = context.down ? this.getOrdinal(context.down) : '';
+        const quarter = context.quarter ?? 1;
+        const isLate = quarter >= 4;
+        const isRedZone = context.redZone || (context.fieldPosition && context.fieldPosition <= 20);
+        const alertType = context.alertType;
+        
+        let focusGuidance = '';
+        
+        if (alertType.includes('RED_ZONE') || isRedZone) {
+          focusGuidance = `USE FOOTBALL JARGON:
+- "Threatening" or "In the red zone"
+- "TD range" or "Scoring position"
+- Include down & distance
+
+EXAMPLES:
+{"primary": "${context.possession || 'Team'} threatening at ${context.fieldPosition ?? 12}-yard line", "secondary": ""}
+{"primary": "1st & goal from the 5 - TD time 🔥", "secondary": ""}
+{"primary": "${context.possession || 'Team'} in red zone: ${ordDown} & ${context.yardsToGo ?? 'goal'}", "secondary": ""}`;
+        } else if (alertType.includes('FOURTH_DOWN')) {
+          focusGuidance = `USE FOOTBALL JARGON:
+- "Go for it or kick?"
+- "4th down spot" or "Decision time"
+
+EXAMPLES:
+{"primary": "4th & ${context.yardsToGo ?? 1}: Go for it or kick? 💰", "secondary": ""}
+{"primary": "4th down decision at ${context.fieldPosition ?? 35}", "secondary": "${isLate ? 'Late game - must score' : ''}"}`;
+        } else if (alertType.includes('TWO_MINUTE')) {
+          focusGuidance = `USE FOOTBALL JARGON:
+- "2-minute drill" or "Hurry-up mode"
+- Include timeouts if low
+
+EXAMPLES:
+{"primary": "2-minute warning: ${context.timeRemaining ?? '2:00'} left ⚡", "secondary": ""}
+{"primary": "Hurry-up mode: ${context.possession || 'Team'} driving", "secondary": "${context.timeRemaining ?? '1:45'} to score"}`;
+        } else if (alertType.includes('GAME_START') || alertType.includes('KICKOFF')) {
+          focusGuidance = `EXAMPLES:
+{"primary": "Kickoff - ${context.awayTeam} vs ${context.homeTeam}", "secondary": ""}`;
+        } else if (alertType.includes('WEATHER')) {
+          focusGuidance = `EXAMPLES:
+{"primary": "Weather factor: ${context.weather?.windSpeed ?? 20}mph winds 🌬️", "secondary": "Passing game affected"}`;
+        } else {
+          focusGuidance = `EXAMPLES:
+{"primary": "${context.possession || 'Team'} ${ordDown} & ${context.yardsToGo ?? '10'} at ${context.fieldPosition ?? 50}", "secondary": ""}`;
+        }
+        
         const user = `${baseContext}FOOTBALL SITUATION:
-- Q${context.quarter ?? 1}${context.timeRemaining ? `, ${context.timeRemaining} remaining` : ''}
-${context.down && context.yardsToGo !== undefined ? `- ${ordDown} & ${context.yardsToGo}` : ''}
-${context.redZone ? '- RED ZONE: High scoring probability' : ''}
-${context.fieldPosition !== undefined ? `- Field Position: ${context.fieldPosition} yard line` : ''}
-${context.timeRemaining ? `- Time Pressure: ${context.timeRemaining}` : ''}
+- Q${quarter}${context.timeRemaining ? `, ${context.timeRemaining} left` : ''}
+- ${context.down && context.yardsToGo !== undefined ? `${ordDown} & ${context.yardsToGo}` : 'Possession'}
+${isRedZone ? '- RED ZONE - Scoring position' : ''}
+- Field: ${context.fieldPosition ?? '?'}-yard line
+- Possession: ${context.possession ?? 'Unknown'}
 
-Return JSON:
-{
-  "primary": "[Team/QB]: [TD/FG/scoring] opportunity",
-  "secondary": "[field position OR weather if severe OR momentum factor] OR omit if nothing impactful"
-}
+${focusGuidance}
 
-Example:
-{"primary": "Chiefs in red zone: TD scoring chance", "secondary": "1st and goal at 5 yard line"}
-{"primary": "4th down decision: FG or go for it", "secondary": "Strong winds affecting kick"}`;
+BETTORS WATCHING: Give sharp, actionable intel. ${isLate ? 'Late game - every play matters.' : 'Stay tight and focused.'}`;
         return { system, user };
       }
 
       case 'NBA':
       case 'WNBA': {
+        const timeLeft = context.timeLeft ?? context.timeRemaining ?? '';
+        const period = context.period ?? 4;
+        const alertType = context.alertType;
+        const scoreDiff = Math.abs(context.homeScore - context.awayScore);
+        const isClutch = period >= 4 && (timeLeft.includes('0:') || timeLeft.includes('1:'));
+        const isClose = scoreDiff <= 5;
+        
+        let focusGuidance = '';
+        
+        if (alertType.includes('CLUTCH') || alertType.includes('FINAL') || isClutch) {
+          focusGuidance = `USE BASKETBALL JARGON:
+- "Crunch time" or "Clutch situation"
+- "Every possession counts"
+- Include score differential
+
+EXAMPLES:
+{"primary": "Crunch time: ${scoreDiff}pt game, ${timeLeft} left", "secondary": ""}
+{"primary": "Clutch situation - ${timeLeft} remaining ⚡", "secondary": "Bonus - FTs likely"}
+{"primary": "Every possession counts: ${scoreDiff}-point game", "secondary": ""}`;
+        } else if (alertType.includes('RUN') || alertType.includes('SURGE') || alertType.includes('MOMENTUM')) {
+          focusGuidance = `USE BASKETBALL JARGON:
+- "Hot hand" or "Heating up"
+- "Surging" or "Pulling away"
+- "On fire" for big runs
+
+EXAMPLES:
+{"primary": "Team surging: 12-0 run this quarter 🔥", "secondary": ""}
+{"primary": "Hot hand: Player with 15 pts in Q${period}", "secondary": ""}
+{"primary": "Pulling away: 18-4 run", "secondary": "Momentum shift"}`;
+        } else if (alertType.includes('FOURTH_QUARTER')) {
+          focusGuidance = `EXAMPLES:
+{"primary": "4th quarter underway - ${scoreDiff}pt game", "secondary": ""}`;
+        } else if (alertType.includes('OVERTIME')) {
+          focusGuidance = `EXAMPLES:
+{"primary": "OT - Bonus basketball ⚡", "secondary": ""}`;
+        } else {
+          focusGuidance = `EXAMPLES:
+{"primary": "${isClose ? 'Tight game' : 'Action building'}: ${context.awayScore}-${context.homeScore}", "secondary": ""}`;
+        }
+        
         const user = `${baseContext}BASKETBALL SITUATION:
-- ${context.timeLeft ?? 'Unknown'} remaining
-- Shot clock: ${context.shotClock ?? 'Unknown'}
-${context.fouls ? `- Team fouls: ${context.fouls.home}-${context.fouls.away}` : ''}
+- Time: ${timeLeft} remaining (Q${period})
+- Shot clock: ${context.shotClock ?? '24'}
+- Score diff: ${scoreDiff} points
+${context.fouls ? `- Fouls: ${context.fouls.home}-${context.fouls.away} (${context.fouls.home >= 5 || context.fouls.away >= 5 ? 'BONUS' : 'No bonus'})` : ''}
 
-Return JSON:
-{
-  "primary": "[Player/Team]: [scoring/clutch/run] opportunity",
-  "secondary": "[foul situation OR pace factor OR momentum] OR omit if nothing impactful"
-}
+${focusGuidance}
 
-Example:
-{"primary": "Curry hot hand: scoring run building", "secondary": "Team on 12-0 run"}
-{"primary": "Clutch time situation: tight game", "secondary": "Bonus situation - free throws likely"}`;
+BETTORS WATCHING: ${isClutch ? 'Crunch time - every possession matters.' : 'Track momentum shifts and scoring runs.'}`;
         return { system, user };
       }
 
