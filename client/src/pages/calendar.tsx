@@ -402,17 +402,6 @@ export default function Calendar() {
                   Clear Selection
                 </Button>
               )}
-              {teamFilter && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setTeamFilter(null)}
-                  className="bg-red-500/20 backdrop-blur-sm border-red-500/50 ring-1 ring-red-500/30 text-red-300 hover:bg-red-500/30 hover:ring-red-400/50 transition-all duration-200"
-                  data-testid="button-clear-filter"
-                >
-                  Clear Filter
-                </Button>
-              )}
             </div>
             
           </div>
@@ -435,6 +424,26 @@ export default function Calendar() {
                   {selectedDates.size} day{selectedDates.size !== 1 ? 's' : ''} selected
                 </div>
               </div>
+
+              {/* Team Filter Section */}
+              {teamFilter && (
+                <div className="p-3 bg-emerald-500/10 backdrop-blur-sm ring-1 ring-emerald-500/30 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-semibold text-emerald-300">Filtering:</span>
+                      <span className="text-sm text-slate-200">{teamFilter.homeTeam || teamFilter.awayTeam}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setTeamFilter(null)}
+                      className="text-red-400 hover:text-red-300 hover:bg-red-500/20 h-7 px-2"
+                    >
+                      Clear Filter
+                    </Button>
+                  </div>
+                </div>
+              )}
               
               {/* Week View */}
               <div className="grid grid-cols-7 gap-2">
