@@ -82,6 +82,12 @@ export class UnifiedDeduplicator {
 
     // Add context-specific parts for finer-grained deduplication
     if (context) {
+      // If this is an AI-discovered alert, use situationHash
+      if (context.source === 'ai_discovery' && context.situationHash) {
+        parts.push(`HASH${context.situationHash}`);
+        return parts.join(':');
+      }
+
       // For MLB: include inning and outs
       if (context.inning !== undefined) parts.push(`I${context.inning}`);
       if (context.outs !== undefined) parts.push(`O${context.outs}`);

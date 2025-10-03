@@ -36,7 +36,7 @@ export abstract class BaseAlertModule {
   abstract isTriggered(gameState: GameState): boolean;
 
   /** Create an AlertResult when triggered (return null to skip) */
-  abstract generateAlert(gameState: GameState): AlertResult | null;
+  abstract generateAlert(gameState: GameState): AlertResult | null | Promise<AlertResult | null>;
 
   /** Numeric probability 0..100 (used by pre-AI thresholding) */
   abstract calculateProbability(gameState: GameState): number;
@@ -198,7 +198,7 @@ export class AlertModuleManager {
   }
 
   // Process all active modules for this game state with resilience
-  processAlerts(gameState: GameState): AlertResult[] {
+  async processAlerts(gameState: GameState): Promise<AlertResult[]> {
     const alerts: AlertResult[] = [];
     const failed: string[] = [];
 
@@ -207,7 +207,8 @@ export class AlertModuleManager {
         if (!gameState?.isLive) continue; // cheap guard; engines may decide differently
         if (!module.isTriggered(gameState)) continue;
 
-        const alert = module.generateAlert(gameState);
+        const alertOrPromise = module.generateAlert(gameState);
+        const alert = await Promise.resolve(alertOrPromise);
         if (alert) alerts.push(alert);
       } catch (err) {
         console.error(`❌ Error in ${alertType} module:`, err);

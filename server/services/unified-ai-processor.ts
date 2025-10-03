@@ -69,9 +69,23 @@ export interface CrossSportContext {
   playoffImplications?: boolean;
   championshipContext?: string;
 
+  // AI Discovery context
+  source?: 'ai_discovery';
+  situationHash?: string;
+
   // Original message for fallback
   originalMessage: string;
   originalContext: any;
+}
+
+// AI Discovery Response interface
+export interface AIDiscoveryResponse {
+  isOpportunity: boolean;
+  alertType?: string;
+  primary?: string;
+  secondary?: string;
+  confidence?: number;
+  reasoning?: string;
 }
 
 export interface UnifiedAIResponse {
@@ -94,7 +108,7 @@ export interface UnifiedAIResponse {
   aiProcessingTime: number;
   confidence: number;
   sportSpecificData: any;
-  enhancedContext?: string[];
+  enhancedContext?: any; // Changed from string[] to any to support both arrays and objects
   tags?: string[];
   analysis?: string;
 }
@@ -103,6 +117,16 @@ export interface UnifiedAIResponse {
 const AIJSONResponseSchema = z.object({
   primary: z.string().min(5).max(200),
   secondary: z.string().max(200).optional()
+});
+
+// AI Discovery Response Schema
+const AIDiscoveryResponseSchema = z.object({
+  isOpportunity: z.boolean(),
+  alertType: z.string().max(100).optional(),
+  primary: z.string().min(1).max(200),
+  secondary: z.string().max(200).optional(),
+  confidence: z.number().min(50).max(100),
+  reasoning: z.string().max(300).optional()
 });
 
 // Legacy schema for backward compatibility
@@ -208,6 +232,15 @@ export class UnifiedAIProcessor {
       WNBA: { requests: 0, avgTime: 0, successes: 0, fallbacks: 0 },
       CFL: { requests: 0, avgTime: 0, successes: 0, fallbacks: 0 }
     }
+  };
+
+  // Circuit breaker protection for AI API calls
+  private circuitBreakerState = {
+    failureCount: 0,
+    lastFailureTime: 0,
+    isOpen: false,
+    threshold: 5,  // Open after 5 failures
+    resetTimeout: 60000,  // Reset after 1 minute
   };
 
   // High-value alert types that benefit most from AI enhancement
@@ -505,6 +538,21 @@ export class UnifiedAIProcessor {
 
       const processingTime = Date.now() - startTime;
 
+      // Handle null response from AI Discovery (not an opportunity)
+      if (enhancementResponse === null) {
+        console.log(`🚫 AI Discovery: Opportunity rejected - no alert sent`);
+        this.results.set(jobId, {
+          jobId,
+          alertId: job.alertId,
+          enhancedAlert: job.originalAlert,
+          processingTime,
+          processedAt: Date.now(),
+          status: 'completed',
+          wasActuallyEnhanced: false
+        });
+        return; // Exit without sending alert
+      }
+
       // Verify unified enhancement provided enhanced content
       if (!enhancementResponse.enhancedMessage || enhancementResponse.enhancedMessage.trim().length === 0) {
         throw new Error('UNIFIED_ENHANCEMENT_FAILED_NO_MESSAGE');
@@ -715,6 +763,11 @@ export class UnifiedAIProcessor {
   }
 
   private generateCacheKey(context: CrossSportContext): string {
+    // For AI Discovery, use situationHash for precise caching
+    if (context.source === 'ai_discovery' && context.situationHash) {
+      return `ai_discovery:${context.sport}:${context.gameId}:${context.situationHash}:v3.2`;
+    }
+
     // Richer cache key with sport-specific buckets for better reuse
     const scoreBucket = Math.min(5, Math.floor(Math.abs((context.homeScore - context.awayScore)) / 2));
     const windBucket = Math.round((context.weather?.windSpeed ?? 0) / 5) * 5;
@@ -885,13 +938,57 @@ export class UnifiedAIProcessor {
   }
 
   // UNIFIED ENHANCEMENT METHOD: Applies all enhancement types in single pipeline
-  async applyUnifiedEnhancement(alert: AlertResult, context: CrossSportContext): Promise<UnifiedAIResponse> {
+  async applyUnifiedEnhancement(alert: AlertResult, context: CrossSportContext): Promise<UnifiedAIResponse | null> {
     console.log(`🔗 Unified Enhancement: Starting complete enhancement pipeline for ${context.sport} ${context.alertType}`);
 
     let enhancedAlert = { ...alert };
     const startTime = Date.now();
 
     try {
+      // AI DISCOVERY PATHWAY: Handle AI scanner discovery requests
+      if (context.source === 'ai_discovery') {
+        console.log(`🔍 AI Discovery: Processing discovery request for ${context.sport} ${context.alertType}`);
+        
+        const discoveryResponse = await this.callAIDiscovery(context);
+        
+        // If AI says "not an opportunity", return null to skip alert
+        if (!discoveryResponse || !discoveryResponse.isOpportunity) {
+          console.log(`🚫 AI Discovery: Not a unique opportunity - skipping alert`);
+          return null;
+        }
+        
+        // AI says "yes, this is unique" - create enhanced alert
+        console.log(`✅ AI Discovery: Unique opportunity detected - ${discoveryResponse.alertType}`);
+        
+        return {
+          sport: context.sport,
+          enhancedTitle: `${context.sport} AI Discovery`,
+          enhancedMessage: discoveryResponse.primary || context.originalMessage,
+          contextualInsights: [
+            discoveryResponse.primary,
+            discoveryResponse.secondary,
+            `AI Reasoning: ${discoveryResponse.reasoning}`
+          ].filter(Boolean) as string[],
+          actionableRecommendation: discoveryResponse.primary || 'Monitor situation',
+          urgencyLevel: (discoveryResponse.confidence || 70) >= 80 ? 'HIGH' as const : 'MEDIUM' as const,
+          aiProcessingTime: Date.now() - startTime,
+          confidence: discoveryResponse.confidence || 70,
+          sportSpecificData: {
+            ...context,
+            aiDiscovery: true,
+            aiAlertType: discoveryResponse.alertType
+          },
+          enhancedContext: {
+            aiDiscovery: true,
+            aiAlertType: discoveryResponse.alertType,
+            discoveryReasoning: discoveryResponse.reasoning,
+            unifiedEnhancement: true,
+            enhancementTypes: ['ai_discovery']
+          }
+        };
+      }
+
+      // NORMAL ENHANCEMENT PATHWAY: Standard alert enhancement
       // Step 1: Apply gambling insights enhancement
       enhancedAlert = await this.applyGamblingInsightsEnhancement(enhancedAlert, context);
 
@@ -924,6 +1021,13 @@ export class UnifiedAIProcessor {
 
     } catch (error) {
       console.error(`❌ Unified Enhancement failed for ${context.sport} ${context.alertType}:`, error);
+      
+      // For AI discovery, return null on error (skip alert)
+      if (context.source === 'ai_discovery') {
+        console.log(`⚠️ AI Discovery: Error occurred - skipping alert`);
+        return null;
+      }
+      
       return this.getFallbackResponse(context, startTime);
     }
   }
@@ -1120,6 +1224,220 @@ export class UnifiedAIProcessor {
       .replace(/vbscript:/gi, '') // Remove vbscript: protocols
       .trim()
       .substring(0, 1000); // Limit response length
+  }
+
+  // === CIRCUIT BREAKER METHODS ===
+
+  private checkCircuitBreaker(): boolean {
+    const now = Date.now();
+    
+    // If circuit is open, check if timeout has elapsed
+    if (this.circuitBreakerState.isOpen) {
+      if (now - this.circuitBreakerState.lastFailureTime > this.circuitBreakerState.resetTimeout) {
+        console.log('🔄 Circuit breaker RESET: Attempting recovery');
+        this.circuitBreakerState.isOpen = false;
+        this.circuitBreakerState.failureCount = 0;
+        return true;
+      }
+      console.warn('⚠️ Circuit breaker OPEN: Skipping AI discovery');
+      return false;
+    }
+    
+    return true;
+  }
+
+  private recordSuccess(): void {
+    this.circuitBreakerState.failureCount = 0;
+  }
+
+  private recordFailure(): void {
+    this.circuitBreakerState.failureCount++;
+    this.circuitBreakerState.lastFailureTime = Date.now();
+    
+    if (this.circuitBreakerState.failureCount >= this.circuitBreakerState.threshold) {
+      console.error('❌ Circuit breaker TRIGGERED: Too many AI failures');
+      this.circuitBreakerState.isOpen = true;
+    }
+  }
+
+  getCircuitBreakerStatus(): {
+    isOpen: boolean;
+    failureCount: number;
+    lastFailure: number;
+  } {
+    return {
+      isOpen: this.circuitBreakerState.isOpen,
+      failureCount: this.circuitBreakerState.failureCount,
+      lastFailure: this.circuitBreakerState.lastFailureTime
+    };
+  }
+
+  // === AI DISCOVERY METHODS ===
+
+  // Call AI with discovery-specific prompts
+  private async callAIDiscovery(context: CrossSportContext): Promise<AIDiscoveryResponse | null> {
+    // Check circuit breaker first
+    if (!this.checkCircuitBreaker()) {
+      return null;  // Circuit open, skip AI call
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      console.warn('⚠️ AI Discovery: OPENAI_API_KEY not configured');
+      return null;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2800);
+
+    try {
+      const prompt = this.buildDiscoveryPrompt(context);
+      const body = {
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: this.sanitizeInput(prompt.system).slice(0, 1500) },
+          { role: 'user', content: this.sanitizeInput(prompt.user).slice(0, 8000) }
+        ],
+        max_tokens: 200,
+        temperature: 0.3, // Lower temperature for more consistent discovery decisions
+        response_format: { type: 'json_object' as const }
+      };
+
+      console.log('🔍 AI Discovery: Making OpenAI API call');
+
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(body),
+            signal: controller.signal
+          });
+
+          if (resp.ok) {
+            const data = await resp.json();
+            const text = data.choices?.[0]?.message?.content || '';
+
+            if (!text || text.trim().length === 0) {
+              console.warn('⚠️ AI Discovery: Empty response from OpenAI');
+              this.recordFailure();  // Increment on null response
+              return null;
+            }
+
+            // Parse and validate JSON
+            const parsed = JSON.parse(text);
+            const validated = AIDiscoveryResponseSchema.parse(parsed);
+
+            // Additional validation
+            if (!validated.isOpportunity) {
+              console.log('🚫 AI Discovery: Not an opportunity - rejecting');
+              return null;
+            }
+
+            if (!validated.primary || validated.primary.trim().length === 0) {
+              console.warn('⚠️ AI discovery returned empty primary message, rejecting');
+              this.recordFailure();
+              return null;
+            }
+
+            if (!validated.confidence || validated.confidence < 50) {
+              console.warn('⚠️ AI discovery returned invalid confidence, rejecting');
+              this.recordFailure();
+              return null;
+            }
+
+            console.log(`✅ AI Discovery: Opportunity detected with ${validated.confidence}% confidence`);
+            this.recordSuccess();  // Reset failure count on success
+            return validated;
+          }
+
+          // Retry only on 429/5xx
+          if (resp.status === 429 || (resp.status >= 500 && resp.status < 600)) {
+            console.warn(`⚠️ OpenAI ${resp.status}, retrying (attempt ${attempt + 1})`);
+            await new Promise(r => setTimeout(r, 200 + Math.random() * 250));
+            continue;
+          }
+
+          console.error('❌ AI Discovery: OpenAI error:', await resp.text());
+          this.recordFailure();  // Increment on error
+          return null;
+        } catch (fetchError: any) {
+          if (fetchError?.name === 'AbortError') {
+            throw fetchError;
+          }
+          if (attempt === 1) throw fetchError;
+          console.warn(`⚠️ Fetch error, retrying:`, fetchError.message);
+          await new Promise(r => setTimeout(r, 200 + Math.random() * 250));
+        }
+      }
+      this.recordFailure();  // Increment if all retries exhausted
+      return null;
+    } catch (e: any) {
+      this.recordFailure();  // Increment on error
+      if (e?.name === 'AbortError') {
+        console.warn('⌛️ AI Discovery: OpenAI aborted at 2.8s');
+      } else {
+        console.error('❌ AI Discovery: Error calling OpenAI:', e?.message);
+      }
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  // Build AI discovery-specific prompts
+  private buildDiscoveryPrompt(context: CrossSportContext): { system: string; user: string } {
+    const system = `You are a sharp sports betting analyst identifying unique betting opportunities.
+
+Your job: Find opportunities that combine MULTIPLE high-value factors that standard alerts miss.
+
+Look for:
+- Elite player + game situation + external factors (weather, momentum)
+- Unique matchup advantages not caught by simple rules
+- Multi-factor situations with betting implications
+
+CRITICAL: Only flag as opportunity if it's UNIQUE and combines 2+ factors.
+Don't duplicate what standard alerts already catch (bases loaded, red zone, etc.)
+
+Respond with JSON:
+{
+  "isOpportunity": boolean,
+  "alertType": "AI_DISCOVERED_{SPECIFIC_SITUATION}",
+  "primary": "One crisp sentence - what's happening NOW",
+  "secondary": "Additional context if impactful (otherwise omit)",
+  "confidence": 60-95,
+  "reasoning": "Why this specific combo matters for bettors"
+}`;
+
+    const sportContext = context.sport === 'MLB' 
+      ? `Inning ${context.inning}, ${context.outs} out, ${this.getRunnersSignature(context.baseRunners)} runners`
+      : context.sport === 'NFL' || context.sport === 'NCAAF' || context.sport === 'CFL'
+      ? `Q${context.quarter}, ${context.down}${this.getOrdinal(context.down || 1).slice(-2)} & ${context.yardsToGo}, ${context.possession} ball`
+      : context.sport === 'NBA' || context.sport === 'WNBA'
+      ? `${context.timeLeft} left, ${Math.abs(context.homeScore - context.awayScore)}pt game`
+      : 'Game in progress';
+
+    const weatherContext = context.weather && (context.weather.windSpeed || 0) > 10
+      ? `Weather: ${context.weather.condition}, ${context.weather.windSpeed}mph wind`
+      : '';
+
+    const detailedContext = context.originalContext 
+      ? JSON.stringify(context.originalContext).slice(0, 500)
+      : 'Standard game situation';
+
+    const user = `GAME: ${context.sport} - ${context.awayTeam} @ ${context.homeTeam} (${context.awayScore}-${context.homeScore})
+SITUATION: ${sportContext}
+${weatherContext}
+CONTEXT: ${detailedContext}
+ORIGINAL ALERT: ${context.originalMessage}
+
+Analyze: Is this a UNIQUE betting opportunity combining multiple factors?
+Remember: Only flag as opportunity if it's truly unique and not already caught by standard alerts.`;
+
+    return { system, user };
   }
 
   // === PLACEHOLDER METHODS (to be implemented) ===
