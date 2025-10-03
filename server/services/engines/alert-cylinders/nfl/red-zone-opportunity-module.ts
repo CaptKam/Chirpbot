@@ -1,271 +1,240 @@
 import { BaseAlertModule, GameState, AlertResult } from '../../base-engine';
 
+type RedZoneConfig = {
+  maxTriggerYardline: number; // trigger at or inside this yard line (<=30 preserves your current behavior)
+  minDown: number;            // inclusive
+  maxDown: number;            // inclusive (set 3 for 4th-down exclusion)
+  cooldownSec: number;        // per-game cooldown to avoid spam (e.g., 12–20s)
+  dedupeBucketSec: number;    // clock bucketing to smooth feed jitter (e.g., 30s)
+};
 
 export default class RedZoneOpportunityModule extends BaseAlertModule {
   alertType = 'NFL_RED_ZONE_OPPORTUNITY';
   sport = 'NFL';
 
-  private lastSignatureByGame: Map<string, string> = new Map();
-
-  // Historical data for touchdown probability calculations
-  private readonly DOWN_DISTANCE_MULTIPLIERS = {
-    1: { [1]: 1.3, [2]: 1.2, [3]: 1.1, [4]: 1.0, [5]: 0.95, [6]: 0.9, [7]: 0.85, [8]: 0.8, [9]: 0.75, [10]: 0.7 },
-    2: { [1]: 1.2, [2]: 1.1, [3]: 1.0, [4]: 0.95, [5]: 0.9, [6]: 0.85, [7]: 0.8, [8]: 0.75, [9]: 0.7, [10]: 0.65 },
-    3: { [1]: 1.1, [2]: 1.0, [3]: 0.95, [4]: 0.9, [5]: 0.85, [6]: 0.8, [7]: 0.75, [8]: 0.7, [9]: 0.65, [10]: 0.6 },
-    4: { [1]: 0.9, [2]: 0.85, [3]: 0.8, [4]: 0.75, [5]: 0.7, [6]: 0.65, [7]: 0.6, [8]: 0.55, [9]: 0.5, [10]: 0.45 }
+  // === Tunables ===
+  private readonly cfg: RedZoneConfig = {
+    maxTriggerYardline: 30,
+    minDown: 1,
+    maxDown: 3,
+    cooldownSec: 15,
+    dedupeBucketSec: 30,
   };
 
-  private readonly FIELD_POSITION_BASE_PROBABILITY = {
-    1: 95,   // Goal line
-    2: 90,   // 2-yard line
-    3: 85,   // 3-yard line
-    4: 80,   // 4-yard line
-    5: 78,   // 5-yard line
-    6: 76,   // 6-yard line
-    7: 74,   // 7-yard line
-    8: 72,   // 8-yard line
-    9: 70,   // 9-yard line
-    10: 68,  // 10-yard line
-    11: 66,  // 11-yard line
-    12: 64,  // 12-yard line
-    13: 62,  // 13-yard line
-    14: 60,  // 14-yard line
-    15: 58,  // 15-yard line
-    16: 56,  // 16-yard line
-    17: 54,  // 17-yard line
-    18: 52,  // 18-yard line
-    19: 50,  // 19-yard line
-    20: 48,  // 20-yard line
-    21: 45,  // 21-yard line
-    22: 43,  // 22-yard line
-    23: 41,  // 23-yard line
-    24: 39,  // 24-yard line
-    25: 37,  // 25-yard line
-    26: 35,  // 26-yard line
-    27: 33,  // 27-yard line
-    28: 31,  // 28-yard line
-    29: 29,  // 29-yard line
-    30: 27   // 30-yard line
+  // === Stateful guards ===
+  private lastSignatureByGame = new Map<string, string>();
+  private lastTriggerTsByGame = new Map<string, number>(); // wall-clock epoch seconds
+  private lastSeenLiveByGame = new Map<string, boolean>();
+
+  // === Static tables (yours, preserved) ===
+  private readonly DOWN_DISTANCE_MULTIPLIERS: Record<number, Record<number, number>> = {
+    1: {1:1.3,2:1.2,3:1.1,4:1.0,5:0.95,6:0.9,7:0.85,8:0.8,9:0.75,10:0.7},
+    2: {1:1.2,2:1.1,3:1.0,4:0.95,5:0.9,6:0.85,7:0.8,8:0.75,9:0.7,10:0.65},
+    3: {1:1.1,2:1.0,3:0.95,4:0.9,5:0.85,6:0.8,7:0.75,8:0.7,9:0.65,10:0.6},
+    4: {1:0.9,2:0.85,3:0.8,4:0.75,5:0.7,6:0.65,7:0.6,8:0.55,9:0.5,10:0.45},
   };
 
+  private readonly FIELD_POSITION_BASE_PROBABILITY: Record<number, number> = {
+    1:95, 2:90, 3:85, 4:80, 5:78, 6:76, 7:74, 8:72, 9:70, 10:68,
+    11:66, 12:64, 13:62, 14:60, 15:58, 16:56, 17:54, 18:52, 19:50, 20:48,
+    21:45, 22:43, 23:41, 24:39, 25:37, 26:35, 27:33, 28:31, 29:29, 30:27
+  };
+
+  // ---- Trigger logic
   isTriggered(gameState: GameState): boolean {
-    const gameId = gameState.gameId;
-    
-    // Check basic conditions first
-    const meetsBasicConditions = gameState.status === 'live' && 
-                                 gameState.fieldPosition !== undefined && 
-                                 (gameState.fieldPosition as number) <= 30 &&
-                                 (gameState.fieldPosition as number) > 0 &&
-                                 gameState.down !== undefined &&
-                                 (gameState.down as number) <= 3;
+    const gameId = String(gameState.gameId || '');
+    if (!gameId) return false;
 
-    // If not in red zone anymore, clear the signature
-    if (!meetsBasicConditions || (gameState.fieldPosition && (gameState.fieldPosition as number) > 30)) {
+    // detect game stop → cleanup
+    const isLive = gameState.status === 'live';
+    if (this.lastSeenLiveByGame.get(gameId) === true && !isLive) {
+      this.lastSignatureByGame.delete(gameId);
+      this.lastTriggerTsByGame.delete(gameId);
+    }
+    this.lastSeenLiveByGame.set(gameId, !!isLive);
+
+    // Basic checks
+    if (!isLive) return false;
+
+    const fp = this.num(gameState.fieldPosition);
+    const down = this.num(gameState.down);
+    const ytg = this.num(gameState.yardsToGo);
+    const qtr = this.num(gameState.quarter);
+    const timeStr = String(gameState.timeRemaining || '0:00');
+
+    if (!fp || fp < 1) return false;
+    if (fp > this.cfg.maxTriggerYardline) {
+      // outside trigger range → clear
       this.lastSignatureByGame.delete(gameId);
       return false;
     }
+    if (!down || down < this.cfg.minDown || down > this.cfg.maxDown) return false;
+    if (!ytg || ytg < 1) return false;
+    if (!qtr) return false;
 
-    if (!meetsBasicConditions) return false;
-
-    // Build current signature
-    const currentSignature = this.buildGameSignature(gameState);
-    const lastSignature = this.lastSignatureByGame.get(gameId);
-
-    // First time seeing this game in red zone, or signature changed
-    if (!lastSignature || lastSignature !== currentSignature) {
-      this.lastSignatureByGame.set(gameId, currentSignature);
-      return true;
+    // Cooldown window
+    const now = Math.floor(Date.now() / 1000);
+    const lastTs = this.lastTriggerTsByGame.get(gameId) || 0;
+    if (now - lastTs < this.cfg.cooldownSec) {
+      return false;
     }
 
-    // Same signature - don't trigger
+    // Build dedupe signature (possession/drive + situation buckets)
+    const signature = this.buildSignature(gameState, timeStr);
+    const prev = this.lastSignatureByGame.get(gameId);
+
+    if (prev !== signature) {
+      this.lastSignatureByGame.set(gameId, signature);
+      this.lastTriggerTsByGame.set(gameId, now);
+      return true;
+    }
     return false;
   }
 
+  // ---- Alert payload
   generateAlert(gameState: GameState): AlertResult | null {
-    // isTriggered() already called by engine - removed duplicate check
-    const touchdownProbability = this.calculateTouchdownProbability(gameState);
-    const confidenceLevel = this.getConfidenceLevel(touchdownProbability);
+    const prob = this.calculateTouchdownProbability(gameState);
+    const confidenceLevel = this.getConfidenceLevel(prob);
     const situationDescription = this.getSituationDescription(gameState);
     const possessionTeam = this.getPossessionTeam(gameState);
-    
     const dynamicMessage = this.createDynamicMessage(gameState);
 
     return {
       alertKey: `${gameState.gameId}_red_zone_opportunity_${gameState.down}_${gameState.yardsToGo}_${gameState.fieldPosition}`,
       type: this.alertType,
       message: `${gameState.awayTeam} @ ${gameState.homeTeam} | ${dynamicMessage}`,
-      displayMessage: `🏈 ${dynamicMessage} | Q${gameState.quarter}`,
-
+      displayMessage: `🏈 ${dynamicMessage} | Q${this.num(gameState.quarter)}`,
       context: {
         gameId: gameState.gameId,
         sport: this.sport,
         homeTeam: gameState.homeTeam,
         awayTeam: gameState.awayTeam,
-        homeScore: gameState.homeScore,
-        awayScore: gameState.awayScore,
+        homeScore: this.num(gameState.homeScore),
+        awayScore: this.num(gameState.awayScore),
         possessionTeam,
-        down: gameState.down,
-        yardsToGo: gameState.yardsToGo,
-        fieldPosition: gameState.fieldPosition,
-        quarter: gameState.quarter,
-        timeRemaining: gameState.timeRemaining,
-        touchdownProbability: Math.round(touchdownProbability),
+        down: this.num(gameState.down),
+        yardsToGo: this.num(gameState.yardsToGo),
+        fieldPosition: this.num(gameState.fieldPosition),
+        quarter: this.num(gameState.quarter),
+        timeRemaining: String(gameState.timeRemaining || ''),
+        touchdownProbability: Math.round(prob),
         confidenceLevel,
         situationDescription,
         alertType: 'PREDICTIVE',
         predictionCategory: 'RED_ZONE_SCORING',
-        // NFL-specific context for AI enhancement
         nflContext: {
-          isRedZone: true,
-          isGoalLine: (gameState.fieldPosition as number) <= 5,
-          isShortYardage: (gameState.yardsToGo as number) <= 3,
-          scoreDifferential: Math.abs(gameState.homeScore - gameState.awayScore),
+          isRedZone: this.num(gameState.fieldPosition) <= 20,
+          isGoalLine: this.num(gameState.fieldPosition) <= 5,
+          isShortYardage: this.num(gameState.yardsToGo) <= 3,
+          scoreDifferential: Math.abs(this.num(gameState.homeScore) - this.num(gameState.awayScore)),
           timePressure: this.getTimePressureLevel(gameState),
-          playCalling: this.getPlayCallingTendency(gameState)
-        }
+          playCalling: this.getPlayCallingTendency(gameState),
+        },
       },
-      priority: touchdownProbability > 80 ? 95 : touchdownProbability > 70 ? 90 : 85
+      priority: prob > 80 ? 95 : prob > 70 ? 90 : 85,
     };
   }
 
+  // Public probability hook
   calculateProbability(gameState: GameState): number {
     return this.calculateTouchdownProbability(gameState);
   }
 
+  // ---- Internals
+
   private calculateTouchdownProbability(gameState: GameState): number {
-    if (!gameState.fieldPosition || !gameState.down || !gameState.yardsToGo) return 0;
+    const fp = this.clamp(this.num(gameState.fieldPosition), 1, 100);
+    const down = this.clamp(this.num(gameState.down), 1, 4);
+    const ytg = this.clamp(this.num(gameState.yardsToGo), 1, 10);
 
-    // Base probability from field position
-    const fieldPosition = Math.min((gameState.fieldPosition as number), 30);
-    let baseProbability = this.FIELD_POSITION_BASE_PROBABILITY[fieldPosition as keyof typeof this.FIELD_POSITION_BASE_PROBABILITY] || 25;
+    if (!fp || !down || !ytg) return 0;
 
-    // Down and distance multiplier
-    const down = Math.min((gameState.down as number), 4) as keyof typeof this.DOWN_DISTANCE_MULTIPLIERS;
-    const yardsToGo = Math.min((gameState.yardsToGo as number), 10);
-    const downDistanceMultiplier = this.DOWN_DISTANCE_MULTIPLIERS[down]?.[yardsToGo as keyof typeof this.DOWN_DISTANCE_MULTIPLIERS[1]] || 0.5;
-    
-    let probability = baseProbability * downDistanceMultiplier;
+    const cappedFp = Math.min(fp, 30);
+    let base = this.FIELD_POSITION_BASE_PROBABILITY[cappedFp] ?? 25;
 
-    // Weather impact adjustments (for outdoor stadiums only)
-    if (gameState.weather && (gameState.weather as any).isOutdoorStadium) {
-      const weatherImpact = (gameState.weather as any).impact;
-      
-      // If field goals are difficult due to weather, touchdown attempts become more attractive
-      if (weatherImpact.fieldGoalDifficulty === 'extreme') {
-        probability += 20; // Significantly favor touchdown attempts over field goals
-      } else if (weatherImpact.fieldGoalDifficulty === 'high') {
-        probability += 12; // Moderately favor touchdown attempts
-      } else if (weatherImpact.fieldGoalDifficulty === 'moderate') {
-        probability += 6; // Slightly favor touchdown attempts
+    const ddMultTable = this.DOWN_DISTANCE_MULTIPLIERS[down] || this.DOWN_DISTANCE_MULTIPLIERS[3];
+    const ddMult = ddMultTable[ytg] ?? 0.6;
+
+    let probability = base * ddMult;
+
+    // Weather heuristics (optional, preserved)
+    const wx: any = (gameState as any).weather;
+    if (wx?.isOutdoorStadium && wx.impact) {
+      const impact = wx.impact;
+      // FG difficulty tilts toward TD attempts
+      if (impact.fieldGoalDifficulty === 'extreme') probability += 20;
+      else if (impact.fieldGoalDifficulty === 'high') probability += 12;
+      else if (impact.fieldGoalDifficulty === 'moderate') probability += 6;
+
+      if (impact.preferredStrategy === 'run-heavy') {
+        if (fp <= 10) probability += 8;
+        else if (fp <= 20) probability += 5;
+      } else if (impact.preferredStrategy === 'conservative') {
+        probability += 4;
       }
-      
-      // Wind/weather conditions affecting play strategy
-      if (weatherImpact.preferredStrategy === 'run-heavy') {
-        // Heavy running weather - easier to score rushing touchdowns in red zone
-        if ((gameState.fieldPosition as number) <= 10) {
-          probability += 8; // Goal line running is very effective
-        } else if ((gameState.fieldPosition as number) <= 20) {
-          probability += 5; // Red zone running still good
-        }
-      } else if (weatherImpact.preferredStrategy === 'conservative') {
-        // Conservative weather - both passing and kicking affected
-        probability += 4; // Slight preference for touchdown attempts
+
+      if (impact.weatherAlert) {
+        probability += 8;
+        if (fp <= 5 && impact.passingConditions !== 'dangerous') probability += 5;
       }
-      
-      // Extreme weather conditions increase touchdown attempt preference
-      if (weatherImpact.weatherAlert) {
-        probability += 8; // Weather makes field goals unreliable
-        
-        // Special case: Very close to goal line in bad weather
-        if ((gameState.fieldPosition as number) <= 5 && weatherImpact.passingConditions !== 'dangerous') {
-          probability += 5; // Short yardage touchdowns still achievable
-        }
-      }
-      
-      // Passing conditions impact on red zone strategy
-      if (weatherImpact.passingConditions === 'dangerous' && (gameState.fieldPosition as number) > 10) {
-        probability -= 8; // Harder to pass in far red zone
-      } else if (weatherImpact.passingConditions === 'poor' && (gameState.fieldPosition as number) > 15) {
-        probability -= 4; // Moderate passing difficulty
+
+      if (impact.passingConditions === 'dangerous' && fp > 10) {
+        probability -= 8;
+      } else if (impact.passingConditions === 'poor' && fp > 15) {
+        probability -= 4;
       }
     }
 
-    // Time pressure adjustments
-    const timeAdjustment = this.getTimePressureAdjustment(gameState);
-    probability *= timeAdjustment;
+    probability *= this.getTimePressureAdjustment(gameState);
+    probability *= this.getScoreDifferentialAdjustment(gameState);
 
-    // Score differential impact
-    const scoreAdjustment = this.getScoreDifferentialAdjustment(gameState);
-    probability *= scoreAdjustment;
+    if (fp <= 3 && down <= 2) probability += 15; // goal line boost
+    if (fp <= 10 && down === 1) probability += 10; // 1st & goal tendency
+    if (fp <= 20 && this.num(gameState.yardsToGo) <= 3) probability += 8; // short yardage
 
-    // Goal line situations are special
-    if ((gameState.fieldPosition as number) <= 3 && (gameState.down as number) <= 2) {
-      probability += 15; // Goal line boost
-    }
-
-    // First and goal situations
-    if ((gameState.fieldPosition as number) <= 10 && gameState.down === 1) {
-      probability += 10; // First and goal boost
-    }
-
-    // Short yardage in red zone
-    if ((gameState.fieldPosition as number) <= 20 && (gameState.yardsToGo as number) <= 3) {
-      probability += 8; // Short yardage boost
-    }
-
-    return Math.min(Math.max(probability, 5), 98);
+    return this.clamp(probability, 5, 98);
   }
 
   private getTimePressureAdjustment(gameState: GameState): number {
-    if (!gameState.quarter || !gameState.timeRemaining) return 1.0;
+    const q = this.num(gameState.quarter);
+    const t = this.parseTimeToSeconds(String(gameState.timeRemaining || '0:00'));
+    if (!q) return 1;
 
-    const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining as string);
-    
-    // Fourth quarter urgency
-    if (gameState.quarter === 4) {
-      if (timeSeconds <= 120) return 1.15; // Two-minute warning
-      if (timeSeconds <= 300) return 1.10; // Last 5 minutes
-      return 1.05; // Fourth quarter
+    if (q === 4) {
+      if (t <= 120) return 1.15;
+      if (t <= 300) return 1.10;
+      return 1.05;
     }
-    
-    // Second quarter (end of half)
-    if (gameState.quarter === 2 && timeSeconds <= 120) {
-      return 1.08; // End of half urgency
-    }
-
-    return 1.0; // Normal time
+    if (q === 2 && t <= 120) return 1.08;
+    return 1.0;
   }
 
   private getScoreDifferentialAdjustment(gameState: GameState): number {
-    if (gameState.homeScore === undefined || gameState.awayScore === undefined) return 1.0;
+    const h = this.num(gameState.homeScore);
+    const a = this.num(gameState.awayScore);
+    if (h === null || a === null) return 1.0;
 
-    const scoreDiff = Math.abs(gameState.homeScore - gameState.awayScore);
-    
-    if (scoreDiff <= 3) return 1.10; // Very close game - more aggressive
-    if (scoreDiff <= 7) return 1.05; // Close game
-    if (scoreDiff <= 14) return 1.0;  // Competitive game
-    if (scoreDiff <= 21) return 0.95; // Moderate lead
-    return 0.90; // Blowout - less urgency
+    const d = Math.abs(h - a);
+    if (d <= 3) return 1.10;
+    if (d <= 7) return 1.05;
+    if (d <= 14) return 1.0;
+    if (d <= 21) return 0.95;
+    return 0.90;
   }
 
   private getPossessionTeam(gameState: GameState): string {
-    // In a real system, this would be determined from game data
-    // For now, we'll use a placeholder approach
-    if (gameState.possession) {
-      return gameState.possession as string;
-    }
-    
-    // Default assumption based on typical patterns
-    const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : (gameState.awayTeam as any).name || '';
-    return awayTeamName; // Default to away team for simplicity
+    if (gameState.possession) return String(gameState.possession);
+    const away = (typeof gameState.awayTeam === 'string')
+      ? gameState.awayTeam
+      : (gameState as any).awayTeam?.name || '';
+    return away || 'Unknown';
   }
 
   private getSituationDescription(gameState: GameState): string {
-    const down = this.getOrdinal((gameState.down as number) || 1);
-    const distance = (gameState.yardsToGo as number) || 10;
-    const position = (gameState.fieldPosition as number) || 20;
-    
-    return `${down} & ${distance} at ${position}-yard line`;
+    const downStr = this.getOrdinal(this.num(gameState.down) || 1);
+    const distance = this.num(gameState.yardsToGo) || 10;
+    const pos = this.num(gameState.fieldPosition) || 20;
+    return `${downStr} & ${distance} at ${pos}-yard line`;
   }
 
   private getConfidenceLevel(probability: number): string {
@@ -275,116 +244,90 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
     return 'LOW';
   }
 
-  private getOrdinal(num: number): string {
-    const ordinals = ['', '1st', '2nd', '3rd', '4th'];
-    return ordinals[num] || `${num}th`;
+  private getOrdinal(n: number): string {
+    const ord = ['', '1st', '2nd', '3rd', '4th'];
+    return ord[n] || `${n}th`;
   }
 
   private parseTimeToSeconds(timeString: string): number {
     if (!timeString) return 0;
-    const cleanTime = timeString.trim().split(' ')[0];
-    
-    if (cleanTime.includes(':')) {
-      const [minutes, seconds] = cleanTime.split(':').map(t => parseInt(t) || 0);
-      return (minutes * 60) + seconds;
+    const clean = timeString.trim().split(' ')[0];
+    if (clean.includes(':')) {
+      const [m, s] = clean.split(':').map(x => parseInt(x, 10) || 0);
+      return m * 60 + s;
     }
-    
-    return parseInt(cleanTime) || 0;
+    return parseInt(clean, 10) || 0;
   }
 
-  private buildGameSignature(gameState: GameState): string {
-    const possessionTeam = this.getPossessionTeam(gameState);
-    const quarter = (gameState.quarter as number) || 0;
-    const down = (gameState.down as number) || 0;
-    const yardsToGo = (gameState.yardsToGo as number) || 0;
-    const fieldPosition = (gameState.fieldPosition as number) || 0;
-    
-    // Field position bucket: group yards into buckets (1-5, 6-10, 11-15, 16-20, 21-25, 26-30)
-    const fieldPositionBucket = Math.ceil(fieldPosition / 5) * 5;
-    
-    // Clock bucket: round time to 30-second intervals to avoid jitter
-    const timeSeconds = this.parseTimeToSeconds((gameState.timeRemaining as string) || '0:00');
-    const clockBucket = Math.floor(timeSeconds / 30) * 30;
-    
-    return `${possessionTeam}|Q${quarter}|${down}&${yardsToGo}|${fieldPositionBucket}|${clockBucket}`;
+  private buildSignature(gameState: GameState, timeStr: string): string {
+    const team = this.getPossessionTeam(gameState);
+    const driveId = (gameState as any).driveId ? String((gameState as any).driveId) : '';
+    const down = this.clamp(this.num(gameState.down) || 1, 1, 4);
+    const ytg = this.clamp(this.num(gameState.yardsToGo) || 10, 1, 50);
+    const pos = this.clamp(this.num(gameState.fieldPosition) || 20, 1, 99);
+
+    const posBucket = Math.ceil(pos / 5) * 5; // 1–5, 6–10, …
+    const tSec = this.parseTimeToSeconds(timeStr);
+    const tBucket = Math.floor(tSec / this.cfg.dedupeBucketSec) * this.cfg.dedupeBucketSec;
+
+    // Prefer per-drive dedupe if available
+    const driveKey = driveId ? `D:${driveId}` : `T:${team}`;
+    return `${driveKey}|Q${this.num(gameState.quarter)}|${down}&${ytg}|FP${posBucket}|CLK${tBucket}`;
   }
-  
+
   private getTimePressureLevel(gameState: GameState): string {
-    if (!gameState.quarter || !gameState.timeRemaining) return 'NORMAL';
-    
-    const timeSeconds = this.parseTimeToSeconds(gameState.timeRemaining as string);
-    
-    if (gameState.quarter === 4) {
-      if (timeSeconds <= 120) return 'CRITICAL';  // Two-minute warning
-      if (timeSeconds <= 300) return 'HIGH';      // Last 5 minutes
+    const q = this.num(gameState.quarter);
+    const t = this.parseTimeToSeconds(String(gameState.timeRemaining || '0:00'));
+    if (!q) return 'NORMAL';
+    if (q === 4) {
+      if (t <= 120) return 'CRITICAL';
+      if (t <= 300) return 'HIGH';
       return 'MEDIUM';
     }
-    
-    if (gameState.quarter === 2 && timeSeconds <= 120) {
-      return 'MEDIUM';  // End of half
-    }
-    
+    if (q === 2 && t <= 120) return 'MEDIUM';
     return 'NORMAL';
   }
-  
+
   private createDynamicMessage(gameState: GameState): string {
-    const touchdownProbability = this.calculateTouchdownProbability(gameState);
-    const down = this.getOrdinal((gameState.down as number) || 1);
-    const yardsToGo = (gameState.yardsToGo as number) || 10;
-    const fieldPosition = (gameState.fieldPosition as number) || 20;
-    
-    // Create contextual field position description
-    let situationDesc = '';
-    if (fieldPosition <= 3) {
-      situationDesc = `${down} & Goal at ${fieldPosition}-yard line`;
-    } else if (fieldPosition <= 10) {
-      situationDesc = `${down} & ${yardsToGo} at ${fieldPosition}-yard line`;
-    } else {
-      situationDesc = `${down} & ${yardsToGo} at ${fieldPosition}-yard line`;
-    }
+    const prob = this.calculateTouchdownProbability(gameState);
+    const downStr = this.getOrdinal(this.num(gameState.down) || 1);
+    const ytg = this.num(gameState.yardsToGo) || 10;
+    const fp = this.num(gameState.fieldPosition) || 20;
 
-    // Create scoring context based on probability
-    let scoringContext = '';
-    if (touchdownProbability >= 80) {
-      scoringContext = 'Prime scoring opportunity';
-    } else if (touchdownProbability >= 65) {
-      scoringContext = 'Strong scoring chance';
-    } else if (touchdownProbability >= 50) {
-      scoringContext = 'Red zone scoring chance';
-    } else {
-      scoringContext = 'Red zone opportunity';
-    }
+    const situation =
+      fp <= 3
+        ? `${downStr} & Goal at ${fp}-yard line`
+        : `${downStr} & ${ytg} at ${fp}-yard line`;
 
-    // Add goal line context
-    if (fieldPosition <= 5) {
-      scoringContext = 'Goal line ' + scoringContext.toLowerCase();
-    }
+    let label: string;
+    if (prob >= 80) label = 'Prime scoring opportunity';
+    else if (prob >= 65) label = 'Strong scoring chance';
+    else if (prob >= 50) label = 'Red zone scoring chance';
+    else label = 'Red zone opportunity';
 
-    return `${situationDesc} - ${scoringContext}`;
+    if (fp <= 5) label = 'Goal line ' + label.toLowerCase();
+    return `${situation} - ${label}`;
   }
 
   private getPlayCallingTendency(gameState: GameState): string {
-    // Analyze down, distance, and field position to predict play type
-    if (!gameState.down || !gameState.yardsToGo || !gameState.fieldPosition) {
-      return 'BALANCED';
-    }
-    
-    if ((gameState.fieldPosition as number) <= 3) {
-      return 'POWER_RUN';  // Goal line situations favor power running
-    }
-    
-    if (gameState.down === 1 && (gameState.yardsToGo as number) <= 3) {
-      return 'RUN_HEAVY';  // Short yardage on first down
-    }
-    
-    if (gameState.down === 3 && (gameState.yardsToGo as number) >= 7) {
-      return 'PASS_HEAVY';  // Long third down
-    }
-    
-    if (gameState.down === 2 && (gameState.yardsToGo as number) <= 3) {
-      return 'RUN_LIKELY';  // Second and short
-    }
-    
+    const down = this.num(gameState.down);
+    const ytg = this.num(gameState.yardsToGo);
+    const fp = this.num(gameState.fieldPosition);
+    if (!down || !ytg || !fp) return 'BALANCED';
+
+    if (fp <= 3) return 'POWER_RUN';
+    if (down === 1 && ytg <= 3) return 'RUN_HEAVY';
+    if (down === 3 && ytg >= 7) return 'PASS_HEAVY';
+    if (down === 2 && ytg <= 3) return 'RUN_LIKELY';
     return 'BALANCED';
+  }
+
+  // ---- tiny utils
+  private num(v: any): number {
+    const n = typeof v === 'number' ? v : parseFloat(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+  private clamp(n: number, lo: number, hi: number): number {
+    return Math.max(lo, Math.min(hi, n));
   }
 }
