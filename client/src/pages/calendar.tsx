@@ -167,38 +167,52 @@ function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?
 export default function Calendar() {
   const [activeSport, setActiveSport] = useState("MLB");
   const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set([format(new Date(), 'yyyy-MM-dd')]));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [teamFilter, setTeamFilter] = useState<{homeTeam?: string, awayTeam?: string} | null>(null);
   
-  // Fetch today's games
-  const { data: todayGamesData, isLoading: isLoadingToday } = useQuery<GameDay>({
-    queryKey: ["/api/games/today", { sport: activeSport, date: format(selectedDate, 'yyyy-MM-dd') }],
+  // Fetch games for all selected dates
+  const { data: allGamesData, isLoading: isLoadingGames } = useQuery({
+    queryKey: ["/api/games/multi-day", { sport: activeSport, dates: Array.from(selectedDates).sort() }],
     queryFn: async ({ queryKey }) => {
-      const [url, params] = queryKey;
-      const searchParams = new URLSearchParams(params as Record<string, string>);
-      const response = await fetch(`${url}?${searchParams}`, {
-        credentials: "include",
+      const [_, params] = queryKey as [string, { sport: string; dates: string[] }];
+      
+      // Fetch games for each selected date
+      const promises = params.dates.map(async (date) => {
+        const searchParams = new URLSearchParams({ sport: params.sport, date });
+        const response = await fetch(`/api/games/today?${searchParams}`, {
+          credentials: "include",
+        });
+        if (!response.ok) throw new Error("Failed to fetch games");
+        const data = await response.json();
+        return { date, games: data.games || [] };
       });
-      if (!response.ok) throw new Error("Failed to fetch games");
-      return response.json();
+      
+      const results = await Promise.all(promises);
+      
+      // Combine all games with date labels
+      const allGames = results.flatMap(({ date, games }) => 
+        games.map((game: any) => ({ ...game, fetchDate: date }))
+      );
+      
+      return { games: allGames, dates: params.dates };
     },
   });
 
-  const todayGames = todayGamesData?.games || [];
+  const allGames = allGamesData?.games || [];
   
   // Apply team filter if active
-  const filteredTodayGames = teamFilter 
-    ? todayGames.filter(game => 
+  const filteredGames = teamFilter 
+    ? allGames.filter(game => 
         (teamFilter.homeTeam && game.homeTeam?.name === teamFilter.homeTeam) ||
         (teamFilter.awayTeam && game.awayTeam?.name === teamFilter.awayTeam) ||
         (teamFilter.homeTeam && game.awayTeam?.name === teamFilter.homeTeam) ||
         (teamFilter.awayTeam && game.homeTeam?.name === teamFilter.awayTeam)
       )
-    : todayGames;
+    : allGames;
     
-  const games = filteredTodayGames;
-  const isLoading = isLoadingToday;
+  const games = filteredGames;
+  const isLoading = isLoadingGames;
 
   // Fetch alerts for badge count
   const { data: alerts } = useQuery({
@@ -356,7 +370,11 @@ export default function Calendar() {
           <div>
             <div className="flex items-center space-x-3">
               <h2 className="text-xl font-black uppercase tracking-wide text-slate-100">
-                {isSameDay(selectedDate, new Date()) ? "Today's Games" : format(selectedDate, 'MMMM d, yyyy')}
+                {selectedDates.size === 1 && selectedDates.has(format(new Date(), 'yyyy-MM-dd'))
+                  ? "Today's Games"
+                  : selectedDates.size === 1
+                  ? format(new Date(Array.from(selectedDates)[0]), 'MMMM d, yyyy')
+                  : `${selectedDates.size} Days Selected`}
                 {teamFilter && (
                   <span className="text-sm font-normal text-emerald-400 ml-2">
                     - {teamFilter.homeTeam || teamFilter.awayTeam} games
@@ -373,6 +391,17 @@ export default function Calendar() {
                 <CalendarIcon className="w-4 h-4 mr-2" />
                 Pick Date
               </Button>
+              {selectedDates.size > 1 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedDates(new Set([format(new Date(), 'yyyy-MM-dd')]))}
+                  className="bg-blue-500/20 backdrop-blur-sm border-blue-500/50 ring-1 ring-blue-500/30 text-blue-300 hover:bg-blue-500/30 hover:ring-blue-400/50 transition-all duration-200"
+                  data-testid="button-clear-dates"
+                >
+                  Clear Selection
+                </Button>
+              )}
               {teamFilter && (
                 <Button
                   variant="outline"
@@ -399,27 +428,12 @@ export default function Calendar() {
           <div className="mb-4 bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5" data-testid="date-picker-container">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedDate(subDays(selectedDate, 1))}
-                  className="text-slate-300 hover:text-slate-100 hover:bg-emerald-500/10 rounded-xl transition-all duration-200"
-                  data-testid="button-previous-day"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
                 <h3 className="text-xl font-black uppercase tracking-wide text-slate-100">
-                  {format(selectedDate, 'MMMM yyyy')}
+                  Select Multiple Days
                 </h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedDate(addDays(selectedDate, 1))}
-                  className="text-slate-300 hover:text-slate-100 hover:bg-emerald-500/10 rounded-xl transition-all duration-200"
-                  data-testid="button-next-day"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
+                <div className="text-sm text-slate-400">
+                  {selectedDates.size} day{selectedDates.size !== 1 ? 's' : ''} selected
+                </div>
               </div>
               
               {/* Week View */}
@@ -431,56 +445,105 @@ export default function Calendar() {
                 ))}
                 
                 {eachDayOfInterval({
-                  start: startOfWeek(selectedDate),
-                  end: endOfWeek(selectedDate)
-                }).map(date => (
-                  <Button
-                    key={date.toISOString()}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedDate(date);
-                      setShowDatePicker(false);
-                    }}
-                    className={`h-10 text-sm rounded-xl transition-all duration-200 ${
-                      isSameDay(date, selectedDate)
-                        ? 'bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30 backdrop-blur-sm shadow-lg shadow-emerald-500/10'
-                        : isSameDay(date, new Date())
-                        ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/30 backdrop-blur-sm'
-                        : 'text-slate-300 hover:text-slate-100 hover:bg-white/5 hover:ring-1 hover:ring-white/10 backdrop-blur-sm'
-                    }`}
-                    data-testid={`button-date-${format(date, 'yyyy-MM-dd')}`}
-                  >
-                    {format(date, 'd')}
-                  </Button>
-                ))}
+                  start: startOfWeek(new Date()),
+                  end: addDays(endOfWeek(new Date()), 14)
+                }).map(date => {
+                  const dateStr = format(date, 'yyyy-MM-dd');
+                  const isSelected = selectedDates.has(dateStr);
+                  const isToday = isSameDay(date, new Date());
+                  
+                  return (
+                    <Button
+                      key={date.toISOString()}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const newDates = new Set(selectedDates);
+                        if (isSelected) {
+                          newDates.delete(dateStr);
+                          // Don't allow deselecting all dates
+                          if (newDates.size === 0) {
+                            newDates.add(format(new Date(), 'yyyy-MM-dd'));
+                          }
+                        } else {
+                          newDates.add(dateStr);
+                        }
+                        setSelectedDates(newDates);
+                      }}
+                      className={`h-10 text-sm rounded-xl transition-all duration-200 ${
+                        isSelected
+                          ? 'bg-emerald-500/30 text-emerald-300 ring-2 ring-emerald-500/50 backdrop-blur-sm shadow-lg shadow-emerald-500/20 font-bold'
+                          : isToday
+                          ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/30 backdrop-blur-sm'
+                          : 'text-slate-300 hover:text-slate-100 hover:bg-white/5 hover:ring-1 hover:ring-white/10 backdrop-blur-sm'
+                      }`}
+                      data-testid={`button-date-${dateStr}`}
+                    >
+                      {format(date, 'd')}
+                    </Button>
+                  );
+                })}
               </div>
               
-              {/* Quick Navigation */}
-              <div className="flex space-x-3 pt-4 border-t border-white/10">
+              {/* Quick Actions */}
+              <div className="flex flex-wrap gap-2 pt-4 border-t border-white/10">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    setSelectedDate(new Date());
-                    setShowDatePicker(false);
+                    setSelectedDates(new Set([format(new Date(), 'yyyy-MM-dd')]));
                   }}
                   className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 ring-1 ring-emerald-500/20 backdrop-blur-sm rounded-xl transition-all duration-200 font-semibold"
                   data-testid="button-today"
                 >
-                  Today
+                  Today Only
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    setSelectedDate(addDays(new Date(), 1));
-                    setShowDatePicker(false);
+                    const weekend = [];
+                    const now = new Date();
+                    for (let i = 0; i < 7; i++) {
+                      const day = addDays(now, i);
+                      const dayOfWeek = day.getDay();
+                      if (dayOfWeek === 0 || dayOfWeek === 6) {
+                        weekend.push(format(day, 'yyyy-MM-dd'));
+                      }
+                    }
+                    setSelectedDates(new Set(weekend));
                   }}
                   className="text-blue-400 border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 ring-1 ring-blue-500/20 backdrop-blur-sm rounded-xl transition-all duration-200 font-semibold"
-                  data-testid="button-tomorrow"
+                  data-testid="button-weekend"
                 >
-                  Tomorrow
+                  This Weekend
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const week = [];
+                    const now = new Date();
+                    for (let i = 0; i < 7; i++) {
+                      week.push(format(addDays(now, i), 'yyyy-MM-dd'));
+                    }
+                    setSelectedDates(new Set(week));
+                  }}
+                  className="text-purple-400 border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 ring-1 ring-purple-500/20 backdrop-blur-sm rounded-xl transition-all duration-200 font-semibold"
+                  data-testid="button-week"
+                >
+                  Next 7 Days
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowDatePicker(false);
+                  }}
+                  className="ml-auto text-slate-400 border-slate-500/30 bg-slate-500/10 hover:bg-slate-500/20 ring-1 ring-slate-500/20 backdrop-blur-sm rounded-xl transition-all duration-200 font-semibold"
+                  data-testid="button-close"
+                >
+                  Done
                 </Button>
               </div>
             </div>
@@ -504,21 +567,39 @@ export default function Calendar() {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Today's Games */}
-            <div className="space-y-3">
-              {/* Sort games to show live games first, then scheduled, then final */}
-              {games
-                .sort((a, b) => {
-                  // Live games first
-                  if (a.status === 'live' && b.status !== 'live') return -1;
-                  if (b.status === 'live' && a.status !== 'live') return 1;
-                  // Then scheduled games
-                  if (a.status === 'scheduled' && b.status === 'final') return -1;
-                  if (b.status === 'scheduled' && a.status === 'final') return 1;
-                  // Then by start time
-                  return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
-                })
-                .map((game, index) => {
+            {/* Games grouped by date */}
+            {Array.from(selectedDates)
+              .sort()
+              .map(dateStr => {
+                const dateGames = games.filter(g => g.fetchDate === dateStr);
+                if (dateGames.length === 0) return null;
+                
+                const date = new Date(dateStr);
+                const isToday = isSameDay(date, new Date());
+                
+                return (
+                  <div key={dateStr} className="space-y-3">
+                    {selectedDates.size > 1 && (
+                      <div className="flex items-center space-x-2 mt-6 first:mt-0">
+                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-400 px-3 py-1 bg-emerald-500/10 rounded-full ring-1 ring-emerald-500/20">
+                          {isToday ? 'Today' : format(date, 'EEEE, MMM d')}
+                        </h3>
+                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+                      </div>
+                    )}
+                    {dateGames
+                      .sort((a, b) => {
+                        // Live games first
+                        if (a.status === 'live' && b.status !== 'live') return -1;
+                        if (b.status === 'live' && a.status !== 'live') return 1;
+                        // Then scheduled games
+                        if (a.status === 'scheduled' && b.status === 'final') return -1;
+                        if (b.status === 'scheduled' && a.status === 'final') return 1;
+                        // Then by start time
+                        return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+                      })
+                      .map((game, index) => {
               const isSelected = selectedGames.has(game.id);
               const startTime = new Date(game.startTime);
               const formattedTime = isNaN(startTime.getTime()) 
@@ -568,10 +649,10 @@ export default function Calendar() {
                   />
                 </div>
               );
-            })}
-            </div>
-
-            
+                      })}
+                  </div>
+                );
+              })}
           </div>
         )}
       </div>
