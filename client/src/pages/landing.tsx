@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { ArrowRight, CheckCircle2, SignalHigh, Zap, ShieldCheck, TimerReset, Activity, Wifi, ChevronDown, Play, Star, Users, TrendingUp, Award, Target, Clock, Globe, Eye, Bolt, Bell, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ROICalculator } from "@/components/roi-calculator";
+import { ExitIntentPopup } from "@/components/exit-intent-popup";
 import basketballArenaImage from '@assets/generated_images/Basketball_arena_game_moment_4c760cd5.png';
 
 export default function LandingPage() {
@@ -22,6 +23,7 @@ export default function LandingPage() {
       <Pricing />
       <FAQ />
       <Footer />
+      <ExitIntentPopup />
     </div>
   );
 }
