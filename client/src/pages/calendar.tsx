@@ -385,11 +385,11 @@ export default function Calendar() {
                 variant="outline"
                 size="default"
                 onClick={() => setShowDatePicker(!showDatePicker)}
-                className="bg-emerald-500/20 backdrop-blur-sm border-emerald-500/50 ring-1 ring-emerald-500/30 text-emerald-300 hover:bg-emerald-500/30 hover:text-emerald-200 hover:border-emerald-400 hover:ring-emerald-400/50 transition-all duration-200 font-semibold"
+                className="bg-emerald-500/30 backdrop-blur-sm border-emerald-500/60 ring-2 ring-emerald-500/40 text-emerald-200 hover:bg-emerald-500/40 hover:text-emerald-100 hover:border-emerald-400 hover:ring-emerald-400/60 transition-all duration-200 font-bold shadow-lg shadow-emerald-500/20"
                 data-testid="button-date-picker"
               >
-                <CalendarIcon className="w-4 h-4 mr-2" />
-                Pick Date
+                <CalendarIcon className="w-5 h-5 mr-2" />
+                Pick Multiple Days
               </Button>
               {selectedDates.size > 1 && (
                 <Button
