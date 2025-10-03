@@ -304,6 +304,77 @@ function LogosStrip() {
   );
 }
 
+function TrustBadges() {
+  const badges = [
+    {
+      icon: <ShieldCheck className="w-6 h-6" />,
+      title: "256-bit SSL",
+      subtitle: "Bank-level encryption"
+    },
+    {
+      icon: <Star className="w-6 h-6" />,
+      title: "4.8/5 Rating",
+      subtitle: "1,247 verified users"
+    },
+    {
+      icon: <Clock className="w-6 h-6" />,
+      title: "99.9% Uptime",
+      subtitle: "Enterprise reliability"
+    },
+    {
+      icon: <Users className="w-6 h-6" />,
+      title: "2,843+ Active",
+      subtitle: "Join winning community"
+    }
+  ];
+  
+  return (
+    <section className="py-16 bg-gradient-to-b from-slate-900/30 to-transparent">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {badges.map((badge, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1, duration: 0.5 }}
+              viewport={{ once: true }}
+              className="text-center"
+            >
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 mb-3 hover:scale-110 transition-transform duration-300">
+                <div className="text-[#10B981]">{badge.icon}</div>
+              </div>
+              <div className="text-sm font-bold text-white">{badge.title}</div>
+              <div className="text-xs text-slate-400 mt-1">{badge.subtitle}</div>
+            </motion.div>
+          ))}
+        </div>
+        
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+          viewport={{ once: true }}
+          className="mt-8 flex items-center justify-center gap-8 flex-wrap"
+        >
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <ShieldCheck className="w-4 h-4 text-green-500" />
+            <span>SOC2 Compliant</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <ShieldCheck className="w-4 h-4 text-green-500" />
+            <span>GDPR Ready</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <ShieldCheck className="w-4 h-4 text-green-500" />
+            <span>PCI DSS Certified</span>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
 function ValueProps() {
   const features = [
     {

@@ -608,7 +608,7 @@ export default function Calendar() {
                 if (dateGames.length === 0) return null;
 
                 const date = new Date(dateStr);
-                const isToday = isSameDay(date, new Date());
+                const isToday = serverDate?.date ? isSameDay(date, new Date(serverDate.date)) : isSameDay(date, new Date());
 
                 return (
                   <div key={dateStr} className="space-y-3">
