@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { ArrowRight, CheckCircle2, SignalHigh, Zap, ShieldCheck, TimerReset, Activity, Wifi, ChevronDown, Play, Star, Users, TrendingUp, Award, Target, Clock, Globe, Eye, Bolt } from "lucide-react";
+import { ArrowRight, CheckCircle2, SignalHigh, Zap, ShieldCheck, TimerReset, Activity, Wifi, ChevronDown, Play, Star, Users, TrendingUp, Award, Target, Clock, Globe, Eye, Bolt, Bell, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ROICalculator } from "@/components/roi-calculator";
 import basketballArenaImage from '@assets/generated_images/Basketball_arena_game_moment_4c760cd5.png';
 
 export default function LandingPage() {
@@ -11,10 +12,12 @@ export default function LandingPage() {
       <Nav />
       <Hero />
       <LogosStrip />
+      <TrustBadges />
       <ValueProps />
       <LivePreview />
       <HowItWorks />
       <Testimonials />
+      <ROICalculator />
       <Proof />
       <Pricing />
       <FAQ />
@@ -91,7 +94,15 @@ function Hero() {
     alertsSent: 12847,
     activeUsers: 2843,
     responseTime: '247ms',
-    profitableAlerts: 73
+    profitableAlerts: 73,
+    liveGames: 47,
+    spotsRemaining: 37
+  });
+  
+  const [countdown, setCountdown] = useState({
+    hours: 5,
+    minutes: 43,
+    seconds: 12
   });
 
   useEffect(() => {
@@ -100,10 +111,36 @@ function Hero() {
         alertsSent: prev.alertsSent + Math.floor(Math.random() * 7),
         activeUsers: Math.max(2800, prev.activeUsers + Math.floor(Math.random() * 5) - 2),
         responseTime: `${245 + Math.floor(Math.random() * 10)}ms`,
-        profitableAlerts: Math.min(95, prev.profitableAlerts + (Math.random() > 0.5 ? 1 : 0))
+        profitableAlerts: Math.min(95, prev.profitableAlerts + (Math.random() > 0.5 ? 1 : 0)),
+        liveGames: Math.max(30, prev.liveGames + Math.floor(Math.random() * 3) - 1),
+        spotsRemaining: Math.max(5, prev.spotsRemaining - (Math.random() > 0.8 ? 1 : 0))
       }));
     }, 3000);
     return () => clearInterval(interval);
+  }, []);
+  
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown(prev => {
+        let { hours, minutes, seconds } = prev;
+        seconds--;
+        if (seconds < 0) {
+          seconds = 59;
+          minutes--;
+          if (minutes < 0) {
+            minutes = 59;
+            hours--;
+            if (hours < 0) {
+              hours = 5;
+              minutes = 59;
+              seconds = 59;
+            }
+          }
+        }
+        return { hours, minutes, seconds };
+      });
+    }, 1000);
+    return () => clearInterval(timer);
   }, []);
 
   return (
@@ -125,6 +162,26 @@ function Hero() {
         <div className="text-center">
           <Badge>💰 Beat the Odds - 30 Second Advantage</Badge>
           
+          {/* Urgency banner */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="mt-4 inline-flex items-center gap-3 bg-red-500/10 px-4 py-2 rounded-full border border-red-500/20"
+          >
+            <Flame className="w-4 h-4 text-red-400 animate-pulse" />
+            <span className="text-sm font-semibold text-red-400">
+              LIMITED: Only {liveStats.spotsRemaining} Pro spots left at 50% off
+            </span>
+            <div className="flex items-center gap-2 text-xs font-mono text-red-300">
+              <span>{String(countdown.hours).padStart(2, '0')}h</span>
+              <span>:</span>
+              <span>{String(countdown.minutes).padStart(2, '0')}m</span>
+              <span>:</span>
+              <span>{String(countdown.seconds).padStart(2, '0')}s</span>
+            </div>
+          </motion.div>
+          
           {/* Trust indicators */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }} 
@@ -143,6 +200,10 @@ function Hero() {
             <div className="flex items-center gap-2">
               <Zap className="w-4 h-4 text-[#10B981]" />
               <span data-testid="text-alerts-sent">{liveStats.alertsSent.toLocaleString()} winning alerts today</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-yellow-400 animate-pulse" />
+              <span className="font-bold text-yellow-400">{liveStats.liveGames} LIVE GAMES NOW</span>
             </div>
           </motion.div>
 
