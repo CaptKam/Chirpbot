@@ -211,10 +211,23 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // User session parser - CRITICAL: Skip admin paths to prevent session collision
+  // Also parse admin session for shared endpoints like /api/available-alerts
   app.use((req, res, next) => {
     if (req.path.startsWith('/api/admin') || req.path.startsWith('/admin')) {
       return next(); // Skip user session parser for admin paths
     }
+    
+    // For shared endpoints, try admin session first if not already parsed
+    if (req.path.startsWith('/api/available-alerts') && !req.session?.adminUserId && !req.session?.userId) {
+      return adminSessionParser(req, res, () => {
+        // If admin session exists, use it, otherwise fall through to user session
+        if (req.session?.adminUserId) {
+          return next();
+        }
+        return userSessionParser(req, res, next);
+      });
+    }
+    
     return userSessionParser(req, res, next);
   });
 
@@ -3524,7 +3537,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Get available alert types from cylinders - accessible to all authenticated users and admins
   app.get('/api/available-alerts/:sport', async (req, res) => {
     try {
-      if (!req.session.userId && !req.session.adminUserId) {
+      // Check both user and admin sessions
+      const isAuthenticated = !!(req.session?.userId || req.session?.adminUserId);
+      
+      if (!isAuthenticated) {
+        console.log('❌ /api/available-alerts - Not authenticated:', {
+          hasUserSession: !!req.session?.userId,
+          hasAdminSession: !!req.session?.adminUserId,
+          sessionId: req.sessionID
+        });
         return res.status(401).json({ message: 'Authentication required' });
       }
 
