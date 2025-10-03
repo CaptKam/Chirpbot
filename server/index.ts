@@ -355,7 +355,16 @@ async function startServer() {
       
       // Prevent duplicate setupVite calls
       if (!(globalThis as any).__VITE_ATTACHED__) {
+        // Vite reads PORT for HMR, but we need HMR on same server
+        // Temporarily unset PORT so Vite defaults to 3000 for HMR (unused)
+        // HMR will actually work via websocket on main server port
+        const originalPort = process.env.PORT;
+        delete process.env.PORT;
+        
         await setupVite(app, server);
+        
+        // Restore PORT
+        process.env.PORT = originalPort;
         (globalThis as any).__VITE_ATTACHED__ = true;
         console.log(`✅ Vite dev server configured with HMR - frontend ready`);
       } else {
