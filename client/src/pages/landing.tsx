@@ -248,24 +248,43 @@ function Hero() {
             initial={{ opacity: 0, y: 20 }} 
             animate={{ opacity: 1, y: 0 }} 
             transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }}
-            className="mt-8 flex flex-col sm:flex-row gap-4 justify-center"
+            className="mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
-            <Link href="/signup">
-              <Button 
-                size="lg" 
-                className="bg-emerald-500 hover:bg-[#10B981] text-slate-900 px-8 py-6 text-lg font-bold rounded-xl shadow-xl shadow-emerald-500/25 hover:scale-[1.02] transition-all duration-300 group relative overflow-hidden"
-                data-testid="button-hero-signup"
+            <div className="relative">
+              {/* Pulsing ring animation */}
+              <div className="absolute -inset-1 bg-emerald-500 rounded-xl opacity-75 blur-lg animate-pulse" />
+              <Link href="/signup">
+                <Button 
+                  size="lg" 
+                  className="relative bg-emerald-500 hover:bg-[#10B981] text-slate-900 px-8 py-6 text-lg font-bold rounded-xl shadow-xl shadow-emerald-500/25 hover:scale-[1.05] transition-all duration-300 group overflow-hidden"
+                  data-testid="button-hero-signup"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="relative flex items-center gap-2">
+                    <Bell className="w-5 h-5 animate-pulse" />
+                    <span>Start Winning Now - Free Forever</span>
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </Button>
+              </Link>
+              {/* Live signup badge */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 1, duration: 0.5 }}
+                className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-emerald-500/20 backdrop-blur-sm px-3 py-1 rounded-full border border-emerald-500/30 whitespace-nowrap"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-[#10B981] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <span className="relative">Start Free Trial - No Credit Card</span>
-                <ArrowRight className="ml-2 w-5 h-5 relative group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
+                <span className="text-xs font-semibold text-emerald-300 flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  237 joined in last 24h
+                </span>
+              </motion.div>
+            </div>
             <Link href="/login">
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="border-emerald-500 hover:bg-emerald-500 hover:text-slate-900 px-8 py-6 text-lg font-bold rounded-xl text-[#10B981] transition-all duration-300"
+                className="border-emerald-500 hover:bg-emerald-500 hover:text-slate-900 px-8 py-6 text-lg font-bold rounded-xl text-[#10B981] transition-all duration-300 hover:scale-[1.02]"
                 data-testid="button-hero-login"
               >
                 Login to Dashboard
@@ -864,16 +883,32 @@ function Pricing() {
               </ul>
               
               <Link href={plan.ctaLink} className="block">
-                <Button 
-                  className={`w-full py-6 text-lg font-bold rounded-xl transition-all duration-300 ${
-                    plan.featured
-                      ? 'bg-emerald-500 hover:bg-[#10B981] text-slate-900 shadow-lg shadow-emerald-500/25 hover:scale-[1.02]'
-                      : 'bg-slate-800 hover:bg-slate-700 text-white'
-                  }`}
-                  data-testid={`button-pricing-${plan.name.toLowerCase()}`}
-                >
-                  {plan.cta}
-                </Button>
+                {plan.featured ? (
+                  <div className="relative">
+                    {/* Pulsing glow for featured plan */}
+                    <div className="absolute -inset-0.5 bg-emerald-500 rounded-xl opacity-50 blur animate-pulse" />
+                    <Button 
+                      className="relative w-full py-6 text-lg font-bold rounded-xl bg-emerald-500 hover:bg-[#10B981] text-slate-900 shadow-lg shadow-emerald-500/25 hover:scale-[1.03] transition-all duration-300 group"
+                      data-testid={`button-pricing-${plan.name.toLowerCase()}`}
+                    >
+                      <span className="flex items-center justify-center gap-2">
+                        <Zap className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                        {plan.cta}
+                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                      </span>
+                    </Button>
+                  </div>
+                ) : (
+                  <Button 
+                    className="w-full py-6 text-lg font-bold rounded-xl transition-all duration-300 bg-slate-800 hover:bg-slate-700 text-white hover:scale-[1.02] group"
+                    data-testid={`button-pricing-${plan.name.toLowerCase()}`}
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      {plan.cta}
+                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </span>
+                  </Button>
+                )}
               </Link>
             </motion.div>
           ))}
