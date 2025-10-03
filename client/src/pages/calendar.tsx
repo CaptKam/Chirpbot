@@ -21,7 +21,7 @@ const removeCity = (teamName: string) => {
 
 const extractTeamAbbreviation = (teamName: string) => {
   if (!teamName || teamName.trim() === '') return 'TBD';
-  
+
   // Full team name mappings (check these first)
   const fullTeamMappings: Record<string, string> = {
     'San Diego Padres': 'SD',
@@ -35,16 +35,16 @@ const extractTeamAbbreviation = (teamName: string) => {
     'TCU Horned Frogs': 'TCU',
     'North Carolina Tar Heels': 'UNC'
   };
-  
+
   // Check full team name first
   if (fullTeamMappings[teamName]) {
     return fullTeamMappings[teamName];
   }
-  
+
   // Extract abbreviation from team name
   const cityPrefixes = ['New York', 'Los Angeles', 'San Francisco', 'St. Louis', 'Tampa Bay', 'San Diego', 'Washington', 'Kansas City'];
   let cleanName = teamName;
-  
+
   // Remove city prefixes
   for (const prefix of cityPrefixes) {
     if (teamName.startsWith(prefix)) {
@@ -52,7 +52,7 @@ const extractTeamAbbreviation = (teamName: string) => {
       break;
     }
   }
-  
+
   // Common team abbreviations
   const abbreviations: Record<string, string> = {
     'Yankees': 'NYY', 'Mets': 'NYM', 'Dodgers': 'LAD', 'Angels': 'LAA',
@@ -64,7 +64,7 @@ const extractTeamAbbreviation = (teamName: string) => {
     'Braves': 'ATL', 'Pirates': 'PIT', 'Reds': 'CIN', 'Brewers': 'MIL',
     'Diamondbacks': 'ARI', 'Rockies': 'COL'
   };
-  
+
   return abbreviations[cleanName] || cleanName.slice(0, 3).toUpperCase();
 };
 
@@ -76,7 +76,7 @@ import { WeatherImpactVisualizer } from '@/components/WeatherImpactVisualizer';
 import { SportTabs } from '@/components/SportTabs';
 import { PageHeader } from '@/components/PageHeader';
 
-import { getSeasonAwareSports } from '@shared/season-manager';
+import { getSeasonAwareSports } from '@shared/manager';
 
 const SPORTS = getSeasonAwareSports();
 
@@ -170,13 +170,13 @@ export default function Calendar() {
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set([format(new Date(), 'yyyy-MM-dd')]));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [teamFilter, setTeamFilter] = useState<{homeTeam?: string, awayTeam?: string} | null>(null);
-  
+
   // Fetch games for all selected dates
   const { data: allGamesData, isLoading: isLoadingGames } = useQuery({
     queryKey: ["/api/games/multi-day", { sport: activeSport, dates: Array.from(selectedDates).sort() }],
     queryFn: async ({ queryKey }) => {
       const [_, params] = queryKey as [string, { sport: string; dates: string[] }];
-      
+
       // Fetch games for each selected date
       const promises = params.dates.map(async (date) => {
         const searchParams = new URLSearchParams({ sport: params.sport, date });
@@ -187,20 +187,20 @@ export default function Calendar() {
         const data = await response.json();
         return { date, games: data.games || [] };
       });
-      
+
       const results = await Promise.all(promises);
-      
+
       // Combine all games with date labels
       const allGames = results.flatMap(({ date, games }) => 
         games.map((game: any) => ({ ...game, fetchDate: date }))
       );
-      
+
       return { games: allGames, dates: params.dates };
     },
   });
 
   const allGames = allGamesData?.games || [];
-  
+
   // Apply team filter if active
   const filteredGames = teamFilter 
     ? allGames.filter(game => 
@@ -210,7 +210,7 @@ export default function Calendar() {
         (teamFilter.awayTeam && game.homeTeam?.name === teamFilter.awayTeam)
       )
     : allGames;
-    
+
   const games = filteredGames;
   const isLoading = isLoadingGames;
 
@@ -231,7 +231,7 @@ export default function Calendar() {
 
   // Authentication
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
-  
+
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -243,7 +243,7 @@ export default function Calendar() {
       window.location.reload();
     },
   });
-  
+
 
 
   // Load persisted monitored games - require proper authentication
@@ -345,8 +345,8 @@ export default function Calendar() {
 
   return (
     <>
-      
-    
+
+
     <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
       <PageHeader 
         title="ChirpBot" 
@@ -391,19 +391,8 @@ export default function Calendar() {
                 <CalendarIcon className="w-5 h-5 mr-2" />
                 Pick Multiple Days
               </Button>
-              {selectedDates.size > 1 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedDates(new Set([format(new Date(), 'yyyy-MM-dd')]))}
-                  className="bg-blue-500/20 backdrop-blur-sm border-blue-500/50 ring-1 ring-blue-500/30 text-blue-300 hover:bg-blue-500/30 hover:ring-blue-400/50 transition-all duration-200"
-                  data-testid="button-clear-dates"
-                >
-                  Clear Selection
-                </Button>
-              )}
             </div>
-            
+
           </div>
           <div className="px-3 py-1 rounded-xl bg-white/5 ring-1 ring-white/10 backdrop-blur-sm">
             <span className="text-sm font-semibold text-slate-300" data-testid="text-selected-count">
@@ -444,7 +433,7 @@ export default function Calendar() {
                   </div>
                 </div>
               )}
-              
+
               {/* Week View */}
               <div className="grid grid-cols-7 gap-2">
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
@@ -452,7 +441,7 @@ export default function Calendar() {
                     {day}
                   </div>
                 ))}
-                
+
                 {eachDayOfInterval({
                   start: startOfWeek(new Date()),
                   end: addDays(endOfWeek(new Date()), 14)
@@ -460,7 +449,7 @@ export default function Calendar() {
                   const dateStr = format(date, 'yyyy-MM-dd');
                   const isSelected = selectedDates.has(dateStr);
                   const isToday = isSameDay(date, new Date());
-                  
+
                   return (
                     <Button
                       key={date.toISOString()}
@@ -493,7 +482,7 @@ export default function Calendar() {
                   );
                 })}
               </div>
-              
+
               {/* Quick Actions */}
               <div className="flex flex-wrap gap-2 pt-4 border-t border-white/10">
                 <Button
@@ -582,10 +571,10 @@ export default function Calendar() {
               .map(dateStr => {
                 const dateGames = games.filter(g => g.fetchDate === dateStr);
                 if (dateGames.length === 0) return null;
-                
+
                 const date = new Date(dateStr);
                 const isToday = isSameDay(date, new Date());
-                
+
                 return (
                   <div key={dateStr} className="space-y-3">
                     {selectedDates.size > 1 && (
