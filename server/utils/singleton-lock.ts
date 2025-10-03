@@ -61,14 +61,32 @@ export class SingleInstanceLock {
       
       // Check if the process is still alive
       if (this.isProcessAlive(lockData.pid)) {
-        // In development mode, wait for the old process to die during restarts
+        // In development mode, kill the old process and take over
         if (process.env.NODE_ENV === 'development') {
-          console.log(`🔄 Development restart detected - waiting for PID ${lockData.pid} to finish shutting down...`);
-          await this.waitForProcessToDie(lockData.pid, 5000);
+          console.log(`🔄 Development restart detected - terminating old process PID ${lockData.pid}...`);
           
-          // Check again if process is still alive after waiting
-          if (!this.isProcessAlive(lockData.pid)) {
-            console.log(`✅ Previous process finished - acquiring lock`);
+          try {
+            // Kill the old process
+            process.kill(lockData.pid, 'SIGTERM');
+            console.log(`📡 Sent SIGTERM to PID ${lockData.pid}`);
+            
+            // Wait for it to die
+            await this.waitForProcessToDie(lockData.pid, 5000);
+            
+            // If still alive after SIGTERM, force kill with SIGKILL
+            if (this.isProcessAlive(lockData.pid)) {
+              console.log(`⚠️ PID ${lockData.pid} didn't respond to SIGTERM, sending SIGKILL...`);
+              process.kill(lockData.pid, 'SIGKILL');
+              await this.waitForProcessToDie(lockData.pid, 2000);
+            }
+            
+            // Remove the lock file and acquire
+            fs.unlinkSync(this.lockPath);
+            console.log(`✅ Old process terminated - acquiring lock`);
+            return await this.acquire(port);
+          } catch (killError: any) {
+            console.error(`❌ Failed to kill old process ${lockData.pid}:`, killError.message);
+            // If we can't kill it, something is wrong - still try to take over
             fs.unlinkSync(this.lockPath);
             return await this.acquire(port);
           }
