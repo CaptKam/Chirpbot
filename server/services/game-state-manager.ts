@@ -566,6 +566,11 @@ export class GameStateManager {
     // Determine engine actions
     if (targetState === RuntimeGameState.FINAL && currentState === RuntimeGameState.LIVE) {
       shouldStopEngines = true;
+      
+      // Trigger immediate cleanup when game goes final
+      this.cleanupFinalGame(gameInfo.gameId, gameInfo.sport).catch(error => {
+        console.error(`⚠️ Failed to cleanup final game ${gameInfo.gameId}:`, error);
+      });
     } else if (targetState === RuntimeGameState.PAUSED && currentState === RuntimeGameState.LIVE) {
       shouldStopEngines = true;
     } else if (targetState === RuntimeGameState.LIVE && currentState === RuntimeGameState.PAUSED) {
@@ -897,6 +902,18 @@ export class GameStateManager {
     if (timer) {
       clearTimeout(timer);
       this.pollingTimers.delete(gameId);
+    }
+  }
+
+  // === GAME CLEANUP ===
+
+  private async cleanupFinalGame(gameId: string, sport: string): Promise<void> {
+    try {
+      // Import and call game monitoring cleanup service
+      const { gameMonitoringCleanup } = await import('./game-monitoring-cleanup');
+      await gameMonitoringCleanup.cleanupFinalGame(gameId, sport);
+    } catch (error) {
+      console.error(`❌ GameStateManager: Failed to cleanup final game ${gameId}:`, error);
     }
   }
 

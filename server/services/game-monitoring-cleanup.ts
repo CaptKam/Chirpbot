@@ -124,6 +124,27 @@ export class GameMonitoringCleanup {
   }
 
   /**
+   * Clean up a specific game immediately when it goes final
+   * Called by GameStateManager when game transitions to FINAL
+   */
+  async cleanupFinalGame(gameId: string, sport: string): Promise<number> {
+    try {
+      console.log(`🎯 Game Monitoring Cleanup: Immediate cleanup for final game ${gameId} (${sport})`);
+      
+      const removedCount = await storage.removeGameFromAllMonitoring(gameId);
+      
+      if (removedCount > 0) {
+        console.log(`✅ Game Monitoring Cleanup: Removed final game ${gameId} from ${removedCount} user(s) monitoring`);
+      }
+      
+      return removedCount;
+    } catch (error) {
+      console.error(`❌ Game Monitoring Cleanup: Error cleaning up final game ${gameId}:`, error);
+      return 0;
+    }
+  }
+
+  /**
    * Get game status from calendar service
    */
   private getGameStatusFromCalendar(gameId: string, sport: string): string | null {
@@ -136,7 +157,14 @@ export class GameMonitoringCleanup {
       
       if (sportStates && sportStates[sportKey]) {
         const game = sportStates[sportKey].games.get(gameId);
-        return game?.status || null;
+        const status = game?.status?.toLowerCase() || null;
+        
+        // Normalize status - consider all variations of "final"
+        if (status && (status === 'final' || status === 'completed' || status.includes('final'))) {
+          return 'final';
+        }
+        
+        return status;
       }
 
       return null;
