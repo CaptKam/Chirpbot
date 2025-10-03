@@ -273,36 +273,38 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
             </div>
           </div>
 
-          {/* AI Prediction Insights - Highlighted */}
-          {alert.context?.generativeAI?.predictiveInsights && (
+          {/* AI Enhanced Gambling Insights - Structured Template */}
+          {alert.gamblingInsights?.structuredTemplate && (
             <div className={`mb-4 p-4 rounded-xl border-2 ${sportConfig.borderColor} ${sportConfig.bgColor}`}>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Target className={`w-4 h-4 ${sportConfig.iconColor}`} />
-                  <span className={`text-sm font-bold ${sportConfig.iconColor}`}>AI Prediction</span>
-                </div>
-                <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2 mb-2">
+                <Target className={`w-4 h-4 ${sportConfig.iconColor}`} />
+                <span className={`text-sm font-bold ${sportConfig.iconColor}`}>AI Insights</span>
+                {alert.gamblingInsights.confidence && (
                   <div className={`px-2 py-1 rounded-full ${sportConfig.accentColor} text-white text-xs font-bold`}>
-                    {alert.context.generativeAI.predictiveInsights.probability}%
+                    {Math.round(alert.gamblingInsights.confidence * 100)}%
                   </div>
-                </div>
+                )}
               </div>
-              <div className="text-sm text-slate-200 font-medium">
-                {alert.context.generativeAI.predictiveInsights.nextPlay}
+              <div className="text-sm text-slate-200 font-medium whitespace-pre-line">
+                {alert.gamblingInsights.structuredTemplate}
               </div>
             </div>
           )}
 
-          {/* AI Generated Headline */}
-          {alert.context?.generativeAI?.aiGeneratedContent?.headline && (
+          {/* AI Context Insights */}
+          {alert.context?.aiInsights && alert.context.aiInsights.length > 0 && (
             <div className={`mb-4 p-3 rounded-lg ${sportConfig.bgColor} border ${sportConfig.borderColor}`}>
               <div className="flex items-center gap-2 mb-1">
                 <Zap className={`w-3 h-3 ${sportConfig.iconColor}`} />
-                <span className="text-xs font-semibold text-slate-300">AI Headline</span>
+                <span className="text-xs font-semibold text-slate-300">AI Analysis</span>
               </div>
-              <div className="text-sm text-slate-100 font-semibold">
-                {alert.context.generativeAI.aiGeneratedContent.headline}
-              </div>
+              <ul className="space-y-1">
+                {alert.context.aiInsights.slice(0, 3).map((insight: string, idx: number) => (
+                  <li key={idx} className="text-sm text-slate-100">
+                    • {insight}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 
