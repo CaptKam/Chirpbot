@@ -167,17 +167,34 @@ function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?
 export default function Calendar() {
   const [activeSport, setActiveSport] = useState("MLB");
   const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
-  // Initialize with 4 days of games (today + next 3 days)
-  const [selectedDates, setSelectedDates] = useState<Set<string>>(() => {
-    const dates = new Set<string>();
-    const now = new Date();
-    for (let i = 0; i < 4; i++) {
-      dates.add(format(addDays(now, i), 'yyyy-MM-dd'));
-    }
-    return dates;
-  });
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [teamFilter, setTeamFilter] = useState<{homeTeam?: string, awayTeam?: string} | null>(null);
+
+  // Fetch server's Pacific date to ensure timezone alignment
+  const { data: serverDate } = useQuery({
+    queryKey: ["/api/server-date"],
+    queryFn: async () => {
+      const response = await fetch("/api/server-date", {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch server date");
+      return response.json();
+    },
+    staleTime: 60000,
+  });
+
+  // Initialize selectedDates with server date once it's available
+  useEffect(() => {
+    if (serverDate?.date && selectedDates.size === 0) {
+      const dates = new Set<string>();
+      const serverNow = new Date(serverDate.date);
+      for (let i = 0; i < 4; i++) {
+        dates.add(format(addDays(serverNow, i), 'yyyy-MM-dd'));
+      }
+      setSelectedDates(dates);
+    }
+  }, [serverDate]);
 
   // Fetch games for all selected dates
   const { data: allGamesData, isLoading: isLoadingGames } = useQuery({
@@ -378,11 +395,11 @@ export default function Calendar() {
           <div>
             <div className="flex items-center space-x-3">
               <h2 className="text-xl font-black uppercase tracking-wide text-slate-100">
-                {selectedDates.size === 1 && selectedDates.has(format(new Date(), 'yyyy-MM-dd'))
+                {selectedDates.size === 1 && serverDate?.date && selectedDates.has(serverDate.date)
                   ? "Today's Games"
                   : selectedDates.size === 1
                   ? format(new Date(Array.from(selectedDates)[0]), 'MMMM d, yyyy')
-                  : selectedDates.size === 4 && Array.from(selectedDates).includes(format(new Date(), 'yyyy-MM-dd'))
+                  : selectedDates.size === 4 && serverDate?.date && Array.from(selectedDates).includes(serverDate.date)
                   ? "Next 4 Days"
                   : `${selectedDates.size} Days Selected`}
                 {teamFilter && (
@@ -452,13 +469,13 @@ export default function Calendar() {
                   </div>
                 ))}
 
-                {eachDayOfInterval({
-                  start: startOfWeek(new Date()),
-                  end: addDays(endOfWeek(new Date()), 14)
+                {serverDate?.date && eachDayOfInterval({
+                  start: startOfWeek(new Date(serverDate.date)),
+                  end: addDays(endOfWeek(new Date(serverDate.date)), 14)
                 }).map(date => {
                   const dateStr = format(date, 'yyyy-MM-dd');
                   const isSelected = selectedDates.has(dateStr);
-                  const isToday = isSameDay(date, new Date());
+                  const isToday = serverDate?.date && isSameDay(date, new Date(serverDate.date));
 
                   return (
                     <Button
@@ -470,8 +487,8 @@ export default function Calendar() {
                         if (isSelected) {
                           newDates.delete(dateStr);
                           // Don't allow deselecting all dates
-                          if (newDates.size === 0) {
-                            newDates.add(format(new Date(), 'yyyy-MM-dd'));
+                          if (newDates.size === 0 && serverDate?.date) {
+                            newDates.add(serverDate.date);
                           }
                         } else {
                           newDates.add(dateStr);
@@ -499,8 +516,9 @@ export default function Calendar() {
                   variant="outline"
                   size="sm"
                   onClick={() => {
+                    if (!serverDate?.date) return;
                     const dates = new Set<string>();
-                    const now = new Date();
+                    const now = new Date(serverDate.date);
                     for (let i = 0; i < 4; i++) {
                       dates.add(format(addDays(now, i), 'yyyy-MM-dd'));
                     }
@@ -515,8 +533,9 @@ export default function Calendar() {
                   variant="outline"
                   size="sm"
                   onClick={() => {
+                    if (!serverDate?.date) return;
                     const weekend = [];
-                    const now = new Date();
+                    const now = new Date(serverDate.date);
                     for (let i = 0; i < 7; i++) {
                       const day = addDays(now, i);
                       const dayOfWeek = day.getDay();
@@ -535,8 +554,9 @@ export default function Calendar() {
                   variant="outline"
                   size="sm"
                   onClick={() => {
+                    if (!serverDate?.date) return;
                     const week = [];
-                    const now = new Date();
+                    const now = new Date(serverDate.date);
                     for (let i = 0; i < 7; i++) {
                       week.push(format(addDays(now, i), 'yyyy-MM-dd'));
                     }
