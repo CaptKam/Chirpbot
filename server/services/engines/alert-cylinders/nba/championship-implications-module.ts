@@ -55,14 +55,9 @@ export default class ChampionshipImplicationsModule extends BaseAlertModule {
   };
 
   isTriggered(gameState: GameState): boolean {
-    // Only trigger during live games in meaningful part of season
-    if (gameState.status !== 'live') return false;
-    
-    // Simulate season context (in real implementation, would get from database)
-    const seasonContext = this.estimateSeasonContext(gameState);
-    
-    // Check if game has championship implications
-    return this.hasChampionshipImplications(gameState, seasonContext);
+    // Only trigger during live games when we have actual championship data
+    // Without real standings/playoff data, don't generate false alerts
+    return false;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
