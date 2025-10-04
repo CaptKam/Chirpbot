@@ -288,7 +288,7 @@ const teamNameToAbbr: Record<string, string> = {
   'Georgia State Panthers': 'GSU',
   'Appalachian State Mountaineers': 'APP',
   'Coastal Carolina Chanticleers': 'CCU',
-  'UL Lafayette Ragin' Cajuns': 'UL',
+  'UL Lafayette Ragin\' Cajuns': 'UL',
   'UL Monroe Warhawks': 'ULM',
   'Texas State Bobcats': 'TXST',
   'UT Arlington Mavericks': 'UTA',
