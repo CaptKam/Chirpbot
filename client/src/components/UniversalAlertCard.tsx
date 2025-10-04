@@ -4,6 +4,36 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Clock, Target, Bot, TrendingUp, Smartphone } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
+// Helper function to remove mascot from NCAAF team names
+const removeNcaafMascot = (teamName: string, sport?: string) => {
+  if (!teamName || sport !== 'NCAAF') return teamName;
+  
+  // Common NCAAF mascots to remove
+  const mascots = [
+    'Tigers', 'Bulldogs', 'Crimson Tide', 'Volunteers', 'Gators', 'Wildcats',
+    'Aggies', 'Longhorns', 'Sooners', 'Trojans', 'Bruins', 'Cardinal', 
+    'Fighting Irish', 'Seminoles', 'Hurricanes', 'Cavaliers', 'Yellow Jackets',
+    'Blue Devils', 'Demon Deacons', 'Tar Heels', 'Wolfpack', 'Orange',
+    'Eagles', 'Panthers', 'Cardinals', 'Badgers', 'Hawkeyes', 'Cornhuskers',
+    'Wolverines', 'Buckeyes', 'Nittany Lions', 'Spartans', 'Hoosiers',
+    'Boilermakers', 'Terrapins', 'Scarlet Knights', 'Golden Gophers',
+    'Illini', 'Horned Frogs', 'Red Raiders', 'Mountaineers', 'Cowboys',
+    'Jayhawks', 'Cyclones', 'Bears', 'Ducks', 'Beavers', 'Huskies',
+    'Cougars', 'Sun Devils', 'Utes', 'Buffaloes', 'Knights', 'Bulls',
+    'Bearcats', 'Rebels', 'Rainbow Warriors', 'Aztecs', 'Broncos', 'Mustangs',
+    'Mean Green', 'Owls', 'Golden Panthers', 'Blazers', 'Roadrunners'
+  ];
+  
+  // Remove mascot if found at the end
+  for (const mascot of mascots) {
+    if (teamName.endsWith(mascot)) {
+      return teamName.replace(mascot, '').trim();
+    }
+  }
+  
+  return teamName;
+};
+
 interface UniversalAlertProps {
   id: string;
   type: string;
@@ -89,12 +119,16 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
   // Format game state for header
   const gameStateHeader = (() => {
     const parts = [];
+    
+    // Remove mascots for NCAAF teams
+    const displayAwayTeam = removeNcaafMascot(alert.awayTeam, alert.sport);
+    const displayHomeTeam = removeNcaafMascot(alert.homeTeam, alert.sport);
 
     // Add score if available
     if (alert.awayScore !== undefined && alert.homeScore !== undefined) {
-      parts.push(`${alert.awayTeam} ${alert.awayScore} - ${alert.homeScore} ${alert.homeTeam}`);
+      parts.push(`${displayAwayTeam} ${alert.awayScore} - ${alert.homeScore} ${displayHomeTeam}`);
     } else {
-      parts.push(`${alert.awayTeam} @ ${alert.homeTeam}`);
+      parts.push(`${displayAwayTeam} @ ${displayHomeTeam}`);
     }
 
     return parts.join(' • ');
