@@ -1,0 +1,275 @@
+1) Add a validator (server)
+
+server/services/quality-validator.ts
+
+// Quality + dedupe utilities for AI output and display shaping
+
+export type AIText = { primary?: string; secondary?: string; contextualInsights?: string[] };
+export type GamblingOut = {
+  bulletPoints?: string[];
+  confidence?: number; // 0..1
+  tags?: string[];
+  market?: any;        // your Market type
+};
+export type OriginalAlert = { title?: string; message?: string };
+
+export type ValidationResult = {
+  ok: boolean;
+  reasons: string[];
+  ai: { primary: string; secondary: string; contextualInsights: string[] }; // normalized & trimmed
+};
+
+export type ResolvedDisplay = {
+  source: 'ai' | 'original';
+  title: string;
+  body?: string;
+  confidence?: number;
+  tags?: string[];
+  market?: any;
+  bullets?: string[];           // deduped list (0–2)
+  duplicateSuppressed?: string[]; // what we hid & why
+};
+
+export const QualityConfig = {
+  maxPrimaryWords: 14,
+  maxSecondaryWords: 18,
+  // similarity thresholds
+  duplicateThreshold: 0.72,    // same-idea suppression
+  nearDuplicateThreshold: 0.60 // used for bullet pruning
+};
+
+// ---------- text helpers ----------
+function wc(s: string) { return (s.trim().match(/\S+/g) || []).length; }
+function norm(s: string) { return s.toLowerCase().replace(/\s+/g, ' ').replace(/[^\w\s]/g, '').trim(); }
+function jaccard(a: string, b: string) {
+  const A = new Set(norm(a).split(' ').filter(Boolean));
+  const B = new Set(norm(b).split(' ').filter(Boolean));
+  if (!A.size || !B.size) return 0;
+  let inter = 0; for (const x of A) if (B.has(x)) inter++;
+  return inter / new Set([...A, ...B]).size;
+}
+function containsLike(a: string, b: string) {
+  const A = norm(a), B = norm(b);
+  return A.length > 0 && B.length > 0 && (A.includes(B) || B.includes(A));
+}
+
+// ---------- validators ----------
+export function validateAIOutput(aiIn: AIText, original: OriginalAlert): ValidationResult {
+  const reasons: string[] = [];
+  const ai = {
+    primary: String(aiIn.primary || '').trim(),
+    secondary: String(aiIn.secondary || '').trim(),
+    contextualInsights: Array.isArray(aiIn.contextualInsights) ? aiIn.contextualInsights.filter(Boolean).map(String) : []
+  };
+
+  // 1) Must have a primary line and be concise
+  if (!ai.primary) reasons.push('missing_primary');
+  if (wc(ai.primary) > QualityConfig.maxPrimaryWords) reasons.push('primary_too_long');
+  if (ai.secondary && wc(ai.secondary) > QualityConfig.maxSecondaryWords) reasons.push('secondary_too_long');
+
+  // 2) Don’t duplicate original alert title/message
+  const base = `${original.title ?? ''} ${original.message ?? ''}`.trim();
+  if (base) {
+    const simBase = Math.max(jaccard(ai.primary, base), jaccard(`${ai.primary} ${ai.secondary}`, base));
+    if (simBase >= QualityConfig.duplicateThreshold || containsLike(`${ai.primary} ${ai.secondary}`, base)) {
+      reasons.push('duplicates_original');
+    }
+  }
+
+  // 3) Don’t let contextualInsights repeat AI title/message
+  const msgAll = `${ai.primary} ${ai.secondary}`.trim();
+  ai.contextualInsights = ai.contextualInsights.filter(b =>
+    Math.max(jaccard(b, msgAll), containsLike(b, msgAll) ? 1 : 0) < QualityConfig.nearDuplicateThreshold
+  );
+
+  // 4) If secondary adds nothing new, drop it
+  if (ai.secondary) {
+    const simSec = Math.max(jaccard(ai.secondary, ai.primary), containsLike(ai.secondary, ai.primary) ? 1 : 0);
+    if (simSec >= QualityConfig.nearDuplicateThreshold) {
+      ai.secondary = '';
+      reasons.push('secondary_removed_duplicate');
+    }
+  }
+
+  const ok = reasons.length === 0 || (reasons.length === 1 && reasons[0] === 'secondary_removed_duplicate');
+  return { ok, reasons: ok ? reasons.filter(r => r !== 'secondary_removed_duplicate') : reasons, ai };
+}
+
+// ---------- display resolver ----------
+export function resolveDisplay(
+  original: OriginalAlert,
+  ai: ValidationResult | null,
+  gambling: GamblingOut
+): ResolvedDisplay {
+  const pickAI = !!ai?.ok && !!ai.ai.primary;
+  const title = pickAI ? ai!.ai.primary : (original.title || original.message || '').trim();
+  const body = pickAI ? (ai!.ai.secondary || '') : (original.title && original.message ? original.message : '');
+
+  // Deduce bullets from Gambling, pruning duplicates vs chosen text
+  const chosenText = `${title} ${body}`.trim();
+  const rawBullets = (gambling.bulletPoints ?? []).filter(Boolean).map(String);
+  const bullets: string[] = [];
+  const suppressed: string[] = [];
+
+  for (const b of rawBullets) {
+    const dupScore = Math.max(jaccard(b, chosenText), containsLike(b, chosenText) ? 1 : 0);
+    if (dupScore >= QualityConfig.nearDuplicateThreshold) {
+      suppressed.push(`bullet:${b}`);
+    } else if (bullets.length < 2) {
+      bullets.push(b);
+    }
+  }
+
+  // Also suppress AI contextualInsights entirely (we’re not rendering them)
+  if (ai?.ai.contextualInsights?.length) {
+    suppressed.push('ai_contextualInsights_hidden');
+  }
+
+  return {
+    source: pickAI ? 'ai' : 'original',
+    title,
+    body: body || undefined,
+    confidence: gambling.confidence,
+    tags: (gambling.tags ?? []).slice(0, 2),
+    market: gambling.market,
+    bullets,
+    duplicateSuppressed: suppressed.length ? suppressed : undefined
+  };
+}
+
+2) Use the validator in your processor (server)
+
+server/services/unified-ai-processor.ts (after you have aiBits, gamblingBits, weatherBits)
+
+import { validateAIOutput, resolveDisplay } from './quality-validator';
+import { AIFeatures } from '../config/ai-features'; // if you keep flags
+
+function mergeEnhancements(aiBits: any, gamblingBits: any, weatherBits: any) {
+  // your existing merge logic; keep it
+  return { ai: aiBits, gambling: gamblingBits, weather: weatherBits };
+}
+
+export function buildOutboundAlertPayload(originalAlert: any, merged: any) {
+  // 1) Validate AI (title/message + contextualInsights) against original
+  const aiValidation = validateAIOutput(
+    {
+      primary: merged?.ai?.primary,
+      secondary: merged?.ai?.secondary,
+      contextualInsights: merged?.ai?.contextualInsights // if present
+    },
+    { title: originalAlert.title, message: originalAlert.message }
+  );
+
+  // 2) Create a single, deduped presentation model
+  const presentation = resolveDisplay(
+    { title: originalAlert.title, message: originalAlert.message },
+    aiValidation,
+    merged?.gambling ?? {}
+  );
+
+  // 3) Return the final payload your WebSocket/API will deliver
+  return {
+    ...originalAlert,                 // id, game, teams, clocks, etc.
+    context: {
+      ...merged,                     // keep raw for telemetry if you want
+      presentation,                  // <- the one true source for UI
+      aiValidation: {
+        ok: aiValidation.ok,
+        reasons: aiValidation.reasons
+      }
+    }
+  };
+}
+
+// wherever you finish the enhancement:
+const merged = mergeEnhancements(aiBits, gamblingBits, weatherBits);
+const outbound = buildOutboundAlertPayload(baseAlert, merged);
+websocket.send(outbound);
+
+3) Render only the resolved “one truth” (client)
+
+client/src/components/UniversalAlertCard.tsx
+
+// Expect the server to send alert.context.presentation
+const p = alert?.context?.presentation;
+
+{/* Title */}
+<h3 className="text-sm font-semibold">{p?.title}</h3>
+
+{/* Optional one-liner body (AI or original) */}
+{p?.body && <p className="text-xs text-slate-200 mt-1">{p.body}</p>}
+
+{/* Confidence + single best market */}
+<div className="mt-2 flex items-center gap-3 text-xs text-slate-300">
+  {typeof p?.confidence === 'number' && (
+    <span>Confidence {Math.round((p.confidence ?? 0) * 100)}%</span>
+  )}
+  {p?.market && <span>{/* render your chosen market succinctly */}</span>}
+  {p?.tags?.length ? <span>#{p.tags.join(' #')}</span> : null}
+</div>
+
+{/* At most 2 non-duplicative bullets — already filtered server-side */}
+{p?.bullets?.length ? (
+  <ul className="mt-2 space-y-1">
+    {p.bullets.map((b: string, i: number) => (
+      <li key={i} className="text-xs text-slate-200">{b}</li>
+    ))}
+  </ul>
+) : null}
+
+
+The client no longer renders raw aiInsights, contextualInsights, or full gambling bullet lists — it renders only context.presentation.
+
+4) What this fixes (concretely)
+
+AI Output Validator
+
+Enforces word caps
+
+Drops secondary if it adds nothing
+
+Rejects AI if it clones original alert
+
+Prunes AI’s own contextualInsights if they repeat AI’s message
+
+Display Deduplication
+
+Prunes gambling bullets that repeat the chosen title/body
+
+Hides AI contextualInsights entirely (no triple stacking)
+
+Caps bullets to 2 (glanceable)
+
+Fallback Logic
+
+If AI fails: source = "original", uses your original title/message
+
+Still shows confidence/tags/market
+
+Never shows “bad” AI just because it exists
+
+Single Source of Truth
+
+Frontend consumes presentation only
+
+Server decides one best version + short bullets
+
+5) Tuning knobs
+
+Tighten/loosen suppression:
+
+duplicateThreshold (default 0.72)
+
+nearDuplicateThreshold (default 0.60)
+
+Brevity:
+
+maxPrimaryWords (14), maxSecondaryWords (18)
+
+6) Rollout checklist
+
+Add quality-validator.ts.
+
+Wire buildOutboundAlertPayload() in your processor where you currently send enhanced alerts.
+
+Update the React card to read alert.context.presentation only.
