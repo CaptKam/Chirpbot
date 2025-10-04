@@ -257,7 +257,7 @@ export abstract class BaseSportEngine {
         }
 
         if (module.isTriggered(gameState)) {
-          const alert = module.generateAlert(gameState);
+          const alert = await module.generateAlert(gameState);
           if (alert) {
             alerts.push(alert);
           }

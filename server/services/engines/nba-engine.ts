@@ -144,8 +144,8 @@ export class NBAEngine extends BaseSportEngine {
       }
       if (!gameState.isLive) return [];
 
-      // Optional pre-AI threshold to avoid noisy work (can be tuned via settings)
-      const threshold = await unifiedSettings.getNumber?.('NBA_PRE_AI_THRESHOLD', 70).catch(() => 70);
+      // Optional pre-AI threshold to avoid noisy work
+      const threshold = 70;
       const preProb = await this.calculateProbability(gameState);
       if (preProb < threshold) {
         if (DEBUG) console.log(`⏭️ NBA pre-threshold drop (${preProb} < ${threshold}) for game ${gameState.gameId}`);
