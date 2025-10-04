@@ -198,14 +198,14 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
           </div>
 
           {/* AI Insights Bullets (if available) */}
-          {alert.context?.aiInsights && alert.context.aiInsights.length > 0 && (
+          {alert.context?.aiInsights && alert.context.aiInsights.length > 0 && !alert.context?.gambling?.duplicateSuppressed && (
             <div className="mb-3 p-3 rounded-lg bg-slate-800/60 border border-slate-700">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="w-3 h-3 text-blue-400" />
                 <span className="text-xs font-semibold text-slate-300">Key Insights</span>
               </div>
               <ul className="space-y-1">
-                {alert.context.aiInsights.slice(0, 3).map((insight: string, idx: number) => (
+                {alert.context.aiInsights.slice(0, 2).map((insight: string, idx: number) => (
                   <li key={idx} className="text-xs text-slate-300 flex items-start gap-2">
                     <span className="text-blue-400 mt-0.5">•</span>
                     <span className="flex-1">{insight}</span>

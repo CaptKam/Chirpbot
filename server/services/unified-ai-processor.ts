@@ -1,6 +1,8 @@
 import { storage } from '../storage';
 import { AlertResult } from './engines/base-engine';
 import { gamblingInsightsComposer } from './gambling-insights-composer';
+import { AIFeatures } from '../config/ai-features';
+import { jaccardSimilarity } from './text-utils';
 
 // 🛡️ SECURITY: Schema validation and XSS protection
 import { z } from 'zod';
@@ -918,6 +920,11 @@ export class UnifiedAIProcessor {
         weatherSeverity: originalAlert.context?.weatherSeverity,
         // CRITICAL FIX: Include unified enhancement flags from enhancedContext
         ...aiResponse.enhancedContext,
+        // Properly merge gambling data including duplicateSuppressed flag
+        gambling: {
+          ...originalAlert.context?.gambling,
+          ...aiResponse.enhancedContext?.gambling
+        },
         // AI enhancement data
         aiEnhanced: true,
         aiInsights: aiResponse.contextualInsights,
@@ -932,9 +939,39 @@ export class UnifiedAIProcessor {
     };
 
     // Add logging to track enhancement flags being set
-    console.log(`🏷️ Enhanced Alert Context: ${enhancedAlert.context?.unifiedEnhancement ? '✅ UNIFIED' : '❌ MISSING UNIFIED'}, ${enhancedAlert.context?.hasGamblingInsights ? '✅ GAMBLING' : '❌ NO GAMBLING'}, ${enhancedAlert.context?.hasWeatherEnhancement ? '✅ WEATHER' : '❌ NO WEATHER'}, ${enhancedAlert.context?.aiEnhanced ? '✅ AI' : '❌ NO AI'}`);
+    console.log(`🏷️ Enhanced Alert Context: ${enhancedAlert.context?.unifiedEnhancement ? '✅ UNIFIED' : '❌ MISSING UNIFIED'}, ${enhancedAlert.context?.hasGamblingInsights ? '✅ GAMBLING' : '❌ NO GAMBLING'}, ${enhancedAlert.context?.gambling?.duplicateSuppressed ? '🔄 DUPLICATES SUPPRESSED' : ''}, ${enhancedAlert.context?.hasWeatherEnhancement ? '✅ WEATHER' : '❌ NO WEATHER'}, ${enhancedAlert.context?.aiEnhanced ? '✅ AI' : '❌ NO AI'}`);
 
     return enhancedAlert;
+  }
+
+  // Apply duplicate suppression to hide redundant gambling insights
+  private applyDuplicateSuppression(enhanced: UnifiedAIResponse, alert: AlertResult): UnifiedAIResponse {
+    if (!AIFeatures.hideDuplicateInsights) return enhanced;
+
+    const aiText = `${enhanced.enhancedTitle || ''} ${enhanced.enhancedMessage || ''}`.trim();
+    const gamblingBullets = alert.context?.gambling?.bulletPoints || [];
+    const gamblingText = gamblingBullets.join(' ');
+
+    if (!aiText || !gamblingText) return enhanced;
+
+    const sim = jaccardSimilarity(aiText, gamblingText);
+
+    if (sim >= AIFeatures.duplicateSimilarityThreshold) {
+      console.log(`🔄 Duplicate suppression: ${Math.round(sim * 100)}% similarity - hiding gambling bullets`);
+      return {
+        ...enhanced,
+        enhancedContext: {
+          ...enhanced.enhancedContext,
+          gambling: {
+            ...enhanced.enhancedContext?.gambling,
+            bulletPoints: [],
+            duplicateSuppressed: true
+          }
+        }
+      };
+    }
+
+    return enhanced;
   }
 
   // UNIFIED ENHANCEMENT METHOD: Applies all enhancement types in single pipeline
@@ -947,6 +984,12 @@ export class UnifiedAIProcessor {
     try {
       // AI DISCOVERY PATHWAY: Handle AI scanner discovery requests
       if (context.source === 'ai_discovery') {
+        // Check if AI Scanner is enabled
+        if (!AIFeatures.enableAIScanner) {
+          console.log(`🚫 AI Scanner disabled - skipping AI discovery alert`);
+          return null;
+        }
+
         console.log(`🔍 AI Discovery: Processing discovery request for ${context.sport} ${context.alertType}`);
         
         const discoveryResponse = await this.callAIDiscovery(context);
@@ -999,7 +1042,7 @@ export class UnifiedAIProcessor {
       const aiResponse = await this.enhanceAlert(context);
 
       // Combine all enhancements into final result
-      return {
+      const merged = {
         sport: aiResponse.sport,
         enhancedTitle: aiResponse.enhancedTitle,
         enhancedMessage: aiResponse.enhancedMessage,
@@ -1018,6 +1061,9 @@ export class UnifiedAIProcessor {
         tags: aiResponse.tags,
         analysis: aiResponse.analysis
       };
+
+      // Step 4: Apply duplicate suppression
+      return this.applyDuplicateSuppression(merged, enhancedAlert);
 
     } catch (error) {
       console.error(`❌ Unified Enhancement failed for ${context.sport} ${context.alertType}:`, error);
@@ -1450,7 +1496,7 @@ Remember: Only flag as opportunity if it's truly unique and not already caught b
     }
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 2800); // under 3s race
+    const timer = setTimeout(() => controller.abort(), AIFeatures.openAITimeoutMs);
 
     try {
       const body = {
@@ -1459,8 +1505,8 @@ Remember: Only flag as opportunity if it's truly unique and not already caught b
           { role: 'system', content: this.sanitizeInput(payload.system).slice(0, 1200) },
           { role: 'user', content: this.sanitizeInput(payload.user).slice(0, 8000) }
         ],
-        max_tokens: 180,
-        temperature: 0.5,
+        max_tokens: 120,
+        temperature: AIFeatures.openAITemperature,
         response_format: { type: 'json_object' as const }
       };
 
@@ -1529,34 +1575,13 @@ Remember: Only flag as opportunity if it's truly unique and not already caught b
 
   // Build sport-specific prompt for OpenAI
   private buildSportSpecificPrompt(context: CrossSportContext): { system: string; user: string } {
-    const system = `You are a sharp sports betting analyst writing real-time alerts for experienced bettors.
-
-VOICE RULES:
-- Punchy, active voice only - every word must earn its place
-- Power words: threatening, dominating, surging, collapsing, heating up, gassed
-- Strategic emoji use: 🔥 (hot), ⚡ (speed/urgency), 💰 (value), only when truly impactful
-- NO fluff: "key moment", "developing", "watch for", "situation developing"
-- NO neutral filler: "high confidence", "worth monitoring"
-
-OUTPUT FORMAT:
-- JSON with keys: primary, secondary
-- Primary: One crisp sentence - what's happening RIGHT NOW
-- Secondary: ONLY if significantly impactful (weather >15mph, odds movement, momentum swing). Otherwise OMIT.
-- Never fabricate player names or stats
-- Focus on actionable game intel, not commentary
-
-BANNED PHRASES:
-❌ "Key moment in the game"
-❌ "Developing scoring opportunity"  
-❌ "Worth monitoring closely"
-❌ "Next 5 minutes critical"
-❌ "Watch for this play"
-
-GOOD EXAMPLES:
-✅ "Bases loaded, Judge up, 2 outs"
-✅ "Chiefs threatening at 8-yard line"
-✅ "Curry hot: 15 pts in Q3"
-`;
+    const system = `You are a sharp live-betting analyst.
+RULES:
+- One crisp title (<= ${AIFeatures.maxPrimaryWords} words).
+- One sentence secondary ONLY if it adds real betting edge (<= ${AIFeatures.maxSecondaryWords} words).
+- No filler. No rewording of the same idea twice.
+OUTPUT (valid JSON):
+{"primary": "...", "secondary": "" | "..." }`;
 
     const baseContext = `GAME CONTEXT:
 - ${context.awayTeam} @ ${context.homeTeam} (${context.awayScore}-${context.homeScore})

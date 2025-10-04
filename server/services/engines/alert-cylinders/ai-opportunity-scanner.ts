@@ -1,5 +1,6 @@
 import { BaseAlertModule, GameState, AlertResult } from '../base-engine';
 import type { CrossSportContext, UnifiedAIResponse } from '../../unified-ai-processor';
+import { AIFeatures } from '../../../config/ai-features';
 import crypto from 'crypto';
 
 export interface AIDiscoveryResult {
@@ -20,6 +21,7 @@ export abstract class BaseAIScanner extends BaseAlertModule {
   abstract generateSituationHash(gameState: GameState): string;
 
   isTriggered(gameState: GameState): boolean {
+    if (!AIFeatures.enableAIScanner) return false;
     if (!gameState.isLive) return false;
 
     const gameId = gameState.gameId;
