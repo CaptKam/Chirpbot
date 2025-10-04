@@ -1,0 +1,236 @@
+What to change (Option B + C)
+
+Keep OpenAI title/message + Gambling Insights
+
+Disable AI Scanner (for now) or make it fire only on real edges
+
+Hide duplicates automatically when “Key Insights” ≈ the AI message
+
+Enforce brevity at the model level (hard word caps)
+
+1) Feature flags (one place to control behavior)
+// server/config/ai-features.ts
+export const AIFeatures = {
+  enableAIEnhancement: true,
+  enableAIScanner: false,           // ← disable for now (Option C)
+  hideDuplicateInsights: true,
+  duplicateSimilarityThreshold: 0.72, // 0..1 (tune 0.68–0.78)
+
+  // Output discipline
+  maxPrimaryWords: 14,
+  maxSecondaryWords: 18,
+
+  // Time/Cost discipline
+  openAITimeoutMs: 2500,
+  openAITemperature: 0.2,
+};
+
+
+Wire once:
+
+// server/services/unified-ai-processor.ts
+import { AIFeatures } from '../config/ai-features';
+
+2) Make the AI output short, structured, and consistent
+System/User prompts
+// server/services/unified-ai-processor.ts (excerpt)
+const system = `
+You are a sharp live-betting analyst.
+RULES:
+- One crisp title (<= ${AIFeatures.maxPrimaryWords} words).
+- One sentence secondary ONLY if it adds real betting edge (<= ${AIFeatures.maxSecondaryWords} words).
+- No filler. No rewording of the same idea twice.
+OUTPUT (valid JSON):
+{"primary": "...", "secondary": "" | "..." }
+`;
+
+function makeUserPrompt(ctx: CrossSportContext) {
+  // include sport, inning/quarter/clock, score, runners/down-distance, weather, odds hooks, etc.
+  // keep examples minimal to avoid babble
+  return `
+GAME:
+- ${ctx.awayTeam} @ ${ctx.homeTeam} • ${ctx.situationText}
+- Alert: ${ctx.alertType} (${Math.round((ctx.confidence ?? 0)*100)}% conf)
+- Weather: ${ctx.weatherSummary ?? "n/a"}
+STYLE:
+- Use sport jargon (succinct).
+- Focus on *bettable* angle, not description.
+EXAMPLE (structure only):
+{"primary":"Judge up with RISP, wind out","secondary":""}
+  `.trim();
+}
+
+Safer OpenAI call
+private async callOpenAI(payload: { system: string; user: string }) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), AIFeatures.openAITimeoutMs);
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type':'application/json',
+        'Authorization':`Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        temperature: AIFeatures.openAITemperature,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: payload.system },
+          { role: 'user', content: payload.user }
+        ],
+        max_tokens: 120
+      }),
+      signal: controller.signal
+    });
+    const json = await res.json();
+    // basic guardrail
+    const text = json?.choices?.[0]?.message?.content || '{}';
+    const parsed = JSON.parse(text);
+    return {
+      primary: String(parsed.primary || '').trim(),
+      secondary: String(parsed.secondary || '').trim()
+    };
+  } catch (e) {
+    return { primary: '', secondary: '' }; // fall back; don’t block
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+3) Automatic duplicate hider (server-side)
+// server/services/text-utils.ts
+export function normalize(s: string) {
+  return s.toLowerCase().replace(/\s+/g, ' ').replace(/[^\w\s]/g, '').trim();
+}
+export function jaccardSimilarity(a: string, b: string) {
+  const A = new Set(normalize(a).split(' '));
+  const B = new Set(normalize(b).split(' '));
+  if (!A.size || !B.size) return 0;
+  const inter = [...A].filter(x => B.has(x)).length;
+  const uni = new Set([...A, ...B]).size;
+  return inter / uni;
+}
+
+
+Hook into the combine step:
+
+// server/services/unified-ai-processor.ts (combine)
+import { jaccardSimilarity } from './text-utils';
+import { AIFeatures } from '../config/ai-features';
+
+function applyDuplicateSuppression(enhanced: UnifiedAIResponse) {
+  if (!AIFeatures.hideDuplicateInsights) return enhanced;
+
+  const main = `${enhanced.ai?.primary ?? ''} ${enhanced.ai?.secondary ?? ''}`.trim();
+  const keyInsights = (enhanced.gambling?.bulletPoints ?? []).join(' ');
+  const sim = jaccardSimilarity(main, keyInsights);
+
+  if (sim >= AIFeatures.duplicateSimilarityThreshold) {
+    // hide Key Insights list; keep confidence/tags/markets
+    return {
+      ...enhanced,
+      gambling: {
+        ...enhanced.gambling,
+        bulletPoints: [],                // ← suppress list
+        duplicateSuppressed: true
+      }
+    };
+  }
+  return enhanced;
+}
+
+
+Call it right after you merge AI + Gambling + Weather:
+
+const merged = mergeEnhancements(aiBits, gamblingBits, weatherBits);
+return applyDuplicateSuppression(merged);
+
+4) Frontend: only render “Key Insights” when not suppressed & keep it tiny
+// client/src/components/UniversalAlertCard.tsx
+const bullets = alert.context?.gambling?.bulletPoints ?? [];
+const hideBullets = alert.context?.gambling?.duplicateSuppressed === true;
+
+{!hideBullets && bullets.length > 0 && (
+  <div className="bg-slate-800/60 rounded-xl p-2 mt-2">
+    <div className="flex items-center gap-2">
+      <TrendingUp className="w-3 h-3 text-blue-400" />
+      <span className="text-xs font-semibold text-blue-200">Key Insights</span>
+    </div>
+    <ul className="mt-1 space-y-1">
+      {bullets.slice(0, 2).map((t, i) => (
+        <li key={i} className="text-xs text-slate-200">{t}</li>
+      ))}
+    </ul>
+  </div>
+)}
+
+5) AI Scanner: either OFF or make it fire on real edges
+
+Turn it off via the flag (recommended).
+If you want it ON, change the gate to market-verified edges:
+
+// server/services/engines/alert-cylinders/mlb/ai-scanner-module.ts
+checkSmartGate(gs: GameState): boolean {
+  const hasRISP = gs.hasSecond || gs.hasThird;
+  const elite = this.isEliteBatterUp(gs);
+  const windBoost = (gs.weather?.windSpeed || 0) >= 15;
+
+  // NEW: require objective market/metric edge
+  const liveTotal = gs.odds?.total?.points;
+  const modelRunExp = this.modelExpectedRunsThisPA(gs); // your RE24-style calc
+  const edge = (modelRunExp - (liveTotal ?? 0)/18) >= 0.18; // example: ≥0.18 runs edge in this PA
+
+  return elite && hasRISP && (windBoost || gs.inning >= 7) && edge;
+}
+
+// unified-ai-processor.ts
+if (!AIFeatures.enableAIScanner && context.source === 'ai_discovery') {
+  return null; // short-circuit
+}
+
+
+This makes the scanner rare but meaningful.
+
+6) Gambling Insights: ensure it’s the “one true signal”
+
+Keep:
+
+confidence %
+
+2 tags max (e.g., ["MLB", "RISP"])
+
+the single best market (don’t list 5)
+
+// server/services/gambling-insights-composer.ts (final shape)
+return {
+  bulletPoints,              // list may be suppressed by duplicate filter
+  confidence: conf,          // 0..1 → show as %
+  tags: tags.slice(0, 2),
+  market: bestMarketOnly(oddsData)  // pick 1 actionable market
+};
+
+7) What matters when you’re watching many games (optics for the card)
+
+Latency: send base alert instantly; AI arrives as a one-liner.
+
+Uniqueness: dedupe on the server so each card says one new thing.
+
+Edge-centric: always show confidence % + one market.
+
+Glanceability: title ≤14 words; body ≤1 sentence or nothing.
+
+8) Quick checklist to deploy
+
+Add ai-features.ts, set enableAIScanner:false.
+
+Replace OpenAI call with the short JSON pattern + timeout.
+
+Insert applyDuplicateSuppression() in the unify step.
+
+Update UniversalAlertCard to honor duplicateSuppressed and cap bullets to 2.
+
+(Optional) Tighten AI Scanner gate as shown if you re-enable later.
+
+If you want, paste me your current unified-ai-processor.ts combine method and I’ll splice these changes directly into it so you can copy/paste.
