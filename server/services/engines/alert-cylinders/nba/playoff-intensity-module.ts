@@ -61,11 +61,9 @@ export default class PlayoffIntensityModule extends BaseAlertModule {
   };
 
   isTriggered(gameState: GameState): boolean {
-    // Only trigger during live games with playoff implications
-    if (gameState.status !== 'live') return false;
-    
-    // Check for playoff intensity scenarios
-    return this.hasPlayoffIntensity(gameState);
+    // Only trigger during actual playoff games with real series data
+    // Without real playoff context, don't generate false alerts
+    return false;
   }
 
   generateAlert(gameState: GameState): AlertResult | null {
