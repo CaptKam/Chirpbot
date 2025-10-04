@@ -4,6 +4,15 @@ ChirpBot V3 is an advanced multi-sport betting intelligence platform that provid
 
 # Recent Changes
 
+## October 4, 2025 - Quality Validation & Deduplication System
+- **Quality Validator Created**: Added `server/services/quality-validator.ts` with validateAIOutput() and resolveDisplay() functions to enforce quality standards before using AI output.
+- **Word Limits Enforced**: AI titles limited to 14 words max, messages to 18 words max. Empty or whitespace-only AI responses automatically rejected.
+- **Duplicate Suppression**: Jaccard similarity algorithm (72% threshold) detects and suppresses duplicate content between AI output, original alerts, and gambling bullets.
+- **Single Source of Truth**: New `presentation` object in alert.context provides one clean version (source: 'ai' or 'original', title, body, 0-2 deduplicated bullets).
+- **Triple-Layer Validation**: (1) validateAIOutput checks quality, (2) buildEnhancedAlert applies fallback guards, (3) final empty-check ensures no blank messages ship.
+- **Frontend Simplification**: UniversalAlertCard now renders only alert.context.presentation, eliminating triple-stacked duplicate content (contextualInsights, aiInsights, raw gambling bullets all removed).
+- **System Status**: Quality gates active, blank alerts blocked, deduplication working, single clean version displayed to users.
+
 ## October 2, 2025 - NFL Alert Cylinder Bug Fixes & TypeScript Resolution
 - **Deduplication Fixed**: Resolved critical bug where massive-weather-module.ts used `Date.now()` in alertKey (same pattern as MLB bugs), causing alert spam. Changed to stable context: `Q${quarter}_${condition}_${severity}`.
 - **Fourth-Down Deduplication Improved**: Added quarter to alertKey for more granular tracking: `${gameId}_fourth_down_Q${quarter}_${yardsToGo}_${fieldPosition}`.
