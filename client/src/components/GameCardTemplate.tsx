@@ -66,6 +66,36 @@ const removeCity = (teamName: string) => {
   return words.length > 1 ? words.slice(-1).join(' ') : teamName;
 };
 
+// Helper function to remove mascot from NCAAF team names
+const removeNcaafMascot = (teamName: string, sport?: string) => {
+  if (!teamName || sport !== 'NCAAF') return teamName;
+  
+  // Common NCAAF mascots to remove
+  const mascots = [
+    'Tigers', 'Bulldogs', 'Crimson Tide', 'Volunteers', 'Gators', 'Wildcats',
+    'Aggies', 'Longhorns', 'Sooners', 'Trojans', 'Bruins', 'Cardinal', 
+    'Fighting Irish', 'Seminoles', 'Hurricanes', 'Cavaliers', 'Yellow Jackets',
+    'Blue Devils', 'Demon Deacons', 'Tar Heels', 'Wolfpack', 'Orange',
+    'Eagles', 'Panthers', 'Cardinals', 'Badgers', 'Hawkeyes', 'Cornhuskers',
+    'Wolverines', 'Buckeyes', 'Nittany Lions', 'Spartans', 'Hoosiers',
+    'Boilermakers', 'Terrapins', 'Scarlet Knights', 'Golden Gophers',
+    'Illini', 'Horned Frogs', 'Red Raiders', 'Mountaineers', 'Cowboys',
+    'Jayhawks', 'Cyclones', 'Bears', 'Ducks', 'Beavers', 'Huskies',
+    'Cougars', 'Sun Devils', 'Utes', 'Buffaloes', 'Knights', 'Bulls',
+    'Bearcats', 'Rebels', 'Rainbow Warriors', 'Aztecs', 'Broncos', 'Mustangs',
+    'Mean Green', 'Owls', 'Golden Panthers', 'Blazers', 'Roadrunners'
+  ];
+  
+  // Remove mascot if found at the end
+  for (const mascot of mascots) {
+    if (teamName.endsWith(mascot)) {
+      return teamName.replace(mascot, '').trim();
+    }
+  }
+  
+  return teamName;
+};
+
 const extractTeamAbbreviation = (teamName: string) => {
   if (!teamName || teamName.trim() === '') return 'TBD';
 
@@ -238,6 +268,10 @@ export function GameCardTemplate({
   const displayBalls = liveGameData?.balls ?? balls ?? 0;
   const displayStrikes = liveGameData?.strikes ?? strikes ?? 0;
 
+  // Get display names (remove mascot for NCAAF)
+  const awayDisplayName = removeNcaafMascot(awayTeam.name, sport);
+  const homeDisplayName = removeNcaafMascot(homeTeam.name, sport);
+
   return (
     <Card 
       className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-2 ${cardHeight} ${
@@ -255,7 +289,7 @@ export function GameCardTemplate({
         <div className="flex items-center space-x-3">
           <div className="text-center">
             <TeamLogo
-              teamName={removeCity(awayTeam.name)}
+              teamName={removeCity(awayDisplayName)}
               abbreviation={awayAbbr}
               sport={sport}
               size={logoSize}
@@ -263,7 +297,7 @@ export function GameCardTemplate({
               teamColor={undefined}
             />
             <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
-              {removeCity(awayTeam.name)}
+              {removeCity(awayDisplayName)}
             </div>
           </div>
           {(status === 'live' || status === 'final') && (
@@ -318,7 +352,7 @@ export function GameCardTemplate({
           )}
           <div className="text-center">
             <TeamLogo
-              teamName={removeCity(homeTeam.name)}
+              teamName={removeCity(homeDisplayName)}
               abbreviation={homeAbbr}
               sport={sport}
               size={logoSize}
@@ -326,7 +360,7 @@ export function GameCardTemplate({
               teamColor={undefined}
             />
             <div className="text-xs text-slate-300 font-medium mt-1 max-w-[60px] truncate">
-              {removeCity(homeTeam.name)}
+              {removeCity(homeDisplayName)}
             </div>
           </div>
         </div>
