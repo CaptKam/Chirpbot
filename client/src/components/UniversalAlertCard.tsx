@@ -86,32 +86,16 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
 
   const sportConfig = getSportConfig(alert.sport);
 
-  // Clean and format the display message
-  const getDisplayMessage = () => {
-    // Priority 1: Use structured template from gambling insights (clean emoji format)
-    if (alert.gamblingInsights?.structuredTemplate) {
-      return alert.gamblingInsights.structuredTemplate;
-    }
+  const presentation = alert.context?.presentation;
 
-    // Priority 2: Use AI-enhanced message if available
-    if (alert.context?.aiEnhanced && alert.message) {
-      return alert.message;
-    }
+  const displayTitle = presentation?.title || alert.message;
+  const displayBody = presentation?.body;
+  const displayBullets = presentation?.bullets || [];
+  const displayTags = presentation?.tags || alert.gamblingInsights?.tags || [];
+  const displayConfidence = presentation?.confidence || alert.gamblingInsights?.confidence || alert.confidence || 0;
 
-    // Priority 3: Use regular message, cleaned up
-    if (alert.message) {
-      return alert.message.replace(/\[object Object\]/g, '').trim();
-    }
-
-    // Fallback
-    return `${alert.type.replace(/^(MLB|NFL|NBA|NCAAF|WNBA|CFL)_/, '').replace(/_/g, ' ')} Alert`;
-  };
-
-  const displayMessage = getDisplayMessage();
-
-  // Calculate confidence percentage
   const confidencePercent = (() => {
-    const conf = alert.gamblingInsights?.confidence || alert.confidence || 0;
+    const conf = displayConfidence;
     if (conf > 1) return Math.min(100, Math.max(0, Math.round(conf)));
     return Math.round(conf * 100);
   })();
@@ -181,9 +165,9 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
             </div>
           </div>
 
-          {/* Main Alert Content - AI-Controlled Display */}
+          {/* Main Alert Content - Quality Validated Display */}
           <div className="mb-3 rounded-lg p-3 bg-slate-800/40 border border-slate-700">
-            {(alert.hasComposerEnhancement || alert.context?.aiEnhanced) && (
+            {presentation?.source === 'ai' && (
               <div className="flex items-center gap-2 mb-2">
                 <Bot className={`w-4 h-4 text-${sportConfig.color.replace('bg-', '')}`} />
                 <span className={`text-xs font-semibold uppercase tracking-wide text-${sportConfig.color.replace('bg-', '')}`}>
@@ -192,23 +176,29 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
               </div>
             )}
 
-            <div className="text-sm text-slate-100 leading-relaxed whitespace-pre-line">
-              {displayMessage}
+            <div className="text-sm font-semibold text-slate-100 leading-relaxed mb-1">
+              {displayTitle}
             </div>
+
+            {displayBody && (
+              <div className="text-xs text-slate-300 leading-relaxed">
+                {displayBody}
+              </div>
+            )}
           </div>
 
-          {/* AI Insights Bullets (if available) */}
-          {alert.context?.aiInsights && alert.context.aiInsights.length > 0 && !alert.context?.gambling?.duplicateSuppressed && (
+          {/* Quality-Validated Bullets (max 2, deduplicated server-side) */}
+          {displayBullets.length > 0 && (
             <div className="mb-3 p-3 rounded-lg bg-slate-800/60 border border-slate-700">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="w-3 h-3 text-blue-400" />
                 <span className="text-xs font-semibold text-slate-300">Key Insights</span>
               </div>
               <ul className="space-y-1">
-                {alert.context.aiInsights.slice(0, 2).map((insight: string, idx: number) => (
+                {displayBullets.map((bullet: string, idx: number) => (
                   <li key={idx} className="text-xs text-slate-300 flex items-start gap-2">
                     <span className="text-blue-400 mt-0.5">•</span>
-                    <span className="flex-1">{insight}</span>
+                    <span className="flex-1">{bullet}</span>
                   </li>
                 ))}
               </ul>
@@ -221,7 +211,7 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
               <Badge variant="outline" className={`text-xs border-${sportConfig.color.replace('bg-', '')}/30 text-${sportConfig.color.replace('bg-', '')}`}>
                 {alert.sport}
               </Badge>
-              {alert.gamblingInsights?.tags?.slice(0, 2).map((tag, idx) => (
+              {displayTags.slice(0, 2).map((tag: string, idx: number) => (
                 <Badge key={idx} variant="outline" className="text-xs border-slate-600 text-slate-400">
                   {tag}
                 </Badge>

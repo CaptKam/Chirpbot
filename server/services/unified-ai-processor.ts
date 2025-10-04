@@ -3,6 +3,7 @@ import { AlertResult } from './engines/base-engine';
 import { gamblingInsightsComposer } from './gambling-insights-composer';
 import { AIFeatures } from '../config/ai-features';
 import { jaccardSimilarity } from './text-utils';
+import { validateAIOutput, resolveDisplay, PresentationObject } from './quality-validator';
 
 // 🛡️ SECURITY: Schema validation and XSS protection
 import { z } from 'zod';
@@ -906,26 +907,63 @@ export class UnifiedAIProcessor {
   }
 
   private buildEnhancedAlert(originalAlert: AlertResult, aiResponse: UnifiedAIResponse, startTime: number): AlertResult {
+    const validationResult = validateAIOutput(
+      aiResponse.enhancedTitle,
+      aiResponse.enhancedMessage,
+      originalAlert.message,
+      aiResponse.contextualInsights
+    );
+
+    if (!validationResult.isValid) {
+      console.log(`⚠️ Quality Validation Failed: ${validationResult.reason} - using fallback`);
+    }
+
+    const gamblingBullets = originalAlert.context?.gambling?.bulletPoints || 
+                            originalAlert.gamblingInsights?.bullets || [];
+    const tags = aiResponse.tags || originalAlert.gamblingInsights?.tags || [];
+
+    const presentation = resolveDisplay(
+      aiResponse.enhancedTitle,
+      aiResponse.enhancedMessage,
+      originalAlert.message,
+      aiResponse.contextualInsights,
+      gamblingBullets,
+      aiResponse.confidence,
+      tags,
+      validationResult
+    );
+
+    console.log(`🎨 Presentation resolved: source=${presentation.source}, bullets=${presentation.bullets.length}, duplicateSuppressed=${presentation.duplicateSuppressed}`);
+
+    let finalMessage = originalAlert.message;
+    
+    if (!validationResult.isValid || !aiResponse.enhancedMessage || aiResponse.enhancedMessage.trim().length === 0) {
+      console.log(`⚠️ AI failed validation, using original message`);
+      finalMessage = originalAlert.message;
+    } else if (presentation.source === 'ai') {
+      finalMessage = aiResponse.enhancedMessage;
+    }
+
+    if (!finalMessage || finalMessage.trim().length === 0) {
+      console.error(`❌ CRITICAL: Message would be empty, forcing originalAlert.message`);
+      finalMessage = originalAlert.message;
+    }
+
     const enhancedAlert = {
       ...originalAlert,
-      message: aiResponse.enhancedMessage,
-      // Explicitly preserve gambling insights from pipeline
+      message: finalMessage,
       gamblingInsights: originalAlert.gamblingInsights,
       hasComposerEnhancement: originalAlert.hasComposerEnhancement,
       context: {
         ...originalAlert.context,
-        // Preserve weather enhancement fields in context where they belong
         weatherContext: originalAlert.context?.weatherContext,
         isWeatherTriggered: originalAlert.context?.isWeatherTriggered,
         weatherSeverity: originalAlert.context?.weatherSeverity,
-        // CRITICAL FIX: Include unified enhancement flags from enhancedContext
         ...aiResponse.enhancedContext,
-        // Properly merge gambling data including duplicateSuppressed flag
         gambling: {
           ...originalAlert.context?.gambling,
           ...aiResponse.enhancedContext?.gambling
         },
-        // AI enhancement data
         aiEnhanced: true,
         aiInsights: aiResponse.contextualInsights,
         bettingAdvice: aiResponse.bettingContext?.recommendation,
@@ -933,12 +971,12 @@ export class UnifiedAIProcessor {
         urgency: aiResponse.urgencyLevel,
         callToAction: aiResponse.actionableRecommendation,
         confidenceScore: aiResponse.confidence,
-        aiProcessingTime: aiResponse.aiProcessingTime
+        aiProcessingTime: aiResponse.aiProcessingTime,
+        presentation
       },
-      priority: originalAlert.priority // Keep original priority - AI enhancement shouldn't artificially inflate urgency
+      priority: originalAlert.priority
     };
 
-    // Add logging to track enhancement flags being set
     console.log(`🏷️ Enhanced Alert Context: ${enhancedAlert.context?.unifiedEnhancement ? '✅ UNIFIED' : '❌ MISSING UNIFIED'}, ${enhancedAlert.context?.hasGamblingInsights ? '✅ GAMBLING' : '❌ NO GAMBLING'}, ${enhancedAlert.context?.gambling?.duplicateSuppressed ? '🔄 DUPLICATES SUPPRESSED' : ''}, ${enhancedAlert.context?.hasWeatherEnhancement ? '✅ WEATHER' : '❌ NO WEATHER'}, ${enhancedAlert.context?.aiEnhanced ? '✅ AI' : '❌ NO AI'}`);
 
     return enhancedAlert;
