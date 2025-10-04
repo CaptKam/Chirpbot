@@ -331,7 +331,7 @@ export class UnifiedAIProcessor {
   }
 
   // UNIFIED ENTRY POINT: Queue alert for complete enhancement (AI + gambling + weather in one pipeline)
-  queueAlert(
+  async queueAlert(
     alert: AlertResult, 
     context: CrossSportContext, 
     userId: string
@@ -380,37 +380,38 @@ export class UnifiedAIProcessor {
           const startTime = Date.now();
 
           // Apply gambling insights and weather enhancement even for cache hits
-          let enhancedAlert = { ...alert };
-          this.applyGamblingInsightsEnhancement(enhancedAlert, context)
-            .then(gamblingEnhanced => this.applyWeatherEnhancement(gamblingEnhanced, context))
-            .then(fullyEnhanced => {
-              // Build enhanced alert with cached AI response and unified flags
-              const finalAlert = this.buildEnhancedAlert(fullyEnhanced, {
-                ...cached,
-                enhancedContext: {
-                  ...fullyEnhanced.context,
-                  ...cached.enhancedContext,
-                  unifiedEnhancement: true,
-                  enhancementTypes: ['gambling', 'weather', 'ai']
-                }
-              }, startTime);
+          // FIXED: Now we AWAIT the promise chain instead of fire-and-forget
+          try {
+            let enhancedAlert = { ...alert };
+            const gamblingEnhanced = await this.applyGamblingInsightsEnhancement(enhancedAlert, context);
+            const fullyEnhanced = await this.applyWeatherEnhancement(gamblingEnhanced, context);
+            
+            // Build enhanced alert with cached AI response and unified flags
+            const finalAlert = this.buildEnhancedAlert(fullyEnhanced, {
+              ...cached,
+              enhancedContext: {
+                ...fullyEnhanced.context,
+                ...cached.enhancedContext,
+                unifiedEnhancement: true,
+                enhancementTypes: ['gambling', 'weather', 'ai']
+              }
+            }, startTime);
 
-              // Send enhanced version via WebSocket (non-blocking)
-              if (this.onEnhancedAlert) {
-                this.onEnhancedAlert(finalAlert, userId, context.sport, true).catch(error => {
-                  console.error(`❌ Failed to send cached enhanced alert via WebSocket:`, error);
-                });
-              }
-            })
-            .catch(error => {
-              console.warn(`⚠️ Cache hit enhancement failed, using cached response only:`, error);
-              const fallbackAlert = this.buildEnhancedAlert(alert, cached, startTime);
-              if (this.onEnhancedAlert) {
-                this.onEnhancedAlert(fallbackAlert, userId, context.sport, true).catch(error => {
-                  console.error(`❌ Failed to send fallback cached alert via WebSocket:`, error);
-                });
-              }
-            });
+            // Send enhanced version via WebSocket
+            if (this.onEnhancedAlert) {
+              await this.onEnhancedAlert(finalAlert, userId, context.sport, true);
+            }
+            
+            console.log(`✅ Cache hit: Quality validation and presentation complete for ${context.sport} ${context.alertType}`);
+          } catch (error) {
+            console.warn(`⚠️ Cache hit enhancement failed, using cached response only:`, error);
+            const fallbackAlert = this.buildEnhancedAlert(alert, cached, startTime);
+            if (this.onEnhancedAlert) {
+              await this.onEnhancedAlert(fallbackAlert, userId, context.sport, true).catch(error => {
+                console.error(`❌ Failed to send fallback cached alert via WebSocket:`, error);
+              });
+            }
+          }
 
           return Promise.resolve(jobId);
         } else {
@@ -907,6 +908,8 @@ export class UnifiedAIProcessor {
   }
 
   private buildEnhancedAlert(originalAlert: AlertResult, aiResponse: UnifiedAIResponse, startTime: number): AlertResult {
+    console.log('🎨 Building enhanced alert with quality validation');
+    
     const validationResult = validateAIOutput(
       aiResponse.enhancedTitle,
       aiResponse.enhancedMessage,
