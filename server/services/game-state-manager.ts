@@ -342,6 +342,19 @@ export class GameStateManager {
   // === GAME MANAGEMENT ===
 
   async addGame(gameData: BaseGameData, userIds: string[] = []): Promise<GameStateInfo> {
+    // If no userIds provided, check database for existing monitors
+    let monitoringUsers = userIds;
+    if (monitoringUsers.length === 0) {
+      try {
+        const { default: storage } = await import('../storage');
+        const monitoredGames = await storage.getUsersMonitoringGame(gameData.id);
+        monitoringUsers = monitoredGames.map(mg => mg.userId);
+      } catch (error) {
+        // Database check failed, continue with empty list
+        console.error(`⚠️ Failed to check for existing monitors on game ${gameData.id}:`, error);
+      }
+    }
+
     const gameInfo: GameStateInfo = {
       gameId: gameData.id,
       sport: gameData.sport,
@@ -365,8 +378,8 @@ export class GameStateManager {
       pendingLiveConfirmation: false,
       liveConfirmationAttempts: 0,
 
-      isUserMonitored: userIds.length > 0,
-      userIds: new Set(userIds),
+      isUserMonitored: monitoringUsers.length > 0,
+      userIds: new Set(monitoringUsers),
 
       weatherArmed: false,
 
@@ -680,12 +693,16 @@ export class GameStateManager {
 
       // CRITICAL FIX: Trigger alert generation for live games
       if (gameInfo.currentState === RuntimeGameState.LIVE && this.engineManager) {
-        console.log(`🎯 Force evaluating alerts for live game ${gameId}`);
+        // OPTIMIZATION: Skip alert processing for unmonitored games
+        if (!gameInfo.isUserMonitored || gameInfo.userIds.size === 0) {
+          console.log(`⏭️ Skipping alert generation for unmonitored game ${gameId}`);
+        } else {
+          console.log(`🎯 Force evaluating alerts for live game ${gameId}`);
 
-        try {
-          // Get the engine instance and trigger alert generation
-          const sport = gameInfo.sport.toUpperCase();
-          const engine = this.engineManager.getEngine(sport);
+          try {
+            // Get the engine instance and trigger alert generation
+            const sport = gameInfo.sport.toUpperCase();
+            const engine = this.engineManager.getEngine(sport);
 
           if (engine && engine.generateLiveAlerts) {
             // Convert game data to GameState format for engine (sport-specific fields)
@@ -769,8 +786,9 @@ export class GameStateManager {
           } else {
             console.log(`⚠️ No engine instance available for ${sport} - skipping alert generation`);
           }
-        } catch (alertError) {
-          console.error(`❌ Alert generation failed for game ${gameId}:`, alertError);
+          } catch (alertError) {
+            console.error(`❌ Alert generation failed for game ${gameId}:`, alertError);
+          }
         }
       }
 

@@ -1188,6 +1188,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       };
 
       await storage.addUserMonitoredTeam(userId, gameId, sport || 'MLB', homeTeamName || '', awayTeamName || '');
+      
+      // Update GameStateManager to enable alert processing for this game
+      const { gameStateManager } = await import('./services/game-state-manager');
+      const added = gameStateManager.addUserToGame(gameId, userId);
+      if (added) {
+        console.log(`✅ Game ${gameId} marked as monitored for user ${userId}`);
+      }
+      
       res.json({ message: 'Game monitoring enabled' });
     } catch (error) {
       console.error('Error adding monitored game:', error);
@@ -1199,6 +1207,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       const { userId, gameId } = req.params;
       await storage.removeUserMonitoredTeam(userId, gameId);
+      
+      // Update GameStateManager to disable alert processing if no users monitoring
+      const { gameStateManager } = await import('./services/game-state-manager');
+      const removed = gameStateManager.removeUserFromGame(gameId, userId);
+      if (removed) {
+        console.log(`✅ User ${userId} removed from game ${gameId} monitoring`);
+      }
+      
       res.json({ message: 'Game monitoring disabled' });
     } catch (error) {
       console.error('Error removing monitored game:', error);
