@@ -408,4 +408,19 @@ export default class ClutchPerformanceModule extends BaseAlertModule {
     // Placeholder - would analyze foul situation
     return {};
   }
+
+  private parseTimeToSeconds(timeString: string): number {
+    if (!timeString || timeString === '0:00') return 0;
+    try {
+      const clean = String(timeString).trim().split(' ')[0];
+      if (clean.includes(':')) {
+        const [m, s] = clean.split(':').map(n => parseInt(n, 10) || 0);
+        return m * 60 + s;
+      }
+      return parseInt(clean, 10) || 0;
+    } catch (e) {
+      console.warn(`NBA Clutch: Failed to parse time "${timeString}":`, e);
+      return 0;
+    }
+  }
 }
