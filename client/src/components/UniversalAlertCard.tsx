@@ -4,14 +4,48 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Clock, Target, Bot, TrendingUp, Smartphone } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
+// Assuming formatTimeAgo is defined elsewhere or needs to be imported.
+// For the purpose of this example, let's assume it's available globally or imported.
+// In a real scenario, you would import it like:
+// import { formatTimeAgo } from '@/lib/utils';
+
+// Placeholder for formatTimeAgo if not provided. Replace with actual import.
+const formatTimeAgo = (dateString: string): string => {
+  try {
+    const date = parseISO(dateString);
+    if (isNaN(date.getTime())) return 'Unknown';
+
+    const now = new Date();
+    const secondsAgo = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (secondsAgo < 60) return `${secondsAgo}s ago`;
+    const minutesAgo = Math.floor(secondsAgo / 60);
+    if (minutesAgo < 60) return `${minutesAgo}m ago`;
+    const hoursAgo = Math.floor(minutesAgo / 60);
+    if (hoursAgo < 24) return `${hoursAgo}h ago`;
+    const daysAgo = Math.floor(hoursAgo / 24);
+    if (daysAgo < 7) return `${daysAgo}d ago`;
+    const weeksAgo = Math.floor(daysAgo / 7);
+    if (weeksAgo < 4) return `${weeksAgo}w ago`;
+    const monthsAgo = Math.floor(daysAgo / 30);
+    if (monthsAgo < 12) return `${monthsAgo}mo ago`;
+    const yearsAgo = Math.floor(daysAgo / 365);
+    return `${yearsAgo}y ago`;
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return 'Unknown';
+  }
+};
+
+
 // Helper function to remove mascot from NCAAF team names
 const removeNcaafMascot = (teamName: string, sport?: string) => {
   if (!teamName || sport !== 'NCAAF') return teamName;
-  
+
   // Common NCAAF mascots to remove
   const mascots = [
     'Tigers', 'Bulldogs', 'Crimson Tide', 'Volunteers', 'Gators', 'Wildcats',
-    'Aggies', 'Longhorns', 'Sooners', 'Trojans', 'Bruins', 'Cardinal', 
+    'Aggies', 'Longhorns', 'Sooners', 'Trojans', 'Bruins', 'Cardinal',
     'Fighting Irish', 'Seminoles', 'Hurricanes', 'Cavaliers', 'Yellow Jackets',
     'Blue Devils', 'Demon Deacons', 'Tar Heels', 'Wolfpack', 'Orange',
     'Eagles', 'Panthers', 'Cardinals', 'Badgers', 'Hawkeyes', 'Cornhuskers',
@@ -23,14 +57,14 @@ const removeNcaafMascot = (teamName: string, sport?: string) => {
     'Bearcats', 'Rebels', 'Rainbow Warriors', 'Aztecs', 'Broncos', 'Mustangs',
     'Mean Green', 'Owls', 'Golden Panthers', 'Blazers', 'Roadrunners'
   ];
-  
+
   // Remove mascot if found at the end
   for (const mascot of mascots) {
     if (teamName.endsWith(mascot)) {
       return teamName.replace(mascot, '').trim();
     }
   }
-  
+
   return teamName;
 };
 
@@ -63,9 +97,12 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
   const formattedTime = (() => {
     try {
       if (!alert.createdAt) return 'Unknown';
-      const parsed = parseISO(alert.createdAt);
-      if (isNaN(parsed.getTime())) return 'Unknown';
-      return format(parsed, 'HH:mm');
+      // The original code was parsing and formatting to 'HH:mm'.
+      // The change request is to use formatTimeAgo instead.
+      // The new implementation will use formatTimeAgo.
+      // The original `format(parsed, 'HH:mm')` is being replaced by `formatTimeAgo(alert.createdAt)`
+      // where the original timestamp was displayed.
+      return formatTimeAgo(alert.createdAt);
     } catch (error) {
       return 'Unknown';
     }
@@ -103,7 +140,7 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
   // Format game state for header
   const gameStateHeader = (() => {
     const parts = [];
-    
+
     // Remove mascots for NCAAF teams
     const displayAwayTeam = removeNcaafMascot(alert.awayTeam, alert.sport);
     const displayHomeTeam = removeNcaafMascot(alert.homeTeam, alert.sport);
@@ -139,9 +176,10 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
                 <h3 className={`text-sm font-bold uppercase tracking-wide text-${sportConfig.color.replace('bg-', '')}`}>
                   {alert.type.replace(/^(MLB|NFL|NBA|NCAAF|WNBA|CFL)_/, '').replace(/_/g, ' ')}
                 </h3>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <Clock className="w-3 h-3 text-slate-400" />
-                  <span className="text-xs text-slate-400">{formattedTime}</span>
+                {/* Updated time display to use formatTimeAgo */}
+                <div className="flex items-center space-x-1.5 text-xs text-slate-400">
+                  <Clock className="w-3 h-3" />
+                  <span>{formatTimeAgo(alert.createdAt)}</span>
                 </div>
               </div>
             </div>
