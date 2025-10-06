@@ -761,16 +761,18 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
   }
 
   // Show colored team circle fallback (either no logo URL or image failed to load)
+  // Use inline styles for background to avoid Tailwind CSS specificity conflicts
   const fallbackStyle = resolvedColor 
     ? { 
-        background: `linear-gradient(135deg, ${resolvedColor}, ${resolvedColor}dd)`,
-        borderColor: 'white'
+        background: `linear-gradient(135deg, ${resolvedColor}, ${resolvedColor}dd)`
       }
-    : {};
+    : {
+        background: 'linear-gradient(135deg, rgb(107, 114, 128), rgb(75, 85, 99))'
+      };
 
   return (
     <div 
-      className={`${sizeClasses[size]} ${className} rounded-full ${resolvedColor ? '' : 'bg-gradient-to-br from-gray-500 to-gray-600'} border-2 border-white shadow-sm flex items-center justify-center`}
+      className={`${sizeClasses[size]} ${className} rounded-full border-2 border-white shadow-sm flex items-center justify-center`}
       style={fallbackStyle}
     >
       <span className="text-white font-black text-xs">{teamAbbr || displayName.substring(0, 2).toUpperCase()}</span>
