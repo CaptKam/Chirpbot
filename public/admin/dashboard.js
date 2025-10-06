@@ -653,24 +653,18 @@ async function showSportSettings(sport) {
     `;
     
     try {
-        // Use the same pattern as user settings: fetch cylinders + toggle states separately
-        const [cylindersResponse, settingsResponse] = await Promise.all([
-            fetch(`/api/available-alerts/${sport.toLowerCase()}`, {
-                credentials: 'include'
-            }),
-            fetch(`/api/admin/global-alert-settings/${sport.toLowerCase()}`, {
-                credentials: 'include'
-            })
-        ]);
+        // Fetch cylinders which already include globallyEnabled status
+        const cylindersResponse = await fetch(`/api/available-alerts/${sport.toLowerCase()}`, {
+            credentials: 'include'
+        });
         
-        if (cylindersResponse.ok && settingsResponse.ok) {
+        if (cylindersResponse.ok) {
             const cylinders = await cylindersResponse.json();
-            const settings = await settingsResponse.json();
             
-            // Merge cylinders with toggle states - cylinders is array, settings is object
+            // Build settings object from cylinders data (already includes globallyEnabled)
             const mergedData = {};
             cylinders.forEach(cylinder => {
-                mergedData[cylinder.key] = settings[cylinder.key] || false;
+                mergedData[cylinder.key] = cylinder.globallyEnabled || false;
             });
             
             renderSportSettings(sport, mergedData);
