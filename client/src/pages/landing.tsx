@@ -267,18 +267,6 @@ function Hero() {
                   </div>
                 </Button>
               </Link>
-              {/* Live signup badge */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 1, duration: 0.5 }}
-                className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-emerald-500/20 backdrop-blur-sm px-3 py-1 rounded-full border border-emerald-500/30 whitespace-nowrap"
-              >
-                <span className="text-xs font-semibold text-emerald-300 flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  237 joined in last 24h
-                </span>
-              </motion.div>
             </div>
             <Link href="/login">
               <Button 
