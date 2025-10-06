@@ -68,7 +68,7 @@ const extractTeamAbbreviation = (teamName: string) => {
   return abbreviations[cleanName] || cleanName.slice(0, 3).toUpperCase();
 };
 
-import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
+import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
 import { SportsLoading, GameCardLoading } from '@/components/sports-loading';
 import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
 import { WeatherImpactVisualizer } from '@/components/WeatherImpactVisualizer';
@@ -192,7 +192,8 @@ export default function Calendar() {
   useEffect(() => {
     if (serverDate?.date) {
       const dates = new Set<string>();
-      const serverNow = new Date(serverDate.date);
+      // Parse the date string at noon to avoid timezone shifts
+      const serverNow = parseISO(serverDate.date + 'T12:00:00');
       for (let i = 0; i < 4; i++) {
         dates.add(format(addDays(serverNow, i), 'yyyy-MM-dd'));
       }
@@ -401,11 +402,11 @@ export default function Calendar() {
           <div>
             <div className="flex items-center space-x-3">
               <h2 className="text-xl font-black uppercase tracking-wide text-slate-100">
-                {selectedDates.size === 1 && serverDate?.date && selectedDates.has(format(new Date(serverDate.date), 'yyyy-MM-dd'))
+                {selectedDates.size === 1 && serverDate?.date && selectedDates.has(serverDate.date)
                   ? "Today's Games"
                   : selectedDates.size === 1
-                  ? format(new Date(Array.from(selectedDates)[0]), 'MMMM d, yyyy')
-                  : selectedDates.size === 4 && serverDate?.date && Array.from(selectedDates).includes(format(new Date(serverDate.date), 'yyyy-MM-dd'))
+                  ? format(parseISO(Array.from(selectedDates)[0] + 'T12:00:00'), 'MMMM d, yyyy')
+                  : selectedDates.size === 4 && serverDate?.date && Array.from(selectedDates).includes(serverDate.date)
                   ? "Next 4 Days"
                   : `${selectedDates.size} Days Selected`}
                 {teamFilter && (
@@ -476,12 +477,12 @@ export default function Calendar() {
                 ))}
 
                 {serverDate?.date && eachDayOfInterval({
-                  start: startOfWeek(new Date(serverDate.date)),
-                  end: addDays(endOfWeek(new Date(serverDate.date)), 14)
+                  start: startOfWeek(parseISO(serverDate.date + 'T12:00:00')),
+                  end: addDays(endOfWeek(parseISO(serverDate.date + 'T12:00:00')), 14)
                 }).map(date => {
                   const dateStr = format(date, 'yyyy-MM-dd');
                   const isSelected = selectedDates.has(dateStr);
-                  const todayStr = format(new Date(serverDate.date), 'yyyy-MM-dd');
+                  const todayStr = serverDate.date;
                   const isToday = dateStr === todayStr;
 
                   return (
@@ -525,8 +526,8 @@ export default function Calendar() {
                   onClick={() => {
                     if (!serverDate?.date) return;
                     const dates = new Set<string>();
-                    // Force parse the date to ensure we're using the latest server date
-                    const now = new Date(serverDate.date);
+                    // Parse the date at noon to avoid timezone shifts
+                    const now = parseISO(serverDate.date + 'T12:00:00');
                     for (let i = 0; i < 4; i++) {
                       dates.add(format(addDays(now, i), 'yyyy-MM-dd'));
                     }
@@ -545,7 +546,7 @@ export default function Calendar() {
                   onClick={() => {
                     if (!serverDate?.date) return;
                     const weekend = [];
-                    const now = new Date(serverDate.date);
+                    const now = parseISO(serverDate.date + 'T12:00:00');
                     for (let i = 0; i < 7; i++) {
                       const day = addDays(now, i);
                       const dayOfWeek = day.getDay();
@@ -566,7 +567,7 @@ export default function Calendar() {
                   onClick={() => {
                     if (!serverDate?.date) return;
                     const week = [];
-                    const now = new Date(serverDate.date);
+                    const now = parseISO(serverDate.date + 'T12:00:00');
                     for (let i = 0; i < 7; i++) {
                       week.push(format(addDays(now, i), 'yyyy-MM-dd'));
                     }
@@ -617,8 +618,8 @@ export default function Calendar() {
                 const dateGames = games.filter(g => g.fetchDate === dateStr);
                 if (dateGames.length === 0) return null;
 
-                const date = new Date(dateStr);
-                const isToday = serverDate?.date ? isSameDay(date, new Date(serverDate.date)) : isSameDay(date, new Date());
+                const date = parseISO(dateStr + 'T12:00:00');
+                const isToday = serverDate?.date ? dateStr === serverDate.date : false;
 
                 return (
                   <div key={dateStr} className="space-y-3">
