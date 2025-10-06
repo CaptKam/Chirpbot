@@ -197,6 +197,8 @@ export default function Calendar() {
         dates.add(format(addDays(serverNow, i), 'yyyy-MM-dd'));
       }
       setSelectedDates(dates);
+      // Force refresh games when dates are initialized
+      queryClient.invalidateQueries({ queryKey: ["/api/games/multi-day"] });
     }
   }, [serverDate?.date]);
 
@@ -399,11 +401,11 @@ export default function Calendar() {
           <div>
             <div className="flex items-center space-x-3">
               <h2 className="text-xl font-black uppercase tracking-wide text-slate-100">
-                {selectedDates.size === 1 && serverDate?.date && selectedDates.has(serverDate.date)
+                {selectedDates.size === 1 && serverDate?.date && selectedDates.has(format(new Date(serverDate.date), 'yyyy-MM-dd'))
                   ? "Today's Games"
                   : selectedDates.size === 1
                   ? format(new Date(Array.from(selectedDates)[0]), 'MMMM d, yyyy')
-                  : selectedDates.size === 4 && serverDate?.date && Array.from(selectedDates).includes(serverDate.date)
+                  : selectedDates.size === 4 && serverDate?.date && Array.from(selectedDates).includes(format(new Date(serverDate.date), 'yyyy-MM-dd'))
                   ? "Next 4 Days"
                   : `${selectedDates.size} Days Selected`}
                 {teamFilter && (
@@ -522,11 +524,14 @@ export default function Calendar() {
                   onClick={() => {
                     if (!serverDate?.date) return;
                     const dates = new Set<string>();
+                    // Force parse the date to ensure we're using the latest server date
                     const now = new Date(serverDate.date);
                     for (let i = 0; i < 4; i++) {
                       dates.add(format(addDays(now, i), 'yyyy-MM-dd'));
                     }
                     setSelectedDates(dates);
+                    // Force refresh the games after updating dates
+                    queryClient.invalidateQueries({ queryKey: ["/api/games/multi-day"] });
                   }}
                   className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 ring-1 ring-emerald-500/20 backdrop-blur-sm rounded-xl transition-all duration-200 font-semibold"
                   data-testid="button-today"
