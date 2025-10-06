@@ -55,14 +55,37 @@ const extractTeamAbbreviation = (teamName: string) => {
 
   // Common team abbreviations
   const abbreviations: Record<string, string> = {
+    // MLB
     'Yankees': 'NYY', 'Mets': 'NYM', 'Dodgers': 'LAD', 'Angels': 'LAA',
-    'Giants': 'SF', 'Athletics': 'OAK', 'Padres': 'SD', 'Cardinals': 'STL',
-    'Cubs': 'CHC', 'White Sox': 'CWS', 'Tigers': 'DET', 'Guardians': 'CLE',
+    'Athletics': 'OAK', 'Padres': 'SD',
+    'Cubs': 'CHC', 'White Sox': 'CWS', 'Guardians': 'CLE',
     'Twins': 'MIN', 'Royals': 'KC', 'Astros': 'HOU', 'Rangers': 'TEX',
     'Mariners': 'SEA', 'Red Sox': 'BOS', 'Orioles': 'BAL', 'Blue Jays': 'TOR',
     'Rays': 'TB', 'Marlins': 'MIA', 'Nationals': 'WSH', 'Phillies': 'PHI',
-    'Braves': 'ATL', 'Pirates': 'PIT', 'Reds': 'CIN', 'Brewers': 'MIL',
-    'Diamondbacks': 'ARI', 'Rockies': 'COL'
+    'Pirates': 'PIT', 'Reds': 'CIN', 'Brewers': 'MIL',
+    'Diamondbacks': 'ARI', 'Rockies': 'COL',
+    // NBA
+    'Hawks': 'ATL', 'Celtics': 'BOS', 'Nets': 'BKN', 'Hornets': 'CHA',
+    'Bulls': 'CHI', 'Cavaliers': 'CLE', 'Mavericks': 'DAL', 'Nuggets': 'DEN',
+    'Pistons': 'DET', 'Warriors': 'GSW', 'Rockets': 'HOU', 'Pacers': 'IND',
+    'Clippers': 'LAC', 'Lakers': 'LAL', 'Grizzlies': 'MEM', 'Heat': 'MIA',
+    'Bucks': 'MIL', 'Timberwolves': 'MIN', 'Pelicans': 'NOP', 'Knicks': 'NYK',
+    'Thunder': 'OKC', 'Magic': 'ORL', '76ers': 'PHI', 'Suns': 'PHX',
+    'Trail Blazers': 'POR', 'Blazers': 'POR', 'Kings': 'SAC', 'Spurs': 'SAS',
+    'Raptors': 'TOR', 'Jazz': 'UTA', 'Wizards': 'WAS',
+    // NFL
+    'Falcons': 'ATL', 'Ravens': 'BAL', 'Bills': 'BUF',
+    'Panthers': 'CAR', 'Bears': 'CHI', 'Bengals': 'CIN', 'Browns': 'CLE',
+    'Cowboys': 'DAL', 'Broncos': 'DEN', 'Lions': 'DET', 'Packers': 'GB',
+    'Texans': 'HOU', 'Colts': 'IND', 'Jaguars': 'JAX', 'Chiefs': 'KC',
+    'Chargers': 'LAC', 'Rams': 'LAR', 'Raiders': 'LV', 'Dolphins': 'MIA',
+    'Vikings': 'MIN', 'Patriots': 'NE', 'Saints': 'NO',
+    'Jets': 'NYJ', 'Eagles': 'PHI', 'Steelers': 'PIT', 'Seahawks': 'SEA',
+    '49ers': 'SF', 'Niners': 'SF', 'Buccaneers': 'TB', 'Bucs': 'TB', 'Titans': 'TEN', 'Commanders': 'WAS',
+    // Full names for disambiguation
+    'SF Giants': 'SF', 'San Francisco Giants': 'SF', 'NY Giants': 'NYG', 'New York Giants': 'NYG',
+    'STL Cardinals': 'STL', 'St. Louis Cardinals': 'STL', 'Arizona Cardinals': 'ARI',
+    'Atlanta Braves': 'ATL', 'Detroit Tigers': 'DET'
   };
 
   return abbreviations[cleanName] || cleanName.slice(0, 3).toUpperCase();
