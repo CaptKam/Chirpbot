@@ -765,6 +765,19 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
   // Use provided teamColor or look up by abbreviation/sport
   const resolvedColor = teamColor || getTeamColor(teamAbbr, sport);
 
+  // DEBUG: Log color resolution (DEV only)
+  if (import.meta.env.DEV && !logoUrl) {
+    console.log(`🎨 TeamLogo [${sport}]:`, {
+      teamName,
+      rawAbbr: abbreviation,
+      resolvedAbbr: teamAbbr,
+      normalizedAbbr: teamAbbr?.toUpperCase().trim(),
+      hasColor: !!resolvedColor,
+      color: resolvedColor,
+      willShowGray: !resolvedColor
+    });
+  }
+
   // If we have a logo URL and it hasn't failed to load, show the image
   if (logoUrl && !imageLoadFailed) {
     return (
