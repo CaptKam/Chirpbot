@@ -279,15 +279,15 @@ const teamNameToAbbr: Record<string, string> = {
   'NC State Wolfpack': 'NCSU',
   'Syracuse Orange': 'CUSE',
   'Eastern Washington Eagles': 'EWU',
-  'Montana State Bobcats': 'MSU',
+  'Montana State Bobcats': 'MTST',
   'North Dakota State Bison': 'NDSU',
   'James Madison Dukes': 'JMU',
-  'South Dakota State Jackrabbits': 'SDSU',
+  'South Dakota State Jackrabbits': 'SDST',
   'Villanova Wildcats': 'NOVA',
   'William & Mary Tribe': 'W&M',
   'Northern Iowa Panthers': 'UNI',
   'Southern Illinois Salukis': 'SIU',
-  'Missouri State Bears': 'MSU',
+  'Missouri State Bears': 'MOST',
   'Western Illinois Leathernecks': 'WIU',
   'Indiana State Sycamores': 'INS',
   'Youngstown State Penguins': 'YSU',
@@ -317,7 +317,7 @@ const teamNameToAbbr: Record<string, string> = {
   'Stanford Cardinal': 'STAN',
   'Cal Golden Bears': 'CAL',
   'UCLA Bruins': 'UCLA',
-  'Oregon State Beavers': 'OSU',
+  'Oregon State Beavers': 'ORST',
   'Washington State Cougars': 'WSU',
   'Boise State Broncos': 'BSU',
   'Fresno State Bulldogs': 'FRESNO',
@@ -367,19 +367,9 @@ const teamNameToAbbr: Record<string, string> = {
   'Tennessee Volunteers': 'TENN',
   'UConn Huskies': 'UCONN',
   'Boston College Eagles': 'BC',
-  'Clemson Tigers': 'CLEMSON',
-  'Florida State Seminoles': 'FSU',
-  'Georgia Tech Yellow Jackets': 'GT',
   'Louisville Cardinals': 'LOU',
-  'Miami Hurricanes': 'MIA',
-  'NC State Wolfpack': 'NCSU',
-  'North Carolina Tar Heels': 'UNC',
   'Pittsburgh Panthers': 'PITT',
-  'Syracuse Orange': 'SYR',
-  'Virginia Cavaliers': 'UVA',
   'Virginia Tech Hokies': 'VT',
-  'Wake Forest Demon Deacons': 'WFU',
-  'WVU Mountaineers': 'WVU',
 };
 
 // Helper function to get team color (fallback for when teamColor prop is not provided)
@@ -553,8 +543,6 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
       'IOWA': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/94.png',
       'NEB': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/145.png',
       'PUR': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/223.png',
-      'MICH': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/123.png',
-      'MSU': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/134.png',
       'RUTG': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/177.png',
       'MD': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/121.png',
       'NW': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/195.png',
@@ -573,11 +561,10 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
       'STAN': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/244.png',
       'CAL': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/27.png',
       'UCLA': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/26.png',
-      'OSU': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/221.png',
+      'ORST': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/221.png',
       'WSU': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/288.png',
       'BSU': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/36.png',
       'FRESNO': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/67.png',
-      'SDSU': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/240.png',
       'WYO': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/298.png',
       'CSU': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/49.png',
       'NEV': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/146.png',
@@ -623,27 +610,22 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
       'TENN': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/244.png',
       'UCONN': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/54.png',
       'BC': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/34.png',
-      'CLEMSON': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/197.png',
-      'FSU': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/74.png',
-      'GT': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/79.png',
       'LOU': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/112.png',
-      'MIA': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/77.png',
-      'NCSU': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/196.png',
-      'UNC': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/191.png',
       'PITT': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/216.png',
-      'SYR': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/188.png',
-      'UVA': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/276.png',
       'VT': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/277.png',
-      'WFU': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/282.png',
     }
   };
 
-  // If sport is specified, try that sport first
-  if (sport && espnLogos[sport] && espnLogos[sport][teamAbbr]) {
-    return espnLogos[sport][teamAbbr];
+  // If sport is specified, ONLY look in that sport (prevent cross-sport contamination)
+  if (sport) {
+    if (espnLogos[sport] && espnLogos[sport][teamAbbr]) {
+      return espnLogos[sport][teamAbbr];
+    }
+    // Sport specified but logo not found - return null (don't search other sports)
+    return null;
   }
 
-  // Fallback: try to find logo in any sport (for backwards compatibility)
+  // Fallback: only when NO sport specified, search all sports
   for (const [sportKey, logos] of Object.entries(espnLogos)) {
     if (logos[teamAbbr]) {
       return logos[teamAbbr];
