@@ -3206,6 +3206,46 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // NCAAF Possession Tracking API endpoints
+  app.get('/api/ncaaf/possession/:gameId', async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const { gameStateManager } = await import('./services/game-state-manager');
+      const ncaafEngine = gameStateManager.getEngine('NCAAF');
+      
+      if (!ncaafEngine) {
+        return res.status(503).json({ error: 'NCAAF engine not available' });
+      }
+
+      const stats = (ncaafEngine as any).getPossessionStats(gameId);
+      res.json(stats);
+    } catch (error: any) {
+      console.error('Error fetching NCAAF possession stats:', error);
+      res.status(500).json({ error: 'Failed to fetch possession stats' });
+    }
+  });
+
+  app.get('/api/ncaaf/possession', async (req, res) => {
+    try {
+      const { gameStateManager } = await import('./services/game-state-manager');
+      const ncaafEngine = gameStateManager.getEngine('NCAAF');
+      
+      if (!ncaafEngine) {
+        return res.status(503).json({ error: 'NCAAF engine not available' });
+      }
+
+      const allStats = (ncaafEngine as any).getAllPossessionStats();
+      res.json({
+        tracked: allStats.length > 0,
+        gamesTracked: allStats.length,
+        possessionStats: allStats
+      });
+    } catch (error: any) {
+      console.error('Error fetching all NCAAF possession stats:', error);
+      res.status(500).json({ error: 'Failed to fetch possession stats' });
+    }
+  });
+
   // 🔧 CACHE FIX: Global Settings Diagnostics Endpoint
   app.get('/api/debug/global-settings/:sport', async (req, res) => {
     try {
