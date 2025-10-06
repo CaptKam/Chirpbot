@@ -275,6 +275,22 @@ export function GameCardTemplate({
     enabled: (sport === 'NFL' || sport === 'NCAAF') && status === 'live'
   });
 
+  // Fetch timeout stats for NFL/NCAAF/CFL games
+  const { data: timeoutData } = useQuery({
+    queryKey: ['timeouts', gameId, sport],
+    queryFn: async () => {
+      const response = await fetch(`/api/${sport.toLowerCase()}/timeouts/${gameId}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Timeout fetch failed');
+      return response.json();
+    },
+    staleTime: 5 * 1000, // Cache for 5 seconds
+    refetchInterval: status === 'live' ? 5000 : false, // Refetch every 5s for live games
+    retry: 1,
+    enabled: (sport === 'NFL' || sport === 'NCAAF' || sport === 'CFL') && status === 'live'
+  });
+
   // Convert wind direction degrees to cardinal direction
   const getCardinalDirection = (degrees: number) => {
     const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
@@ -437,6 +453,22 @@ export function GameCardTemplate({
               <span className="text-slate-500 mx-1">-</span>
               <span className={possessionData.currentPossession === 'away' ? 'text-emerald-400 font-bold' : 'text-slate-300'}>
                 {possessionData.awayPossessions}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Timeout Stats for NFL/NCAAF/CFL */}
+        {(sport === 'NFL' || sport === 'NCAAF' || sport === 'CFL') && status === 'live' && timeoutData?.tracked && (
+          <div className="flex items-center space-x-2">
+            <div className="text-xs bg-slate-800/50 px-2 py-1 rounded">
+              <span className="text-slate-400">TO: </span>
+              <span className="text-slate-300">
+                {timeoutData.homeTimeoutsRemaining}
+              </span>
+              <span className="text-slate-500 mx-1">-</span>
+              <span className="text-slate-300">
+                {timeoutData.awayTimeoutsRemaining}
               </span>
             </div>
           </div>

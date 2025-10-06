@@ -495,6 +495,63 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // NFL Timeout Tracking API
+  app.get('/api/nfl/timeouts/:gameId', async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
+      const engineManager = getEngineLifecycleManager();
+      const nflEngine = engineManager.getEngine('NFL');
+      
+      if (!nflEngine || !nflEngine.getTimeoutStats) {
+        return res.status(404).json({ error: 'NFL engine not available' });
+      }
+
+      const stats = nflEngine.getTimeoutStats(gameId);
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // NCAAF Timeout Tracking API
+  app.get('/api/ncaaf/timeouts/:gameId', async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
+      const engineManager = getEngineLifecycleManager();
+      const ncaafEngine = engineManager.getEngine('NCAAF');
+      
+      if (!ncaafEngine || !ncaafEngine.getTimeoutStats) {
+        return res.status(404).json({ error: 'NCAAF engine not available' });
+      }
+
+      const stats = ncaafEngine.getTimeoutStats(gameId);
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // CFL Timeout Tracking API
+  app.get('/api/cfl/timeouts/:gameId', async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
+      const engineManager = getEngineLifecycleManager();
+      const cflEngine = engineManager.getEngine('CFL');
+      
+      if (!cflEngine || !cflEngine.getTimeoutStats) {
+        return res.status(404).json({ error: 'CFL engine not available' });
+      }
+
+      const stats = cflEngine.getTimeoutStats(gameId);
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Wind speed test for specific stadiums
   app.get('/api/test-wind-speeds', async (req, res) => {
     try {
