@@ -373,7 +373,17 @@ const teamNameToAbbr: Record<string, string> = {
 };
 
 // ESPN team logo URLs - these return actual mascot logos
-const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
+const getTeamLogoUrl = (teamAbbr: string, sport?: string, teamName?: string): string | null => {
+  // Handle NFL "NEW" abbreviation disambiguation using team name
+  if (sport === 'NFL' && teamAbbr === 'NEW' && teamName) {
+    const nameLower = teamName.toLowerCase();
+    if (nameLower.includes('england') || nameLower.includes('patriot')) {
+      return 'https://a.espncdn.com/i/teamlogos/nfl/500/ne.png'; // Patriots
+    } else if (nameLower.includes('orleans') || nameLower.includes('saint')) {
+      return 'https://a.espncdn.com/i/teamlogos/nfl/500/no.png'; // Saints
+    }
+  }
+  
   // ESPN logo URLs by sport
   const espnLogos: Record<string, Record<string, string>> = {
     NBA: {
@@ -445,27 +455,47 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
       'TB': 'https://a.espncdn.com/i/teamlogos/mlb/500/tb.png',
     },
     NFL: {
-      'NYJ': 'https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png',
-      'PHI': 'https://a.espncdn.com/i/teamlogos/nfl/500/phi.png',
-      'DAL': 'https://a.espncdn.com/i/teamlogos/nfl/500/dal.png',
+      // All 32 NFL teams
+      'ARI': 'https://a.espncdn.com/i/teamlogos/nfl/500/ari.png',
       'ATL': 'https://a.espncdn.com/i/teamlogos/nfl/500/atl.png',
-      'TEN': 'https://a.espncdn.com/i/teamlogos/nfl/500/ten.png',
-      'MIN': 'https://a.espncdn.com/i/teamlogos/nfl/500/min.png',
-      'KC': 'https://a.espncdn.com/i/teamlogos/nfl/500/kc.png',
-      'CHI': 'https://a.espncdn.com/i/teamlogos/nfl/500/chi.png',
-      'BUF': 'https://a.espncdn.com/i/teamlogos/nfl/500/buf.png',
-      'NE': 'https://a.espncdn.com/i/teamlogos/nfl/500/ne.png',
-      'MIA': 'https://a.espncdn.com/i/teamlogos/nfl/500/mia.png',
-      'PIT': 'https://a.espncdn.com/i/teamlogos/nfl/500/pit.png',
       'BAL': 'https://a.espncdn.com/i/teamlogos/nfl/500/bal.png',
+      'BUF': 'https://a.espncdn.com/i/teamlogos/nfl/500/buf.png',
+      'CAR': 'https://a.espncdn.com/i/teamlogos/nfl/500/car.png',
+      'CHI': 'https://a.espncdn.com/i/teamlogos/nfl/500/chi.png',
       'CIN': 'https://a.espncdn.com/i/teamlogos/nfl/500/cin.png',
       'CLE': 'https://a.espncdn.com/i/teamlogos/nfl/500/cle.png',
+      'DAL': 'https://a.espncdn.com/i/teamlogos/nfl/500/dal.png',
+      'DEN': 'https://a.espncdn.com/i/teamlogos/nfl/500/den.png',
+      'DET': 'https://a.espncdn.com/i/teamlogos/nfl/500/det.png',
+      'GB': 'https://a.espncdn.com/i/teamlogos/nfl/500/gb.png',
       'HOU': 'https://a.espncdn.com/i/teamlogos/nfl/500/hou.png',
       'IND': 'https://a.espncdn.com/i/teamlogos/nfl/500/ind.png',
       'JAX': 'https://a.espncdn.com/i/teamlogos/nfl/500/jax.png',
-      'DEN': 'https://a.espncdn.com/i/teamlogos/nfl/500/den.png',
-      'LV': 'https://a.espncdn.com/i/teamlogos/nfl/500/lv.png',
+      'KC': 'https://a.espncdn.com/i/teamlogos/nfl/500/kc.png',
       'LAC': 'https://a.espncdn.com/i/teamlogos/nfl/500/lac.png',
+      'LAR': 'https://a.espncdn.com/i/teamlogos/nfl/500/lar.png',
+      'LV': 'https://a.espncdn.com/i/teamlogos/nfl/500/lv.png',
+      'MIA': 'https://a.espncdn.com/i/teamlogos/nfl/500/mia.png',
+      'MIN': 'https://a.espncdn.com/i/teamlogos/nfl/500/min.png',
+      'NE': 'https://a.espncdn.com/i/teamlogos/nfl/500/ne.png',
+      'NO': 'https://a.espncdn.com/i/teamlogos/nfl/500/no.png',
+      'NYG': 'https://a.espncdn.com/i/teamlogos/nfl/500/nyg.png',
+      'NYJ': 'https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png',
+      'PHI': 'https://a.espncdn.com/i/teamlogos/nfl/500/phi.png',
+      'PIT': 'https://a.espncdn.com/i/teamlogos/nfl/500/pit.png',
+      'SF': 'https://a.espncdn.com/i/teamlogos/nfl/500/sf.png',
+      'SEA': 'https://a.espncdn.com/i/teamlogos/nfl/500/sea.png',
+      'TB': 'https://a.espncdn.com/i/teamlogos/nfl/500/tb.png',
+      'TEN': 'https://a.espncdn.com/i/teamlogos/nfl/500/ten.png',
+      'WAS': 'https://a.espncdn.com/i/teamlogos/nfl/500/wsh.png',
+      'WSH': 'https://a.espncdn.com/i/teamlogos/nfl/500/wsh.png',
+      // ESPN API alternate abbreviations
+      'NEW': 'https://a.espncdn.com/i/teamlogos/nfl/500/no.png', // Saints (not Patriots - disambiguated by team name)
+      'JET': 'https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png',
+      'BUC': 'https://a.espncdn.com/i/teamlogos/nfl/500/tb.png',
+      'COM': 'https://a.espncdn.com/i/teamlogos/nfl/500/wsh.png',
+      'CHA': 'https://a.espncdn.com/i/teamlogos/nfl/500/lac.png',
+      'JAC': 'https://a.espncdn.com/i/teamlogos/nfl/500/jax.png',
     },
     WNBA: {
       'ATL': 'https://a.espncdn.com/i/teamlogos/wnba/500/atl.png',
@@ -789,7 +819,7 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
 
 
   // Try to get the official team logo URL first (but skip WNBA images)
-  const logoUrl = teamAbbr && sport !== 'WNBA' ? getTeamLogoUrl(teamAbbr, sport) : null;
+  const logoUrl = teamAbbr && sport !== 'WNBA' ? getTeamLogoUrl(teamAbbr, sport, teamName) : null;
 
   // Use provided teamColor or look up by abbreviation/sport
   const resolvedColor = teamColor || getTeamColor(teamAbbr, sport, teamName);
