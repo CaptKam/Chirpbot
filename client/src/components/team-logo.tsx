@@ -372,29 +372,6 @@ const teamNameToAbbr: Record<string, string> = {
   'Virginia Tech Hokies': 'VT',
 };
 
-// Helper function to get team color (fallback for when teamColor prop is not provided)
-// This is a simplified version. A more robust solution might involve a map or API call.
-const getTeamColor = (teamName: string): string => {
-  // Example colors - replace with actual logic or data source
-  if (teamName.includes('Lakers')) return '#552583';
-  if (teamName.includes('Celtics')) return '#007A33';
-  if (teamName.includes('Warriors')) return '#006BB6';
-  if (teamName.includes('Bulls')) return '#CE1141';
-  if (teamName.includes('Heat')) return '#990012';
-  if (teamName.includes('Knicks')) return '#003366';
-  if (teamName.includes('Nets')) return '#000000';
-  if (teamName.includes('76ers')) return '#006BB6';
-  if (teamName.includes('Dodgers')) return '#005A9C';
-  if (teamName.includes('Giants')) return '#FD5A1E';
-  if (teamName.includes('Yankees')) return '#002775';
-  if (teamName.includes('Red Sox')) return '#C60C30';
-  if (teamName.includes('Chiefs')) return '#E31837';
-  if (teamName.includes('Bills')) return '#00338D';
-  if (teamName.includes('Patriots')) return '#002244';
-  if (teamName.includes('Steelers')) return '#FFB612';
-  return '#808080'; // Default gray
-};
-
 // ESPN team logo URLs - these return actual mascot logos
 const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
   // ESPN logo URLs by sport
@@ -635,7 +612,77 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string): string | null => {
   return null;
 };
 
+// Team primary colors by sport and abbreviation
+const teamColors: Record<string, Record<string, string>> = {
+  'NFL': {
+    'ARI': '#97233F', 'ATL': '#A71930', 'BAL': '#241773', 'BUF': '#00338D',
+    'CAR': '#0085CA', 'CHI': '#C83803', 'CIN': '#FB4F14', 'CLE': '#311D00',
+    'DAL': '#003594', 'DEN': '#FB4F14', 'DET': '#0076B6', 'GB': '#203731',
+    'HOU': '#03202F', 'IND': '#002C5F', 'JAX': '#006778', 'KC': '#E31837',
+    'LAC': '#0080C6', 'LAR': '#003594', 'LV': '#000000', 'MIA': '#008E97',
+    'MIN': '#4F2683', 'NE': '#002244', 'NO': '#D3BC8D', 'NYG': '#0B2265',
+    'NYJ': '#125740', 'PHI': '#004C54', 'PIT': '#FFB612', 'SEA': '#002244',
+    'SF': '#AA0000', 'TB': '#D50A0A', 'TEN': '#0C2340', 'WAS': '#5A1414'
+  },
+  'MLB': {
+    'ARI': '#A71930', 'ATL': '#CE1141', 'BAL': '#DF4601', 'BOS': '#BD3039',
+    'CHC': '#0E3386', 'CWS': '#27251F', 'CIN': '#C6011F', 'CLE': '#E31937',
+    'COL': '#33006F', 'DET': '#0C2C56', 'HOU': '#EB6E1F', 'KC': '#004687',
+    'LAA': '#BA0021', 'LAD': '#005A9C', 'MIA': '#00A3E0', 'MIL': '#FFC52F',
+    'MIN': '#002B5C', 'NYM': '#002D72', 'NYY': '#003087', 'OAK': '#003831',
+    'PHI': '#E81828', 'PIT': '#FDB827', 'SD': '#2F241D', 'SEA': '#0C2C56',
+    'SF': '#FD5A1E', 'STL': '#C41E3A', 'TB': '#092C5C', 'TEX': '#003278',
+    'TOR': '#134A8E', 'WSH': '#AB0003'
+  },
+  'NBA': {
+    'ATL': '#E03A3E', 'BOS': '#007A33', 'BKN': '#000000', 'CHA': '#1D1160',
+    'CHI': '#CE1141', 'CLE': '#860038', 'DAL': '#00538C', 'DEN': '#0E2240',
+    'DET': '#C8102E', 'GS': '#1D428A', 'HOU': '#CE1141', 'IND': '#002D62',
+    'LAC': '#C8102E', 'LAL': '#552583', 'MEM': '#5D76A9', 'MIA': '#98002E',
+    'MIL': '#00471B', 'MIN': '#0C2340', 'NO': '#0C2340', 'NY': '#006BB6',
+    'OKC': '#007AC1', 'ORL': '#0077C0', 'PHI': '#006BB6', 'PHX': '#1D1160',
+    'POR': '#E03A3E', 'SAC': '#5A2D81', 'SA': '#C4CED4', 'TOR': '#CE1141',
+    'UTA': '#002B5C', 'WAS': '#002B5C'
+  },
+  'NCAAF': {
+    'BAMA': '#9E1B32', 'AUB': '#0C2340', 'UGA': '#BA0C2F', 'LSU': '#461D7C',
+    'FLA': '#0021A5', 'TENN': '#FF8200', 'UK': '#0033A0', 'SCAR': '#73000A',
+    'MISS': '#14213D', 'TAMU': '#500000', 'ARK': '#9D2235', 'MIST': '#5D1725',
+    'VANDY': '#866D4B', 'MIZZ': '#F1B82D', 'OHIO': '#BB0000', 'MICH': '#00274C',
+    'PSU': '#041E42', 'WISC': '#C5050C', 'IOWA': '#FFCD00', 'NEB': '#E41C38',
+    'MINN': '#7A0019', 'ILL': '#13294B', 'NW': '#4E2A84', 'IND': '#990000',
+    'PUR': '#CEB888', 'MD': '#E03A3E', 'RUTG': '#CC0033', 'ND': '#0C2340',
+    'CLEM': '#F66733', 'FSU': '#782F40', 'MIAMI': '#F47321', 'UNC': '#7BAFD4',
+    'NCSU': '#CC0000', 'UVA': '#232D4B', 'VT': '#630031', 'PITT': '#003594',
+    'LOU': '#AD0000', 'BC': '#8B0000', 'GT': '#B3A369', 'DUKE': '#003087',
+    'WAKE': '#9E7E38', 'SYR': '#D44500', 'TEX': '#BF5700', 'OU': '#841617',
+    'USC': '#990000', 'UCLA': '#2D68C4', 'ORE': '#154733', 'WASH': '#4B2E83',
+    'ORST': '#DC4405', 'UTAH': '#CC0000', 'CU': '#CFB87C', 'ASU': '#8C1D40',
+    'STAN': '#8C1515', 'CAL': '#003262', 'OKST': '#FF7300', 'TCU': '#4D1979',
+    'TTU': '#CC0000', 'BAYLOR': '#154734', 'KU': '#0051BA', 'KSU': '#512888',
+    'ISU': '#C8102E', 'WVU': '#002855', 'BYU': '#002E5D', 'SDSU': '#A6192E'
+  },
+  'WNBA': {
+    'ATL': '#C8102E', 'CHI': '#418FDE', 'CONN': '#C4D600', 'DAL': '#0C2340',
+    'IND': '#E03A3E', 'LA': '#702F8A', 'LV': '#000000', 'MIN': '#266092',
+    'NY': '#6ECEB2', 'PHX': '#CB6015', 'SEA': '#2C5234', 'WAS': '#C8102E'
+  },
+  'CFL': {
+    'BC': '#F05323', 'CGY': '#CE1126', 'EDM': '#00573F', 'SSK': '#006341',
+    'WPG': '#041E42', 'HAM': '#FFB81C', 'TOR': '#00205B', 'OTT': '#C8102E',
+    'MTL': '#00205B'
+  }
+};
 
+// Get team color by abbreviation and sport
+function getTeamColor(abbreviation: string | undefined, sport: string | undefined): string | undefined {
+  if (!abbreviation || !sport) return undefined;
+  
+  const sportColors = teamColors[sport.toUpperCase()];
+  if (!sportColors) return undefined;
+  
+  return sportColors[abbreviation.toUpperCase()];
+}
 
 export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className = '', teamColor }: TeamLogoProps) {
   const sizeClasses = {
@@ -711,16 +758,19 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
 
 
   // Final fallback with team colors
-  const fallbackStyle = teamColor 
+  // Use provided teamColor or look up by abbreviation/sport
+  const resolvedColor = teamColor || getTeamColor(teamAbbr, sport);
+  
+  const fallbackStyle = resolvedColor 
     ? { 
-        background: `linear-gradient(135deg, ${teamColor}, ${teamColor}dd)`,
+        background: `linear-gradient(135deg, ${resolvedColor}, ${resolvedColor}dd)`,
         borderColor: 'white'
       }
     : {};
 
   return (
     <div 
-      className={`${sizeClasses[size]} ${className} rounded-full ${teamColor ? '' : 'bg-gradient-to-br from-gray-500 to-gray-600'} border-2 border-white shadow-sm flex items-center justify-center`}
+      className={`${sizeClasses[size]} ${className} rounded-full ${resolvedColor ? '' : 'bg-gradient-to-br from-gray-500 to-gray-600'} border-2 border-white shadow-sm flex items-center justify-center`}
       style={fallbackStyle}
     >
       <span className="text-white font-black text-xs">{teamAbbr || displayName.substring(0, 2).toUpperCase()}</span>
