@@ -50,7 +50,7 @@ export class NFLEngine extends BaseSportEngine {
     try {
       // Validate against dynamically discovered alert types
       const validAlerts = await this.getAvailableAlertTypes();
-      
+
       if (!validAlerts.includes(alertType)) {
         console.log(`❌ ${alertType} is not a valid NFL alert type - rejecting`);
         return false;
@@ -115,26 +115,26 @@ export class NFLEngine extends BaseSportEngine {
       // Weather impact adjustments (for outdoor stadiums only)
       if (weather && (weather as any).isOutdoorStadium) {
         const weatherImpact = (weather as any).impact;
-        
+
         // Extreme weather conditions increase excitement/unpredictability
         if (weatherImpact.weatherAlert) {
           probability += 15; // Weather makes games more unpredictable/exciting
-          
+
           // Specific weather situation adjustments
           if (weatherImpact.fieldGoalDifficulty === 'extreme') {
             probability += 10; // Very difficult field goal conditions
           }
-          
+
           if (weatherImpact.passingConditions === 'dangerous') {
             probability += 8; // Poor passing conditions create more drama
           }
-          
+
           // Fourth down in extreme weather is extra exciting
           if (down === 4 && weatherImpact.fieldGoalDifficulty !== 'low') {
             probability += 5; // Weather complicates fourth down decisions
           }
         }
-        
+
         // Red zone weather impact - field goal difficulty affects strategy
         if (fieldPosition && (fieldPosition as number) <= 20 && weatherImpact.fieldGoalDifficulty === 'high') {
           probability += 5; // Weather makes red zone decisions more critical
@@ -221,18 +221,18 @@ export class NFLEngine extends BaseSportEngine {
 
         if (enhancedData && !enhancedData.error) {
           this.performanceMetrics.cacheHits++;
-          
+
           // Add weather data for NFL games (for outdoor stadiums only)
           let weatherContext = gameState.weatherContext;
           try {
             const homeTeamName = typeof gameState.homeTeam === 'string' ? gameState.homeTeam : (gameState.homeTeam as any).name || '';
             const weatherData = await weatherService.getWeatherForTeam(homeTeamName);
             const weatherImpact = weatherService.getNFLWeatherImpact(weatherData);
-            
+
             // Only add weather context for meaningful weather conditions
             if (weatherImpact.weatherAlert || weatherImpact.fieldGoalDifficulty !== 'low') {
               console.log(`🌤️ NFL Weather for ${gameState.homeTeam}: ${weatherData.condition} ${weatherData.temperature}°F, ${weatherData.windSpeed}mph winds`);
-              
+
               weatherContext = {
                 data: weatherData,
                 impact: weatherImpact,
@@ -278,7 +278,7 @@ export class NFLEngine extends BaseSportEngine {
             isLive: gameState.status === 'final' ? false : gameState.isLive
           };
           // Update log message to show when situation data is missing
-          const situationDesc = enhancedGameState.down && enhancedGameState.yardsToGo && enhancedGameState.fieldPosition 
+          const situationDesc = enhancedGameState.down && enhancedGameState.yardsToGo && enhancedGameState.fieldPosition
             ? `${enhancedGameState.down}&${enhancedGameState.yardsToGo} at ${enhancedGameState.fieldPosition}yd line`
             : 'no situation data';
           console.log(`🚀 NFL Enhancement: Game ${gameState.gameId} enhanced - isLive=${enhancedGameState.isLive}, Q${enhancedGameState.quarter}, ${situationDesc}`);
@@ -311,10 +311,10 @@ export class NFLEngine extends BaseSportEngine {
     const retractableRoofTeams = [
       'Arizona Cardinals', 'Atlanta Falcons', 'Dallas Cowboys', 'Houston Texans', 'Indianapolis Colts'
     ];
-    
+
     // Indoor stadiums never have weather impact
     if (indoorTeams.includes(teamName)) return true;
-    
+
     // Retractable roof stadiums - assume open for this implementation
     // In a real system, you'd check current roof status
     return false;
@@ -347,7 +347,56 @@ export class NFLEngine extends BaseSportEngine {
         const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : (gameState.awayTeam as any).name || '';
         const aiContext: CrossSportContext = {
             sport: 'NFL',
+            gameId: gameState.gameId,
+            alertType: alert.type,
+            priority: alert.priority,
+            probability: probability,
+            homeTeam: homeTeamName,
+            awayTeam: awayTeamName,
+            homeScore: gameState.homeScore,
+            awayScore: gameState.awayScore,
+            isLive: gameState.isLive,
+            quarter: gameState.quarter as number | undefined,
+            timeRemaining: gameState.timeRemaining as string | undefined,
+            down: gameState.down as number | undefined,
+            yardsToGo: gameState.yardsToGo as number | undefined,
+            fieldPosition: gameState.fieldPosition as number | undefined,
+            possession: gameState.possession as string | undefined,
+            redZone: gameState.fieldPosition ? (gameState.fieldPosition as number) <= 20 : false,
+            goalLine: gameState.fieldPosition ? (gameState.fieldPosition as number) <= 5 : false,
+            weather: gameState.weather ? {
+              temperature: (gameState.weather as any).data?.temperature || 72,
+              condition: (gameState.weather as any).data?.condition || 'Clear',
+              windSpeed: (gameState.weather as any).data?.windSpeed || 0,
+              humidity: (gameState.weather as any).data?.humidity || 50,
+              impact: (gameState.weather as any).impact?.description || 'Minimal impact'
+            } : undefined,
+            originalMessage: alert.message,
+            originalContext: alert.context
+          };
 
+        // NON-BLOCKING: Queue for async AI enhancement and return base alert immediately
+        unifiedAIProcessor.queueAlert(alert, aiContext, 'system').catch(error => {
+          console.warn(`⚠️ NFL AI Queue failed for ${alert.type}:`, error);
+        });
+        console.log(`🚀 NFL Async AI: Queued ${alert.type} for background enhancement`);
+
+        // Always return base alert immediately (async enhancement happens via WebSocket)
+        enhancedAlerts.push(alert);
+      } catch (error) {
+        console.error(`❌ NFL AI Enhancement failed for ${alert.type}:`, error);
+        // Fallback to original alert on error
+        enhancedAlerts.push(alert);
+      }
+    }
+
+    const aiTime = Date.now() - aiStartTime;
+    if (aiTime > 50) {
+      console.log(`⚠️ NFL AI Enhancement slow: ${aiTime}ms (target: <50ms)`);
+    }
+
+    return enhancedAlerts;
+  }
 
   // Track possession changes for a game
   private trackPossessionChange(
@@ -361,7 +410,7 @@ export class NFLEngine extends BaseSportEngine {
     if (!possessionSide) return;
 
     let tracking = this.possessionTracking.get(gameId);
-    
+
     // Initialize tracking for new game
     if (!tracking) {
       tracking = {
@@ -379,7 +428,7 @@ export class NFLEngine extends BaseSportEngine {
     // Check if possession changed
     if (tracking.currentPossession !== possessionSide) {
       console.log(`🏈 NFL Possession Change: Game ${gameId} - ${possessionSide === 'home' ? homeTeam : awayTeam} now has possession`);
-      
+
       // Increment possession count
       if (possessionSide === 'home') {
         tracking.homePossessions++;
@@ -448,57 +497,6 @@ export class NFLEngine extends BaseSportEngine {
   public clearPossessionTracking(gameId: string): void {
     this.possessionTracking.delete(gameId);
     console.log(`🧹 NFL: Cleared possession tracking for game ${gameId}`);
-  }
-
-            gameId: gameState.gameId,
-            alertType: alert.type,
-            priority: alert.priority,
-            probability: probability,
-            homeTeam: homeTeamName,
-            awayTeam: awayTeamName,
-            homeScore: gameState.homeScore,
-            awayScore: gameState.awayScore,
-            isLive: gameState.isLive,
-            quarter: gameState.quarter as number | undefined,
-            timeRemaining: gameState.timeRemaining as string | undefined,
-            down: gameState.down as number | undefined,
-            yardsToGo: gameState.yardsToGo as number | undefined,
-            fieldPosition: gameState.fieldPosition as number | undefined,
-            possession: gameState.possession as string | undefined,
-            redZone: gameState.fieldPosition ? (gameState.fieldPosition as number) <= 20 : false,
-            goalLine: gameState.fieldPosition ? (gameState.fieldPosition as number) <= 5 : false,
-            weather: gameState.weather ? {
-              temperature: (gameState.weather as any).data?.temperature || 72,
-              condition: (gameState.weather as any).data?.condition || 'Clear',
-              windSpeed: (gameState.weather as any).data?.windSpeed || 0,
-              humidity: (gameState.weather as any).data?.humidity || 50,
-              impact: (gameState.weather as any).impact?.description || 'Minimal impact'
-            } : undefined,
-            originalMessage: alert.message,
-            originalContext: alert.context
-          };
-
-        // NON-BLOCKING: Queue for async AI enhancement and return base alert immediately
-        unifiedAIProcessor.queueAlert(alert, aiContext, 'system').catch(error => {
-          console.warn(`⚠️ NFL AI Queue failed for ${alert.type}:`, error);
-        });
-        console.log(`🚀 NFL Async AI: Queued ${alert.type} for background enhancement`);
-
-        // Always return base alert immediately (async enhancement happens via WebSocket)
-        enhancedAlerts.push(alert);
-      } catch (error) {
-        console.error(`❌ NFL AI Enhancement failed for ${alert.type}:`, error);
-        // Fallback to original alert on error
-        enhancedAlerts.push(alert);
-      }
-    }
-
-    const aiTime = Date.now() - aiStartTime;
-    if (aiTime > 50) {
-      console.log(`⚠️ NFL AI Enhancement slow: ${aiTime}ms (target: <50ms)`);
-    }
-
-    return enhancedAlerts;
   }
 
   // Initialize alert modules based on user's enabled preferences
