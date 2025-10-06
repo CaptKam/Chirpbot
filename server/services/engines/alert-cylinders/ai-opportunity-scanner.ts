@@ -153,8 +153,7 @@ Only return isOpportunity:true for UNIQUE situations our cylinders wouldn't catc
           context: context,
           priority: 70
         },
-        context,
-        'system'
+        context
       );
 
       if (!aiResponse || !aiResponse.sportSpecificData?.aiDiscovery) {

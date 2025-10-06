@@ -418,7 +418,8 @@ export class NFLEngine extends BaseSportEngine {
         'NFL_FOURTH_DOWN': './alert-cylinders/nfl/fourth-down-module.ts',
         'NFL_RED_ZONE_OPPORTUNITY': './alert-cylinders/nfl/red-zone-opportunity-module.ts',
         'NFL_TURNOVER_LIKELIHOOD': './alert-cylinders/nfl/turnover-likelihood-module.ts',
-        'NFL_MASSIVE_WEATHER': './alert-cylinders/nfl/massive-weather-module.ts'
+        'NFL_MASSIVE_WEATHER': './alert-cylinders/nfl/massive-weather-module.ts',
+        'NFL_AI_SCANNER': './alert-cylinders/nfl/ai-scanner-module.ts'
       };
 
       const modulePath = moduleMap[alertType];
