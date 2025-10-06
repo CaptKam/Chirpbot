@@ -4,6 +4,11 @@ ChirpBot V3 is an advanced multi-sport betting intelligence platform that provid
 
 # Recent Changes
 
+## October 6, 2025 - Admin Session & Dashboard Fixes
+- **Production Session Fix**: Changed admin session cookie `sameSite` from 'strict' to 'lax' in `server/routes.ts` to resolve session persistence issues in published/production environments. The 'lax' policy allows cookies during top-level navigations while maintaining `secure`, `httpOnly`, and domain scoping for security.
+- **Dashboard API Call Optimization**: Removed redundant authenticated API call in `public/admin/dashboard.js` for Sports Alert Settings page. Now uses single public endpoint `/api/available-alerts/:sport` which already includes `globallyEnabled` field, eliminating 401 authentication errors.
+- **System Status**: Admin sessions now work correctly in production. Dashboard loads efficiently with one API call instead of two.
+
 ## October 6, 2025 - Betting-Focused AI Prompt Enhancement
 - **AI Prompt Redesigned**: Completely rewrote system prompt in `unified-ai-processor.ts` to focus on actionable betting intelligence instead of game descriptions.
 - **Prescriptive Output**: AI now generates probability predictions (%), market implications (spread/total/ML), live line movements, and betting value opportunities.
