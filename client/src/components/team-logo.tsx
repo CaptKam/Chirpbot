@@ -618,11 +618,11 @@ const teamColors: Record<string, Record<string, string>> = {
     'ARI': '#97233F', 'ATL': '#A71930', 'BAL': '#241773', 'BUF': '#00338D',
     'CAR': '#0085CA', 'CHI': '#C83803', 'CIN': '#FB4F14', 'CLE': '#311D00',
     'DAL': '#003594', 'DEN': '#FB4F14', 'DET': '#0076B6', 'GB': '#203731',
-    'HOU': '#03202F', 'IND': '#002C5F', 'JAX': '#006778', 'KC': '#E31837',
-    'LAC': '#0080C6', 'LAR': '#003594', 'LV': '#000000', 'MIA': '#008E97',
+    'HOU': '#03202F', 'IND': '#002C5F', 'JAX': '#006778', 'JAC': '#006778', 'KC': '#E31837',
+    'LAC': '#0080C6', 'LAR': '#003594', 'LA': '#003594', 'LV': '#000000', 'MIA': '#008E97',
     'MIN': '#4F2683', 'NE': '#002244', 'NO': '#D3BC8D', 'NYG': '#0B2265',
     'NYJ': '#125740', 'PHI': '#004C54', 'PIT': '#FFB612', 'SEA': '#002244',
-    'SF': '#AA0000', 'TB': '#D50A0A', 'TEN': '#0C2340', 'WAS': '#5A1414'
+    'SF': '#AA0000', 'TB': '#D50A0A', 'TEN': '#0C2340', 'WAS': '#5A1414', 'WSH': '#5A1414'
   },
   'MLB': {
     'ARI': '#A71930', 'AZ': '#A71930', 'ATL': '#CE1141', 'BAL': '#DF4601', 'BOS': '#BD3039',
@@ -645,22 +645,37 @@ const teamColors: Record<string, Record<string, string>> = {
     'UTA': '#002B5C', 'UTAH': '#002B5C', 'WAS': '#002B5C', 'WSH': '#002B5C'
   },
   'NCAAF': {
-    'BAMA': '#9E1B32', 'AUB': '#0C2340', 'UGA': '#BA0C2F', 'LSU': '#461D7C',
+    // SEC
+    'BAMA': '#9E1B32', 'ALA': '#9E1B32', 'AUB': '#0C2340', 'UGA': '#BA0C2F', 'LSU': '#461D7C',
     'FLA': '#0021A5', 'TENN': '#FF8200', 'UK': '#0033A0', 'SCAR': '#73000A',
-    'MISS': '#14213D', 'TAMU': '#500000', 'ARK': '#9D2235', 'MIST': '#5D1725',
-    'VANDY': '#866D4B', 'MIZZ': '#F1B82D', 'OHIO': '#BB0000', 'MICH': '#00274C',
-    'PSU': '#041E42', 'WISC': '#C5050C', 'IOWA': '#FFCD00', 'NEB': '#E41C38',
-    'MINN': '#7A0019', 'ILL': '#13294B', 'NW': '#4E2A84', 'IND': '#990000',
-    'PUR': '#CEB888', 'MD': '#E03A3E', 'RUTG': '#CC0033', 'ND': '#0C2340',
-    'CLEM': '#F66733', 'FSU': '#782F40', 'MIAMI': '#F47321', 'UNC': '#7BAFD4',
+    'MISS': '#14213D', 'TAMU': '#500000', 'ARK': '#9D2235', 'MIST': '#5D1725', 'MSU': '#5D1725',
+    'VANDY': '#866D4B', 'MIZZ': '#F1B82D', 'MIZ': '#F1B82D',
+    // Big Ten
+    'OHIO': '#BB0000', 'OSU': '#BB0000', 'MICH': '#00274C', 'PSU': '#041E42', 'WISC': '#C5050C', 
+    'IOWA': '#FFCD00', 'NEB': '#E41C38', 'MINN': '#7A0019', 'ILL': '#13294B', 
+    'NW': '#4E2A84', 'NU': '#4E2A84', 'IND': '#990000', 'IU': '#990000',
+    'PUR': '#CEB888', 'MD': '#E03A3E', 'RUTG': '#CC0033',
+    // ACC & Independent
+    'ND': '#0C2340', 'CLEM': '#F66733', 'FSU': '#782F40', 'MIAMI': '#F47321', 'UNC': '#7BAFD4',
     'NCSU': '#CC0000', 'UVA': '#232D4B', 'VT': '#630031', 'PITT': '#003594',
     'LOU': '#AD0000', 'BC': '#8B0000', 'GT': '#B3A369', 'DUKE': '#003087',
-    'WAKE': '#9E7E38', 'SYR': '#D44500', 'TEX': '#BF5700', 'OU': '#841617',
-    'USC': '#990000', 'UCLA': '#2D68C4', 'ORE': '#154733', 'WASH': '#4B2E83',
-    'ORST': '#DC4405', 'UTAH': '#CC0000', 'CU': '#CFB87C', 'ASU': '#8C1D40',
-    'STAN': '#8C1515', 'CAL': '#003262', 'OKST': '#FF7300', 'TCU': '#4D1979',
+    'WAKE': '#9E7E38', 'SYR': '#D44500', 'ARMY': '#000000', 'NAVY': '#00205B',
+    // Big 12
+    'TEX': '#BF5700', 'OU': '#841617', 'OKST': '#FF7300', 'TCU': '#4D1979',
     'TTU': '#CC0000', 'BAYLOR': '#154734', 'KU': '#0051BA', 'KSU': '#512888',
-    'ISU': '#C8102E', 'WVU': '#002855', 'BYU': '#002E5D', 'SDSU': '#A6192E'
+    'ISU': '#C8102E', 'WVU': '#002855', 'BYU': '#002E5D', 'UCF': '#000000', 
+    'CIN': '#E00122', 'HOU': '#C8102E',
+    // Pac-12
+    'USC': '#990000', 'UCLA': '#2D68C4', 'ORE': '#154733', 'WASH': '#4B2E83',
+    'ORST': '#DC4405', 'UTAH': '#CC0000', 'CU': '#CFB87C', 'COLO': '#CFB87C', 'ASU': '#8C1D40',
+    'STAN': '#8C1515', 'CAL': '#003262', 'WSU': '#A60F2D',
+    // Other conferences
+    'SDSU': '#A6192E', 'SMU': '#C8102E', 'JMU': '#450084', 'UL': '#CE181E',
+    'CLT': '#005035', 'AKR': '#041E42', 'M-OH': '#C8102E', 'BGSU': '#FE5000',
+    'TOL': '#15397F', 'EMU': '#006633', 'NIU': '#BA0C2F', 'KENT': '#002664',
+    'MASS': '#881C1C', 'GAST': '#0039A6', 'APP': '#222222', 'MRSH': '#00B140',
+    'ODU': '#003057', 'WMU': '#421C08', 'BALL': '#BA0C2F', 'TEM': '#9D2235',
+    'FAU': '#003366', 'UAB': '#1E6B52', 'AFA': '#003087', 'UNLV': '#CF0A2C'
   },
   'WNBA': {
     'ATL': '#C8102E', 'CHI': '#418FDE', 'CONN': '#C4D600', 'DAL': '#0C2340',
