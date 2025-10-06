@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState } from 'react';
 
 interface TeamLogoProps {
   teamName: string;
@@ -685,6 +685,8 @@ function getTeamColor(abbreviation: string | undefined, sport: string | undefine
 }
 
 export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className = '', teamColor }: TeamLogoProps) {
+  const [imageLoadFailed, setImageLoadFailed] = useState(false);
+  
   const sizeClasses = {
     sm: 'w-8 h-8',
     md: 'w-12 h-12',
@@ -740,27 +742,25 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
   // Try to get the official team logo URL first (but skip WNBA images)
   const logoUrl = teamAbbr && sport !== 'WNBA' ? getTeamLogoUrl(teamAbbr, sport) : null;
 
-  if (logoUrl) {
-    // Use official team logo from ESPN
+  // Use provided teamColor or look up by abbreviation/sport
+  const resolvedColor = teamColor || getTeamColor(teamAbbr, sport);
+
+  // If we have a logo URL and it hasn't failed to load, show the image
+  if (logoUrl && !imageLoadFailed) {
     return (
       <img 
         src={logoUrl} 
         alt={displayName}
         className={`${sizeClasses[size]} ${className} object-contain`}
-        onError={(e) => {
-          // If image fails to load, hide it and show fallback
-          e.currentTarget.style.display = 'none';
+        onError={() => {
+          // If image fails to load, switch to colored fallback
+          setImageLoadFailed(true);
         }}
       />
     );
   }
 
-
-
-  // Final fallback with team colors
-  // Use provided teamColor or look up by abbreviation/sport
-  const resolvedColor = teamColor || getTeamColor(teamAbbr, sport);
-  
+  // Show colored team circle fallback (either no logo URL or image failed to load)
   const fallbackStyle = resolvedColor 
     ? { 
         background: `linear-gradient(135deg, ${resolvedColor}, ${resolvedColor}dd)`,
