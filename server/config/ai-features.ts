@@ -1,6 +1,6 @@
 export const AIFeatures = {
   enableAIEnhancement: true,
-  enableAIScanner: false,
+  enableAIScanner: true,
   hideDuplicateInsights: true,
   duplicateSimilarityThreshold: 0.72,
 
