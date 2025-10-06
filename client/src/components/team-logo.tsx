@@ -694,10 +694,14 @@ const teamColors: Record<string, Record<string, string>> = {
 function getTeamColor(abbreviation: string | undefined, sport: string | undefined): string | undefined {
   if (!abbreviation || !sport) return undefined;
   
-  const sportColors = teamColors[sport.toUpperCase()];
+  // Normalize both sport and abbreviation to uppercase for consistent lookup
+  const normalizedSport = sport.toUpperCase().trim();
+  const normalizedAbbr = abbreviation.toUpperCase().trim();
+  
+  const sportColors = teamColors[normalizedSport];
   if (!sportColors) return undefined;
   
-  return sportColors[abbreviation.toUpperCase()];
+  return sportColors[normalizedAbbr];
 }
 
 export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className = '', teamColor }: TeamLogoProps) {
