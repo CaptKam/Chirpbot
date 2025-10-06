@@ -178,7 +178,7 @@ const adminSessionParser = session({
     path: '/', // Admin cookie needs global access for both /admin and /api/admin* routes
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'strict', // More restrictive for admin
+    sameSite: 'lax', // Secure but compatible with production deployments
     domain: process.env.COOKIE_DOMAIN || undefined,
     maxAge: 4 * 60 * 60 * 1000 // 4 hours (shorter for security)
   }
