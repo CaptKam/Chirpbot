@@ -457,6 +457,44 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Serve admin static files
   app.use('/admin', express.static('public/admin'));
 
+  // NFL Possession Tracking API
+  app.get('/api/nfl/possession/:gameId', async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
+      const engineManager = getEngineLifecycleManager();
+      const nflEngine = engineManager.getEngine('NFL');
+      
+      if (!nflEngine || !nflEngine.getPossessionStats) {
+        return res.status(404).json({ error: 'NFL engine not available' });
+      }
+
+      const stats = nflEngine.getPossessionStats(gameId);
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // NCAAF Possession Tracking API
+  app.get('/api/ncaaf/possession/:gameId', async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
+      const engineManager = getEngineLifecycleManager();
+      const ncaafEngine = engineManager.getEngine('NCAAF');
+      
+      if (!ncaafEngine || !ncaafEngine.getPossessionStats) {
+        return res.status(404).json({ error: 'NCAAF engine not available' });
+      }
+
+      const stats = ncaafEngine.getPossessionStats(gameId);
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Wind speed test for specific stadiums
   app.get('/api/test-wind-speeds', async (req, res) => {
     try {

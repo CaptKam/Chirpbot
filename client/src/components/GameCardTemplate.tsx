@@ -259,6 +259,22 @@ export function GameCardTemplate({
     enabled: showWeather && sport === 'MLB' // Only fetch for MLB games when weather is shown
   });
 
+  // Fetch possession stats for NFL and NCAAF games
+  const { data: possessionData } = useQuery({
+    queryKey: ['possession', gameId, sport],
+    queryFn: async () => {
+      const response = await fetch(`/api/${sport.toLowerCase()}/possession/${gameId}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Possession fetch failed');
+      return response.json();
+    },
+    staleTime: 5 * 1000, // Cache for 5 seconds
+    refetchInterval: status === 'live' ? 5000 : false, // Refetch every 5s for live games
+    retry: 1,
+    enabled: (sport === 'NFL' || sport === 'NCAAF') && status === 'live'
+  });
+
   // Convert wind direction degrees to cardinal direction
   const getCardinalDirection = (degrees: number) => {
     const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
@@ -408,6 +424,22 @@ export function GameCardTemplate({
             windDirection={weather?.windDirection || "N"}
             size="sm"
           />
+        )}
+
+        {/* Possession Stats for NFL/NCAAF */}
+        {(sport === 'NFL' || sport === 'NCAAF') && status === 'live' && possessionData?.tracked && (
+          <div className="flex items-center space-x-2">
+            <div className="text-xs bg-slate-800/50 px-2 py-1 rounded">
+              <span className="text-slate-400">Poss: </span>
+              <span className={possessionData.currentPossession === 'home' ? 'text-emerald-400 font-bold' : 'text-slate-300'}>
+                {possessionData.homePossessions}
+              </span>
+              <span className="text-slate-500 mx-1">-</span>
+              <span className={possessionData.currentPossession === 'away' ? 'text-emerald-400 font-bold' : 'text-slate-300'}>
+                {possessionData.awayPossessions}
+              </span>
+            </div>
+          </div>
         )}
 
         <div className="flex items-center space-x-3">
