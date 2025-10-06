@@ -23,6 +23,22 @@ export class NFLEngine extends BaseSportEngine {
     twoMinuteWarnings: 0,
   };
 
+  // Track possession per team per game
+  private possessionTracking = new Map<string, {
+    homeTeam: string;
+    awayTeam: string;
+    homePossessions: number;
+    awayPossessions: number;
+    currentPossession: 'home' | 'away' | null;
+    lastPossessionChange: number;
+    possessionHistory: Array<{
+      team: 'home' | 'away';
+      startTime: number;
+      quarter: number;
+      fieldPosition?: number;
+    }>;
+  }>();
+
   constructor() {
     super('NFL');
   }
@@ -231,6 +247,16 @@ export class NFLEngine extends BaseSportEngine {
             console.warn(`🌤️ Weather data unavailable for NFL game ${gameState.gameId}:`, error);
           }
 
+          // Track possession changes for this game
+          this.trackPossessionChange(
+            gameState.gameId,
+            gameState.homeTeam as string,
+            gameState.awayTeam as string,
+            enhancedData.possessionSide,
+            enhancedData.quarter,
+            enhancedData.fieldPosition
+          );
+
           const enhancedGameState = {
             ...gameState,
             quarter: enhancedData.quarter || gameState.quarter || 1,
@@ -241,6 +267,9 @@ export class NFLEngine extends BaseSportEngine {
             yardsToGo: enhancedData.yardsToGo ?? gameState.yardsToGo ?? null,
             fieldPosition: enhancedData.fieldPosition ?? gameState.fieldPosition ?? null,
             possession: enhancedData.possession ?? gameState.possession ?? null,
+            possessionSide: enhancedData.possessionSide ?? null,
+            possessionTeamAbbrev: enhancedData.possessionTeamAbbrev ?? null,
+            possessionTeamName: enhancedData.possessionTeamName ?? null,
             homeScore: enhancedData.homeScore || gameState.homeScore,
             awayScore: enhancedData.awayScore || gameState.awayScore,
             weatherContext,
@@ -318,6 +347,109 @@ export class NFLEngine extends BaseSportEngine {
         const awayTeamName = typeof gameState.awayTeam === 'string' ? gameState.awayTeam : (gameState.awayTeam as any).name || '';
         const aiContext: CrossSportContext = {
             sport: 'NFL',
+
+
+  // Track possession changes for a game
+  private trackPossessionChange(
+    gameId: string,
+    homeTeam: string,
+    awayTeam: string,
+    possessionSide: 'home' | 'away' | null,
+    quarter: number,
+    fieldPosition?: number
+  ): void {
+    if (!possessionSide) return;
+
+    let tracking = this.possessionTracking.get(gameId);
+    
+    // Initialize tracking for new game
+    if (!tracking) {
+      tracking = {
+        homeTeam,
+        awayTeam,
+        homePossessions: 0,
+        awayPossessions: 0,
+        currentPossession: null,
+        lastPossessionChange: Date.now(),
+        possessionHistory: []
+      };
+      this.possessionTracking.set(gameId, tracking);
+    }
+
+    // Check if possession changed
+    if (tracking.currentPossession !== possessionSide) {
+      console.log(`🏈 NFL Possession Change: Game ${gameId} - ${possessionSide === 'home' ? homeTeam : awayTeam} now has possession`);
+      
+      // Increment possession count
+      if (possessionSide === 'home') {
+        tracking.homePossessions++;
+      } else {
+        tracking.awayPossessions++;
+      }
+
+      // Record possession change
+      tracking.possessionHistory.push({
+        team: possessionSide,
+        startTime: Date.now(),
+        quarter,
+        fieldPosition
+      });
+
+      tracking.currentPossession = possessionSide;
+      tracking.lastPossessionChange = Date.now();
+    }
+  }
+
+  // Get possession statistics for a game
+  public getPossessionStats(gameId: string): any {
+    const tracking = this.possessionTracking.get(gameId);
+    if (!tracking) {
+      return {
+        gameId,
+        tracked: false,
+        message: 'No possession data tracked for this game'
+      };
+    }
+
+    return {
+      gameId,
+      tracked: true,
+      homeTeam: tracking.homeTeam,
+      awayTeam: tracking.awayTeam,
+      homePossessions: tracking.homePossessions,
+      awayPossessions: tracking.awayPossessions,
+      currentPossession: tracking.currentPossession,
+      currentPossessionTeam: tracking.currentPossession === 'home' ? tracking.homeTeam : tracking.awayTeam,
+      totalPossessions: tracking.homePossessions + tracking.awayPossessions,
+      possessionHistory: tracking.possessionHistory,
+      lastChange: new Date(tracking.lastPossessionChange).toISOString()
+    };
+  }
+
+  // Get all possession stats across all tracked games
+  public getAllPossessionStats(): any[] {
+    const allStats = [];
+    for (const [gameId, tracking] of this.possessionTracking.entries()) {
+      allStats.push({
+        gameId,
+        homeTeam: tracking.homeTeam,
+        awayTeam: tracking.awayTeam,
+        homePossessions: tracking.homePossessions,
+        awayPossessions: tracking.awayPossessions,
+        currentPossession: tracking.currentPossession,
+        currentPossessionTeam: tracking.currentPossession === 'home' ? tracking.homeTeam : tracking.awayTeam,
+        totalPossessions: tracking.homePossessions + tracking.awayPossessions
+      });
+    }
+    return allStats;
+  }
+
+  // Clear possession tracking for finished games
+  public clearPossessionTracking(gameId: string): void {
+    this.possessionTracking.delete(gameId);
+    console.log(`🧹 NFL: Cleared possession tracking for game ${gameId}`);
+  }
+
             gameId: gameState.gameId,
             alertType: alert.type,
             priority: alert.priority,
@@ -566,7 +698,11 @@ export class NFLEngine extends BaseSportEngine {
         fourthDownSituations: this.performanceMetrics.fourthDownSituations,
         twoMinuteWarnings: this.performanceMetrics.twoMinuteWarnings,
         activeGameTracking: 0, // Now handled by unified deduplicator
-        totalTrackedAlerts: 0  // Now handled by unified deduplicator
+        totalTrackedAlerts: 0,  // Now handled by unified deduplicator
+        possessionTracking: {
+          gamesTracked: this.possessionTracking.size,
+          allStats: this.getAllPossessionStats()
+        }
       },
       recentPerformance: {
         calculationTimes: this.performanceMetrics.probabilityCalculationTime.slice(-20),

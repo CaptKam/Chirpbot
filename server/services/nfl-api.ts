@@ -350,7 +350,15 @@ export class NFLApiService extends BaseSportApi {
       usedPlayMetadata, usedAIParsing
     });
 
-    return {
+    // Determine possession team name for clearer tracking
+      let possessionTeamName = null;
+      if (aiParsedPossessionSide === 'home' && homeCompetitor) {
+        possessionTeamName = homeCompetitor.team.displayName;
+      } else if (aiParsedPossessionSide === 'away' && awayCompetitor) {
+        possessionTeamName = awayCompetitor.team.displayName;
+      }
+
+      return {
       quarter,
       timeRemaining,
       down: aiParsedDown,
@@ -359,6 +367,7 @@ export class NFLApiService extends BaseSportApi {
       possession: aiParsedPossession,
       possessionSide: aiParsedPossessionSide,
       possessionTeamAbbrev: aiParsedPossessionTeamAbbrev,
+      possessionTeamName,
       homeScore: parseInt(homeScore) || 0,
       awayScore: parseInt(awayScore) || 0,
       gameState: competitions.status?.type?.state || 'unknown',

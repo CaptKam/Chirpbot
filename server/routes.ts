@@ -215,7 +215,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     if (req.path.startsWith('/api/admin') || req.path.startsWith('/admin')) {
       return next(); // Skip user session parser for admin paths
     }
-    
+
     return userSessionParser(req, res, next);
   });
 
@@ -1051,7 +1051,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { getPacificDate, getPacificDateTime } = await import('./utils/timezone');
       const pacificDate = getPacificDate();
       const pacificDateTime = getPacificDateTime();
-      
+
       res.json({
         date: pacificDate,
         dateTime: pacificDateTime,
@@ -1188,14 +1188,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       };
 
       await storage.addUserMonitoredTeam(userId, gameId, sport || 'MLB', homeTeamName || '', awayTeamName || '');
-      
+
       // Update GameStateManager to enable alert processing for this game
       const { gameStateManager } = await import('./services/game-state-manager');
       const added = gameStateManager.addUserToGame(gameId, userId);
       if (added) {
         console.log(`✅ Game ${gameId} marked as monitored for user ${userId}`);
       }
-      
+
       res.json({ message: 'Game monitoring enabled' });
     } catch (error) {
       console.error('Error adding monitored game:', error);
@@ -1207,14 +1207,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       const { userId, gameId } = req.params;
       await storage.removeUserMonitoredTeam(userId, gameId);
-      
+
       // Update GameStateManager to disable alert processing if no users monitoring
       const { gameStateManager } = await import('./services/game-state-manager');
       const removed = gameStateManager.removeUserFromGame(gameId, userId);
       if (removed) {
         console.log(`✅ User ${userId} removed from game ${gameId} monitoring`);
       }
-      
+
       res.json({ message: 'Game monitoring disabled' });
     } catch (error) {
       console.error('Error removing monitored game:', error);
@@ -1891,17 +1891,17 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // === GAME MONITORING CLEANUP ROUTES ===
-  
+
   // Admin: Check game monitoring cleanup status
   app.get('/api/admin/game-monitoring-cleanup/status', requireAdminAuth, async (req, res) => {
     try {
       const { gameMonitoringCleanup } = await import('./services/game-monitoring-cleanup');
       const status = gameMonitoringCleanup.getStatus();
-      
+
       // Get current monitored games count
       const monitoredGames = await storage.getMonitoredGamesForCleanup();
       const totalUsers = [...new Set(monitoredGames.map(g => g.gameId))].length;
-      
+
       res.json({
         ...status,
         monitoredGames: {
@@ -1925,7 +1925,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       const { gameMonitoringCleanup } = await import('./services/game-monitoring-cleanup');
       const result = await gameMonitoringCleanup.triggerManualCleanup();
-      
+
       res.json({
         success: true,
         message: `Cleanup completed - removed ${result.removedGames} final games from ${result.cleanedUsers} user monitoring entries`,
@@ -2342,7 +2342,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             alertKey: `${row.game_id}_${row.type}`,
             type: row.type,
             // Preserve original backend message formatting
-            message: payload.message || payload.displayMessage || `${row.type} alert`,
+            message: payload.message || payload.displayMessage || `${row.type} alert for game ${row.game_id}`,
             displayMessage: payload.displayMessage, // Preserve formatted messages from CleanAlertFormatter
             gameId: row.game_id,
             sport: row.sport || 'MLB',
@@ -2384,7 +2384,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/diagnostics/environment', async (req, res) => {
     try {
       const currentUserId = req.session?.userId;
-      
+
       // Environment variables that could affect card rendering
       const environmentData = {
         deployment: {
@@ -2426,11 +2426,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
               ))
               .orderBy(desc(alerts.createdAt))
               .limit(1);
-              
+
             if (sampleResult.length > 0) {
               const alert = sampleResult[0];
               const payload = alert.payload as any;
-              
+
               sampleAlert = {
                 id: alert.id,
                 type: alert.type,
@@ -2458,7 +2458,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         timestamp: new Date().toISOString(),
         cardRenderingFactors: {
           shouldRenderAdvanced: !!(
-            environmentData.features.openaiEnabled && 
+            environmentData.features.openaiEnabled &&
             environmentData.features.enhancedCardsEnabled &&
             currentUserId
           ),
@@ -4220,11 +4220,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       const status = migrationAdapter.getStatus();
       const metrics = migrationAdapter.getMetrics();
+      const rolloutController = migrationAdapter.getRolloutController();
+      const rolloutStatus = rolloutController.getStatus();
 
       res.json({
         status: status.status,
         services: status.services,
-        rollout: status.rollout,
+        rollout: rolloutStatus,
         health: status.health,
         comparison: status.comparison || {
           eventsProcessed: 0,
@@ -4627,7 +4629,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         success: true,
         ...healthCheck,
         timestamp: new Date().toISOString()
-      });
+       });
 
     } catch (error: any) {
       console.error('❌ Control Plane: Error performing health check:', error);
