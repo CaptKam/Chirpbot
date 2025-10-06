@@ -481,7 +481,8 @@ export default function Calendar() {
                 }).map(date => {
                   const dateStr = format(date, 'yyyy-MM-dd');
                   const isSelected = selectedDates.has(dateStr);
-                  const isToday = serverDate?.date && isSameDay(date, new Date(serverDate.date));
+                  const todayStr = format(new Date(serverDate.date), 'yyyy-MM-dd');
+                  const isToday = dateStr === todayStr;
 
                   return (
                     <Button
