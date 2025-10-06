@@ -641,15 +641,15 @@ const teamColors: Record<string, Record<string, string>> = {
     'LAC': '#C8102E', 'LAL': '#552583', 'MEM': '#5D76A9', 'MIA': '#98002E',
     'MIL': '#00471B', 'MIN': '#0C2340', 'NO': '#0C2340', 'NOP': '#0C2340', 'NY': '#006BB6', 'NYK': '#006BB6',
     'OKC': '#007AC1', 'OKL': '#007AC1', 'ORL': '#0077C0', 'PHI': '#006BB6', 'PHX': '#1D1160',
-    'POR': '#E03A3E', 'SAC': '#5A2D81', 'SA': '#C4CED4', 'SAS': '#C4CED4', 'TOR': '#CE1141',
+    'POR': '#E03A3E', 'SAC': '#5A2D81', 'SA': '#C4CED4', 'SAS': '#C4CED4', 'SAN': '#C4CED4', 'TOR': '#CE1141',
     'UTA': '#002B5C', 'UTAH': '#002B5C', 'WAS': '#002B5C', 'WSH': '#002B5C',
-    'GUANGZHOU': '#FF0000'
+    'GUANGZHOU': '#FF0000', 'GUA': '#FF0000'
   },
   'NCAAF': {
     // SEC
     'BAMA': '#9E1B32', 'ALA': '#9E1B32', 'AUB': '#0C2340', 'UGA': '#BA0C2F', 'LSU': '#461D7C',
     'FLA': '#0021A5', 'TENN': '#FF8200', 'UK': '#0033A0', 'SCAR': '#73000A',
-    'MISS': '#14213D', 'TAMU': '#500000', 'ARK': '#9D2235', 'MIST': '#5D1725', 'MSU': '#5D1725',
+    'MISS': '#14213D', 'MIS': '#14213D', 'TAMU': '#500000', 'ARK': '#9D2235', 'MIST': '#5D1725', 'MSU': '#5D1725',
     'VANDY': '#866D4B', 'MIZZ': '#F1B82D', 'MIZ': '#F1B82D',
     // Big Ten
     'OHIO': '#BB0000', 'OSU': '#BB0000', 'MICH': '#00274C', 'PSU': '#041E42', 'WISC': '#C5050C', 
@@ -668,7 +668,7 @@ const teamColors: Record<string, Record<string, string>> = {
     'CIN': '#E00122', 'HOU': '#C8102E',
     // Pac-12
     'USC': '#990000', 'UCLA': '#2D68C4', 'ORE': '#154733', 'WASH': '#4B2E83',
-    'ORST': '#DC4405', 'UTAH': '#CC0000', 'CU': '#CFB87C', 'COLO': '#CFB87C', 'ASU': '#8C1D40',
+    'ORST': '#DC4405', 'UTAH': '#CC0000', 'UTE': '#CC0000', 'CU': '#CFB87C', 'COLO': '#CFB87C', 'ASU': '#8C1D40',
     'STAN': '#8C1515', 'CAL': '#003262', 'WSU': '#A60F2D',
     // Other conferences
     'SDSU': '#A6192E', 'SMU': '#C8102E', 'JMU': '#450084', 'UL': '#CE181E',
