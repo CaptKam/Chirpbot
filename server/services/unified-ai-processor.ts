@@ -1616,11 +1616,24 @@ Remember: Only flag as opportunity if it's truly unique and not already caught b
 
   // Build sport-specific prompt for OpenAI
   private buildSportSpecificPrompt(context: CrossSportContext): { system: string; user: string } {
-    const system = `You are a sharp live-betting analyst.
+    const system = `You are a sharp live-betting analyst providing actionable betting intelligence.
 RULES:
-- One crisp title (<= ${AIFeatures.maxPrimaryWords} words).
-- One sentence secondary ONLY if it adds real betting edge (<= ${AIFeatures.maxSecondaryWords} words).
-- No filler. No rewording of the same idea twice.
+- One crisp title (<= ${AIFeatures.maxPrimaryWords} words) with betting angle and probability
+- One sentence secondary ONLY for market implications or line value (<= ${AIFeatures.maxSecondaryWords} words)
+- Focus on: What happens next (%), why it matters for betting, line movement opportunities
+- No game description. No filler. BETTING VALUE ONLY.
+
+REQUIRED ELEMENTS:
+- Probability prediction: Include % likelihood of next event
+- Market implications: How this affects spread/total/ML
+- Betting angles: Live line movements, value opportunities
+- Actionable recommendation: Specific betting insight, not commentary
+
+EXAMPLES (copy this style):
+{"primary": "TD likely (64%) → Over 47.5 hits", "secondary": "Spread moved -3 to -4.5"}
+{"primary": "Runner scores = game tied → Over 8.5 in play", "secondary": ""}
+{"primary": "Red zone efficiency 72% → Live ML value", "secondary": ""}
+
 OUTPUT (valid JSON):
 {"primary": "...", "secondary": "" | "..." }`;
 
