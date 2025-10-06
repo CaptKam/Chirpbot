@@ -625,11 +625,11 @@ const teamColors: Record<string, Record<string, string>> = {
     'SF': '#AA0000', 'TB': '#D50A0A', 'TEN': '#0C2340', 'WAS': '#5A1414'
   },
   'MLB': {
-    'ARI': '#A71930', 'ATL': '#CE1141', 'BAL': '#DF4601', 'BOS': '#BD3039',
-    'CHC': '#0E3386', 'CWS': '#27251F', 'CIN': '#C6011F', 'CLE': '#E31937',
+    'ARI': '#A71930', 'AZ': '#A71930', 'ATL': '#CE1141', 'BAL': '#DF4601', 'BOS': '#BD3039',
+    'CHC': '#0E3386', 'CWS': '#27251F', 'CHW': '#27251F', 'CIN': '#C6011F', 'CLE': '#E31937',
     'COL': '#33006F', 'DET': '#0C2C56', 'HOU': '#EB6E1F', 'KC': '#004687',
     'LAA': '#BA0021', 'LAD': '#005A9C', 'MIA': '#00A3E0', 'MIL': '#FFC52F',
-    'MIN': '#002B5C', 'NYM': '#002D72', 'NYY': '#003087', 'OAK': '#003831',
+    'MIN': '#002B5C', 'NYM': '#002D72', 'NYY': '#003087', 'OAK': '#003831', 'ATH': '#003831',
     'PHI': '#E81828', 'PIT': '#FDB827', 'SD': '#2F241D', 'SEA': '#0C2C56',
     'SF': '#FD5A1E', 'STL': '#C41E3A', 'TB': '#092C5C', 'TEX': '#003278',
     'TOR': '#134A8E', 'WSH': '#AB0003'
@@ -637,12 +637,12 @@ const teamColors: Record<string, Record<string, string>> = {
   'NBA': {
     'ATL': '#E03A3E', 'BOS': '#007A33', 'BKN': '#000000', 'CHA': '#1D1160',
     'CHI': '#CE1141', 'CLE': '#860038', 'DAL': '#00538C', 'DEN': '#0E2240',
-    'DET': '#C8102E', 'GS': '#1D428A', 'HOU': '#CE1141', 'IND': '#002D62',
+    'DET': '#C8102E', 'GS': '#1D428A', 'GSW': '#1D428A', 'HOU': '#CE1141', 'IND': '#002D62',
     'LAC': '#C8102E', 'LAL': '#552583', 'MEM': '#5D76A9', 'MIA': '#98002E',
-    'MIL': '#00471B', 'MIN': '#0C2340', 'NO': '#0C2340', 'NY': '#006BB6',
+    'MIL': '#00471B', 'MIN': '#0C2340', 'NO': '#0C2340', 'NOP': '#0C2340', 'NY': '#006BB6', 'NYK': '#006BB6',
     'OKC': '#007AC1', 'ORL': '#0077C0', 'PHI': '#006BB6', 'PHX': '#1D1160',
-    'POR': '#E03A3E', 'SAC': '#5A2D81', 'SA': '#C4CED4', 'TOR': '#CE1141',
-    'UTA': '#002B5C', 'WAS': '#002B5C'
+    'POR': '#E03A3E', 'SAC': '#5A2D81', 'SA': '#C4CED4', 'SAS': '#C4CED4', 'TOR': '#CE1141',
+    'UTA': '#002B5C', 'UTAH': '#002B5C', 'WAS': '#002B5C', 'WSH': '#002B5C'
   },
   'NCAAF': {
     'BAMA': '#9E1B32', 'AUB': '#0C2340', 'UGA': '#BA0C2F', 'LSU': '#461D7C',
