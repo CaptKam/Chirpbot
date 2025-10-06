@@ -35,9 +35,9 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
   };
 
   private readonly FIELD_POSITION_BASE_PROBABILITY: Record<number, number> = {
-    1:95, 2:90, 3:85, 4:80, 5:78, 6:76, 7:74, 8:72, 9:70, 10:68,
-    11:66, 12:64, 13:62, 14:60, 15:58, 16:56, 17:54, 18:52, 19:50, 20:48,
-    21:45, 22:43, 23:41, 24:39, 25:37, 26:35, 27:33, 28:31, 29:29, 30:27
+    1:56, 2:55, 3:53, 4:52, 5:50, 6:49, 7:47, 8:46, 9:44, 10:43,
+    11:41, 12:40, 13:38, 14:37, 15:35, 16:34, 17:32, 18:31, 19:29, 20:28,
+    21:26, 22:25, 23:23, 24:22, 25:20, 26:19, 27:17, 28:16, 29:15, 30:15
   };
 
   // ---- Trigger logic
@@ -149,77 +149,112 @@ export default class RedZoneOpportunityModule extends BaseAlertModule {
 
     if (!fp || !down || !ytg) return 0;
 
-    const cappedFp = Math.min(fp, 30);
-    let base = this.FIELD_POSITION_BASE_PROBABILITY[cappedFp] ?? 25;
+    // Use fp directly without redundant capping - alert won't trigger beyond 30 anyway
+    let base = this.FIELD_POSITION_BASE_PROBABILITY[fp] ?? 20;
 
     const ddMultTable = this.DOWN_DISTANCE_MULTIPLIERS[down] || this.DOWN_DISTANCE_MULTIPLIERS[3];
     const ddMult = ddMultTable[ytg] ?? 0.6;
 
     let probability = base * ddMult;
 
-    // Weather heuristics (optional, preserved)
+    // Weather adjustments - cap total weather contribution to +3% max
     const wx: any = (gameState as any).weather;
+    let weatherBonus = 0;
     if (wx?.isOutdoorStadium && wx.impact) {
       const impact = wx.impact;
-      // FG difficulty tilts toward TD attempts
-      if (impact.fieldGoalDifficulty === 'extreme') probability += 20;
-      else if (impact.fieldGoalDifficulty === 'high') probability += 12;
-      else if (impact.fieldGoalDifficulty === 'moderate') probability += 6;
+      // FG difficulty tilts toward TD attempts (much smaller impact)
+      if (impact.fieldGoalDifficulty === 'extreme') weatherBonus += 2;
+      else if (impact.fieldGoalDifficulty === 'high') weatherBonus += 1.5;
+      else if (impact.fieldGoalDifficulty === 'moderate') weatherBonus += 1;
 
-      if (impact.preferredStrategy === 'run-heavy') {
-        if (fp <= 10) probability += 8;
-        else if (fp <= 20) probability += 5;
+      if (impact.preferredStrategy === 'run-heavy' && fp <= 10) {
+        weatherBonus += 1;
       } else if (impact.preferredStrategy === 'conservative') {
-        probability += 4;
+        weatherBonus += 0.5;
       }
 
       if (impact.weatherAlert) {
-        probability += 8;
-        if (fp <= 5 && impact.passingConditions !== 'dangerous') probability += 5;
+        weatherBonus += 1;
       }
 
       if (impact.passingConditions === 'dangerous' && fp > 10) {
-        probability -= 8;
+        weatherBonus -= 1;
       } else if (impact.passingConditions === 'poor' && fp > 15) {
-        probability -= 4;
+        weatherBonus -= 0.5;
       }
+
+      // Cap total weather contribution to +3%
+      weatherBonus = this.clamp(weatherBonus, -3, 3);
     }
+    probability += weatherBonus;
 
-    probability *= this.getTimePressureAdjustment(gameState);
-    probability *= this.getScoreDifferentialAdjustment(gameState);
+    // Get raw adjustments
+    const timePressureAdj = this.getTimePressureAdjustment(gameState);
+    const scoreDiffAdj = this.getScoreDifferentialAdjustment(gameState);
+    
+    // Check for goal line situation
+    const isGoalLine = fp <= 3 && down <= 2;
+    const isFirstAndGoal = fp <= 10 && down === 1;
+    const isShortYardage = fp <= 20 && this.num(gameState.yardsToGo) <= 3;
+    
+    // Calculate goal line bonuses (reduced from +8/+5/+4 to +7/+5/+3)
+    let goalLineBonus = 0;
+    if (isGoalLine) goalLineBonus = 7;
+    else if (isFirstAndGoal) goalLineBonus = 5;
+    else if (isShortYardage) goalLineBonus = 3;
+    
+    // Apply mutual exclusivity/scaling rules:
+    // If applying goal line bonus, scale down other bonuses by 50%
+    // If applying time pressure bonus, scale down score differential bonus by 50%
+    let finalTimePressure = timePressureAdj;
+    let finalScoreDiff = scoreDiffAdj;
+    let finalGoalLine = goalLineBonus;
+    
+    if (goalLineBonus > 0) {
+      // Goal line situation: scale down time pressure and score differential by 50%
+      finalTimePressure = timePressureAdj * 0.5;
+      finalScoreDiff = scoreDiffAdj * 0.5;
+    } else if (timePressureAdj > 0) {
+      // Time pressure without goal line: scale down score differential by 50%
+      finalScoreDiff = scoreDiffAdj * 0.5;
+    }
+    
+    probability += finalTimePressure;
+    probability += finalScoreDiff;
+    probability += finalGoalLine;
 
-    if (fp <= 3 && down <= 2) probability += 15; // goal line boost
-    if (fp <= 10 && down === 1) probability += 10; // 1st & goal tendency
-    if (fp <= 20 && this.num(gameState.yardsToGo) <= 3) probability += 8; // short yardage
-
-    return this.clamp(probability, 5, 98);
+    // Final clamp to ensure reasonable bounds (0-90%)
+    // 90% cap ensures we never naturally exceed it except in extreme edge cases
+    return this.clamp(probability, 5, 90);
   }
 
   private getTimePressureAdjustment(gameState: GameState): number {
     const q = this.num(gameState.quarter);
     const t = this.parseTimeToSeconds(String(gameState.timeRemaining || '0:00'));
-    if (!q) return 1;
+    if (!q) return 0;
 
+    // Return additive percentage points - reduced from max +15 to max +8
     if (q === 4) {
-      if (t <= 120) return 1.15;
-      if (t <= 300) return 1.10;
-      return 1.05;
+      if (t <= 120) return 8;   // Critical time: +8 percentage points (reduced from +15)
+      if (t <= 300) return 5;   // High pressure: +5 percentage points (reduced from +10)
+      return 3;                  // Medium pressure: +3 percentage points (reduced from +5)
     }
-    if (q === 2 && t <= 120) return 1.08;
-    return 1.0;
+    if (q === 2 && t <= 120) return 4; // 2-minute drill: +4 percentage points (reduced from +8)
+    return 0;
   }
 
   private getScoreDifferentialAdjustment(gameState: GameState): number {
     const h = this.num(gameState.homeScore);
     const a = this.num(gameState.awayScore);
-    if (h === null || a === null) return 1.0;
+    if (h === null || a === null) return 0;
 
+    // Return additive percentage points - reduced from ±10 to ±5
     const d = Math.abs(h - a);
-    if (d <= 3) return 1.10;
-    if (d <= 7) return 1.05;
-    if (d <= 14) return 1.0;
-    if (d <= 21) return 0.95;
-    return 0.90;
+    if (d <= 3) return 5;     // Very close game: +5 percentage points (reduced from +10)
+    if (d <= 7) return 3;     // Close game: +3 percentage points (reduced from +5)
+    if (d <= 14) return 0;    // Normal game: no adjustment
+    if (d <= 21) return -3;   // Large deficit: -3 percentage points (reduced from -5)
+    return -5;                // Blowout: -5 percentage points (reduced from -10)
   }
 
   private getPossessionTeam(gameState: GameState): string {
