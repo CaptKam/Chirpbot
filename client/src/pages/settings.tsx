@@ -783,8 +783,16 @@ export default function Settings() {
                       {activeSport === 'MLB' ? '⚾' : activeSport === 'NFL' ? '🏈' : activeSport === 'NCAAF' ? '🏈' : activeSport === 'WNBA' ? '🏀' : activeSport === 'CFL' ? '🏈' : '🏀'} {activeSport} Game Alerts
                     </h3>
                     <div className="space-y-3">
-                      {/* Defensive fallback: Use API data if available, otherwise fallback to local config */}
-                      {(Array.isArray(availableAlerts) && availableAlerts.length > 0 ? availableAlerts : ALERT_TYPE_CONFIG[activeSport] || []).map((alertType: any) => {
+                      {/* Always use local config as primary source, enhance with API data when available */}
+                      {(() => {
+                        // Start with local config as the base
+                        const baseAlerts = ALERT_TYPE_CONFIG[activeSport] || [];
+                        // If API data is available, use it to enhance the local config
+                        const alertsToShow = Array.isArray(availableAlerts) && availableAlerts.length > 0 
+                          ? availableAlerts 
+                          : baseAlerts;
+                        return alertsToShow;
+                      })().map((alertType: any) => {
                         const userPreference = getAlertPreference(activeSport, alertType.key);
                         const isGloballyDisabled = isAlertGloballyDisabled(alertType.key);
                         const isPending = pendingAlerts.has(alertType.key);
@@ -857,8 +865,9 @@ export default function Settings() {
                     </div>
                   </div>
 
-                  {/* Show message when no alerts are available or all are disabled */}
-                  {(!availableAlerts || (availableAlerts as any[]).length === 0) && (
+                  {/* Show message only when no alerts exist in local config AND API */}
+                  {(!ALERT_TYPE_CONFIG[activeSport] || ALERT_TYPE_CONFIG[activeSport].length === 0) && 
+                   (!availableAlerts || (availableAlerts as any[]).length === 0) && (
                     <div className="text-center py-8">
                       <p className="text-slate-400">No alert cylinders available for {activeSport}.</p>
                     </div>
