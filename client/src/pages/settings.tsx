@@ -78,6 +78,18 @@ const ALERT_TYPE_CONFIG: Record<string, any[]> = {
     { key: 'NBA_CLUTCH_TIME', label: 'Clutch Time', description: 'Critical moments in close games' },
     { key: 'NBA_OVERTIME', label: 'Overtime', description: 'Game extends to overtime' }
   ],
+  NFL: [
+    // Core NFL game situation alerts
+    { key: 'NFL_GAME_START', label: 'Game Start', description: 'Alert when NFL game begins' },
+    { key: 'NFL_SECOND_HALF_KICKOFF', label: 'Second Half Kickoff', description: 'Alert when second half starts' },
+    { key: 'NFL_TWO_MINUTE_WARNING', label: 'Two Minute Warning', description: 'Official two-minute warning' },
+    { key: 'NFL_RED_ZONE', label: 'Red Zone Entry', description: 'Team enters the red zone (20-yard line)' },
+    { key: 'NFL_RED_ZONE_OPPORTUNITY', label: 'Red Zone Opportunity', description: 'High-probability scoring opportunity' },
+    { key: 'NFL_FOURTH_DOWN', label: 'Fourth Down', description: 'Critical fourth down situations' },
+    { key: 'NFL_MASSIVE_WEATHER', label: 'Weather Alert', description: 'Severe weather impacting game conditions' },
+    { key: 'NFL_TURNOVER_LIKELIHOOD', label: 'Turnover Likelihood', description: 'High probability of turnover' },
+    { key: 'NFL_AI_SCANNER', label: 'AI Scanner', description: 'AI-powered game analysis and insights' }
+  ],
   CFL: [
     // Core CFL game situation alerts
     { key: 'CFL_GAME_START', label: 'Game Start', description: 'Alert when CFL game begins' },
