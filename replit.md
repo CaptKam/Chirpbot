@@ -4,6 +4,14 @@ ChirpBot V3 is an advanced multi-sport betting intelligence platform that provid
 
 # Recent Changes
 
+## October 6, 2025 - Betting-Focused AI Prompt Enhancement
+- **AI Prompt Redesigned**: Completely rewrote system prompt in `unified-ai-processor.ts` to focus on actionable betting intelligence instead of game descriptions.
+- **Prescriptive Output**: AI now generates probability predictions (%), market implications (spread/total/ML), live line movements, and betting value opportunities.
+- **Example-Driven Instructions**: Added 3 concrete examples to guide AI output style: "TD likely (64%) → Over 47.5 hits", "Runner scores = game tied → Over 8.5 in play", "Red zone efficiency 72% → Live ML value".
+- **Quality Standards Maintained**: Word limits (14 words title, 18 words secondary) and JSON output format preserved. Deduplication and validation layers still active.
+- **Frontend Ready**: UniversalAlertCard properly configured to display presentation.title, presentation.body, presentation.bullets with AI Enhanced badge.
+- **System Status**: Betting-focused prompt active and ready for live testing when games generate new alerts. All architect reviews passed.
+
 ## October 4, 2025 - Quality Validation & Deduplication System
 - **Quality Validator Created**: Added `server/services/quality-validator.ts` with validateAIOutput() and resolveDisplay() functions to enforce quality standards before using AI output.
 - **Word Limits Enforced**: AI titles limited to 14 words max, messages to 18 words max. Empty or whitespace-only AI responses automatically rejected.
