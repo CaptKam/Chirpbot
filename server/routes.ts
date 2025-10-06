@@ -3555,22 +3555,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // Get available alert types from cylinders - accessible to all authenticated users and admins
+  // Get available alert types from cylinders - PUBLIC endpoint (no auth required)
+  // This returns metadata about what alert types exist, not user-specific preferences
   app.get('/api/available-alerts/:sport', async (req, res) => {
     try {
-      // Check authentication - accept either user or admin session
-      const userId = req.session?.userId;
-      const adminUserId = req.session?.adminUserId;
-      
-      if (!userId && !adminUserId) {
-        console.log('❌ /api/available-alerts - Not authenticated:', {
-          hasUserSession: !!userId,
-          hasAdminSession: !!adminUserId,
-          sessionId: req.sessionID
-        });
-        return res.status(401).json({ message: 'Authentication required' });
-      }
-
       const { sport } = req.params;
 
       try {

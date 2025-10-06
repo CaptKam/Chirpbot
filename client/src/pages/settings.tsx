@@ -147,10 +147,9 @@ export default function Settings() {
   // Extract settings from response (handles both old admin format and new public format)
   const globalSettings = (globalSettingsResponse as any)?.settings || globalSettingsResponse;
 
-  // Available alert types query from cylinders (accessible to all authenticated users)
+  // Available alert types query from cylinders - PUBLIC endpoint (no auth required)
   const { data: availableAlerts, isLoading: availableAlertsLoading, error: availableAlertsError } = useQuery({
     queryKey: [`/api/available-alerts/${activeSport.toLowerCase()}`],
-    enabled: !!user?.id && (isAuthenticated || isAdminSession),
     staleTime: 10 * 60 * 1000, // Cache for 10 minutes (rarely changes)
     refetchInterval: false, // No polling - only refetch on manual invalidation
     refetchOnWindowFocus: false, // No refetch on window focus
