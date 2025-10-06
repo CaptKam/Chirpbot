@@ -3373,10 +3373,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Admin-only endpoint to get global settings (legacy, kept for backward compatibility)
   app.get('/api/admin/global-alert-settings/:sport', async (req, res) => {
     try {
-      if (!req.session.adminUserId) {
-        return res.status(401).json({ message: 'Admin authentication required' });
-      }
-
       const { sport } = req.params;
 
       // Get the global settings from storage
