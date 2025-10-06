@@ -647,36 +647,55 @@ const teamColors: Record<string, Record<string, string>> = {
   },
   'NCAAF': {
     // SEC
-    'BAMA': '#9E1B32', 'ALA': '#9E1B32', 'AUB': '#0C2340', 'UGA': '#BA0C2F', 'LSU': '#461D7C',
-    'FLA': '#0021A5', 'TENN': '#FF8200', 'UK': '#0033A0', 'SCAR': '#73000A',
-    'MISS': '#14213D', 'MIS': '#14213D', 'TAMU': '#500000', 'ARK': '#9D2235', 'MIST': '#5D1725', 'MSU': '#5D1725',
-    'VANDY': '#866D4B', 'MIZZ': '#F1B82D', 'MIZ': '#F1B82D',
+    'ALA': '#9E1B32', 'BAMA': '#9E1B32', 'AUB': '#0C2340', 'UGA': '#BA0C2F', 'LSU': '#461D7C',
+    'FLA': '#0021A5', 'TENN': '#FF8200', 'UK': '#0033A0', 'SC': '#73000A', 'SCAR': '#73000A',
+    'MISS': '#14213D', 'MIS': '#14213D', 'TAMU': '#500000', 'TA&M': '#500000', 'ARK': '#9D2235', 
+    'MSST': '#5D1725', 'MIST': '#5D1725', 'MSU': '#5D1725',
+    'VAN': '#866D4B', 'VANDY': '#866D4B', 'MIZ': '#F1B82D', 'MIZZ': '#F1B82D',
     // Big Ten
-    'OHIO': '#BB0000', 'OSU': '#BB0000', 'MICH': '#00274C', 'PSU': '#041E42', 'WISC': '#C5050C', 
-    'IOWA': '#FFCD00', 'NEB': '#E41C38', 'MINN': '#7A0019', 'ILL': '#13294B', 
-    'NW': '#4E2A84', 'NU': '#4E2A84', 'IND': '#990000', 'IU': '#990000',
-    'PUR': '#CEB888', 'MD': '#E03A3E', 'RUTG': '#CC0033',
+    'OHIO': '#BB0000', 'OSU': '#BB0000', 'MICH': '#00274C', 'PSU': '#041E42', 
+    'WIS': '#C5050C', 'WISC': '#C5050C', 'IOWA': '#FFCD00', 'NEB': '#E41C38', 
+    'MINN': '#7A0019', 'ILL': '#13294B', 'NU': '#4E2A84', 'NW': '#4E2A84', 
+    'IU': '#990000', 'IND': '#990000', 'PUR': '#CEB888', 'MD': '#E03A3E', 'RUTG': '#CC0033',
     // ACC & Independent
-    'ND': '#0C2340', 'CLEM': '#F66733', 'FSU': '#782F40', 'MIAMI': '#F47321', 'UNC': '#7BAFD4',
-    'NCSU': '#CC0000', 'UVA': '#232D4B', 'VT': '#630031', 'PITT': '#003594',
+    'ND': '#0C2340', 'CLEM': '#F66733', 'FSU': '#782F40', 'MIA': '#F47321', 'MIAMI': '#F47321',
+    'UNC': '#7BAFD4', 'NCSU': '#CC0000', 'UVA': '#232D4B', 'VT': '#630031', 'PITT': '#003594',
     'LOU': '#AD0000', 'BC': '#8B0000', 'GT': '#B3A369', 'DUKE': '#003087',
     'WAKE': '#9E7E38', 'SYR': '#D44500', 'ARMY': '#000000', 'NAVY': '#00205B',
     // Big 12
     'TEX': '#BF5700', 'OU': '#841617', 'OKST': '#FF7300', 'TCU': '#4D1979',
-    'TTU': '#CC0000', 'BAYLOR': '#154734', 'KU': '#0051BA', 'KSU': '#512888',
+    'TTU': '#CC0000', 'BAY': '#154734', 'BAYLOR': '#154734', 'KU': '#0051BA', 'KSU': '#512888',
     'ISU': '#C8102E', 'WVU': '#002855', 'BYU': '#002E5D', 'UCF': '#000000', 
     'CIN': '#E00122', 'HOU': '#C8102E',
     // Pac-12
     'USC': '#990000', 'UCLA': '#2D68C4', 'ORE': '#154733', 'WASH': '#4B2E83',
-    'ORST': '#DC4405', 'UTAH': '#CC0000', 'UTE': '#CC0000', 'CU': '#CFB87C', 'COLO': '#CFB87C', 'ASU': '#8C1D40',
-    'STAN': '#8C1515', 'CAL': '#003262', 'WSU': '#A60F2D',
-    // Other conferences
-    'SDSU': '#A6192E', 'SMU': '#C8102E', 'JMU': '#450084', 'UL': '#CE181E',
-    'CLT': '#005035', 'AKR': '#041E42', 'M-OH': '#C8102E', 'BGSU': '#FE5000',
-    'TOL': '#15397F', 'EMU': '#006633', 'NIU': '#BA0C2F', 'KENT': '#002664',
-    'MASS': '#881C1C', 'GAST': '#0039A6', 'APP': '#222222', 'MRSH': '#00B140',
-    'ODU': '#003057', 'WMU': '#421C08', 'BALL': '#BA0C2F', 'TEM': '#9D2235',
-    'FAU': '#003366', 'UAB': '#1E6B52', 'AFA': '#003087', 'UNLV': '#CF0A2C'
+    'ORST': '#DC4405', 'UTAH': '#CC0000', 'UTE': '#CC0000', 'COLO': '#CFB87C', 'CU': '#CFB87C', 
+    'ARIZ': '#8C1D40', 'ASU': '#8C1D40', 'STAN': '#8C1515', 'CAL': '#003262', 'WSU': '#A60F2D',
+    // Mountain West & Independents
+    'BOIS': '#0033A0', 'SDSU': '#A6192E', 'FRES': '#CC0000', 'NEV': '#003366', 
+    'USU': '#0F2439', 'CSU': '#1E4D2B', 'UNM': '#BA0C2F', 'SJSU': '#0055A2',
+    'UNLV': '#CF0A2C', 'AFA': '#003087', 'NMSU': '#BA0C2F',
+    // AAC
+    'SMU': '#C8102E', 'MEM': '#003087', 'TULN': '#006747', 'ECU': '#592A8A',
+    'USF': '#006747', 'TLSA': '#002D72', 'UTSA': '#FF5100', 'UNT': '#00853E',
+    'TEMP': '#9D2235',
+    // Sun Belt
+    'APP': '#222222', 'GASO': '#003087', 'GEO': '#003087', 'GAST': '#0039A6', 'USA': '#0C2340', 'SOU': '#0C2340',
+    'CCU': '#006747', 'ARST': '#CC0033', 'LT': '#00447C', 'UL': '#CE181E',
+    'ULM': '#7C2529', 'TROY': '#862633', 'TXST': '#501214', 'SHSU': '#FF6928', 'SAM': '#FF6928',
+    // MAC
+    'TOL': '#15397F', 'NIU': '#BA0C2F', 'WMU': '#6F4E37', 'EMU': '#046A38',
+    'BALL': '#CC0033', 'BGSU': '#FE5000', 'M-OH': '#C8102E', 'AKR': '#041E42',
+    'KENT': '#002664', 'BUFF': '#005BBB',
+    // C-USA
+    'WKU': '#C60C30', 'MTSU': '#0066CC', 'MRSH': '#00B140', 'ODU': '#003087',
+    'CLT': '#00703C', 'FIU': '#081E3F', 'UTEP': '#FF6310', 'LIB': '#002147', 
+    'JMU': '#450084', 'JVST': '#DC143C', 'KENN': '#FFB81C',
+    // Additional teams
+    'FAU': '#003366', 'UAB': '#1E6B52',
+    // Other FBS
+    'MASS': '#881C1C', 'CONN': '#000E2F', 'MOST': '#5D1725', 'CAM': '#006341',
+    'DEL': '#00539F'
   },
   'WNBA': {
     'ATL': '#C8102E', 'CHI': '#418FDE', 'CONN': '#C4D600', 'DAL': '#0C2340',
