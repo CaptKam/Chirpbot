@@ -709,8 +709,8 @@ const teamColors: Record<string, Record<string, string>> = {
   }
 };
 
-// Get team color by abbreviation and sport
-function getTeamColor(abbreviation: string | undefined, sport: string | undefined): string | undefined {
+// Get team color by abbreviation and sport, with optional team name for disambiguation
+function getTeamColor(abbreviation: string | undefined, sport: string | undefined, teamName?: string): string | undefined {
   if (!abbreviation || !sport) return undefined;
   
   // Normalize both sport and abbreviation to uppercase for consistent lookup
@@ -719,6 +719,16 @@ function getTeamColor(abbreviation: string | undefined, sport: string | undefine
   
   const sportColors = teamColors[normalizedSport];
   if (!sportColors) return undefined;
+  
+  // Special handling for ambiguous NFL abbreviations
+  if (normalizedSport === 'NFL' && normalizedAbbr === 'NEW' && teamName) {
+    const nameLower = teamName.toLowerCase();
+    if (nameLower.includes('england') || nameLower.includes('patriot')) {
+      return '#002244'; // Patriots navy
+    } else if (nameLower.includes('orleans') || nameLower.includes('saint')) {
+      return '#D3BC8D'; // Saints gold
+    }
+  }
   
   return sportColors[normalizedAbbr];
 }
@@ -782,7 +792,7 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
   const logoUrl = teamAbbr && sport !== 'WNBA' ? getTeamLogoUrl(teamAbbr, sport) : null;
 
   // Use provided teamColor or look up by abbreviation/sport
-  const resolvedColor = teamColor || getTeamColor(teamAbbr, sport);
+  const resolvedColor = teamColor || getTeamColor(teamAbbr, sport, teamName);
 
   // If we have a logo URL and it hasn't failed to load, show the image
   if (logoUrl && !imageLoadFailed) {
