@@ -1380,7 +1380,7 @@ export class UnifiedAIProcessor {
     try {
       const prompt = this.buildDiscoveryPrompt(context);
       const body = {
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: this.sanitizeInput(prompt.system).slice(0, 1500) },
           { role: 'user', content: this.sanitizeInput(prompt.user).slice(0, 8000) }
@@ -1541,7 +1541,7 @@ Remember: Only flag as opportunity if it's truly unique and not already caught b
 
     try {
       const body = {
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: this.sanitizeInput(payload.system).slice(0, 1200) },
           { role: 'user', content: this.sanitizeInput(payload.user).slice(0, 8000) }
