@@ -1630,9 +1630,9 @@ REQUIRED ELEMENTS:
 - Actionable recommendation: Specific betting insight, not commentary
 
 EXAMPLES (copy this style):
-{"primary": "TD likely (64%) → Over 47.5 hits", "secondary": "Spread moved -3 to -4.5"}
-{"primary": "Runner scores = game tied → Over 8.5 in play", "secondary": ""}
-{"primary": "Red zone efficiency 72% → Live ML value", "secondary": ""}
+{"primary": "TD likely (64%) → Over hits if scored", "secondary": "Spread pressure mounting"}
+{"primary": "Runner scores likely → Tie game scenario", "secondary": "Consider live total value"}
+{"primary": "Red zone efficiency 72% → ML edge exists", "secondary": ""}
 
 OUTPUT (valid JSON):
 {"primary": "...", "secondary": "" | "..." }`;
@@ -1665,18 +1665,24 @@ ${context.championshipContext ? `- CHAMPIONSHIP: ${context.championshipContext}`
 - "Bases loaded" or "Sacks packed"
 - Include outs for urgency
 - Wind ONLY if >15mph
+- NO specific totals (no "Over 8.5") - just describe situation
 
 EXAMPLES:
 {"primary": "Bases loaded, ${batterName} up, ${outs} out 🔥", "secondary": ""}
 {"primary": "Sacks packed: ${batterName} in RBI spot", "secondary": "${outs === 2 ? '2 outs - do or die' : ''}"}`;
-        } else if (alertType.includes('RISP') || alertType.includes('SCORING_OPPORTUNITY')) {
+        } else if (alertType.includes('RISP') || alertType.includes('SCORING_OPPORTUNITY') || alertType.includes('SECOND_AND_THIRD') || alertType.includes('FIRST_AND_THIRD')) {
+          const currentScore = context.homeScore + context.awayScore;
+          const scoringContext = currentScore === 0 ? 'Early scoring chance' : 'Run opportunity';
+          
           focusGuidance = `USE BASEBALL JARGON:
 - "Ducks on the pond" or "RISP situation"
 - "RBI spot" or "scoring position"
 - Keep it tight - no filler
+- NO specific totals (no "Over 8.5") - focus on run probability
+- Consider score: ${currentScore} total runs so far
 
 EXAMPLES:
-{"primary": "Ducks on the pond, ${batterName} up", "secondary": ""}
+{"primary": "Ducks on the pond, ${batterName} up", "secondary": "${scoringContext}"}
 {"primary": "${batterName} in RBI spot, ${outs} out", "secondary": "Runner on 3rd"}`;
         } else if (alertType.includes('HIGH_SCORING') || alertType.includes('RALLY') || alertType.includes('MOMENTUM')) {
           focusGuidance = `USE BASEBALL JARGON:
