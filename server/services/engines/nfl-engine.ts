@@ -39,6 +39,22 @@ export class NFLEngine extends BaseSportEngine {
     }>;
   }>();
 
+  // Track timeouts per team per game
+  private timeoutTracking = new Map<string, {
+    homeTeam: string;
+    awayTeam: string;
+    homeTimeoutsRemaining: number;
+    awayTimeoutsRemaining: number;
+    homeTimeoutsUsed: number;
+    awayTimeoutsUsed: number;
+    timeoutHistory: Array<{
+      team: 'home' | 'away';
+      quarter: number;
+      timeRemaining: string;
+      timestamp: number;
+    }>;
+  }>();
+
   constructor() {
     super('NFL');
   }
@@ -497,6 +513,68 @@ export class NFLEngine extends BaseSportEngine {
   public clearPossessionTracking(gameId: string): void {
     this.possessionTracking.delete(gameId);
     console.log(`🧹 NFL: Cleared possession tracking for game ${gameId}`);
+  }
+
+  // Track timeout usage for a game (NFL has 3 timeouts per half per team)
+  private trackTimeoutUsage(
+    gameId: string,
+    homeTeam: string,
+    awayTeam: string,
+    quarter: number,
+    timeRemaining: string
+  ): void {
+    let tracking = this.timeoutTracking.get(gameId);
+
+    // Initialize tracking for new game
+    if (!tracking) {
+      tracking = {
+        homeTeam,
+        awayTeam,
+        homeTimeoutsRemaining: 3,
+        awayTimeoutsRemaining: 3,
+        homeTimeoutsUsed: 0,
+        awayTimeoutsUsed: 0,
+        timeoutHistory: []
+      };
+      this.timeoutTracking.set(gameId, tracking);
+    }
+
+    // Reset timeouts at halftime (start of Q3)
+    if (quarter === 3 && tracking.timeoutHistory.filter(t => t.quarter >= 3).length === 0) {
+      tracking.homeTimeoutsRemaining = 3;
+      tracking.awayTimeoutsRemaining = 3;
+      console.log(`🔄 NFL: Timeouts reset at halftime for game ${gameId}`);
+    }
+  }
+
+  // Get timeout statistics for a game
+  public getTimeoutStats(gameId: string): any {
+    const tracking = this.timeoutTracking.get(gameId);
+    if (!tracking) {
+      return {
+        gameId,
+        tracked: false,
+        message: 'No timeout data tracked for this game'
+      };
+    }
+
+    return {
+      gameId,
+      tracked: true,
+      homeTeam: tracking.homeTeam,
+      awayTeam: tracking.awayTeam,
+      homeTimeoutsRemaining: tracking.homeTimeoutsRemaining,
+      awayTimeoutsRemaining: tracking.awayTimeoutsRemaining,
+      homeTimeoutsUsed: tracking.homeTimeoutsUsed,
+      awayTimeoutsUsed: tracking.awayTimeoutsUsed,
+      timeoutHistory: tracking.timeoutHistory
+    };
+  }
+
+  // Clear timeout tracking for finished games
+  public clearTimeoutTracking(gameId: string): void {
+    this.timeoutTracking.delete(gameId);
+    console.log(`🧹 NFL: Cleared timeout tracking for game ${gameId}`);
   }
 
   // Initialize alert modules based on user's enabled preferences

@@ -39,6 +39,22 @@ export class CFLEngine extends BaseSportEngine {
     }>;
   }>();
 
+  // Track timeouts per team per game
+  private timeoutTracking = new Map<string, {
+    homeTeam: string;
+    awayTeam: string;
+    homeTimeoutsRemaining: number;
+    awayTimeoutsRemaining: number;
+    homeTimeoutsUsed: number;
+    awayTimeoutsUsed: number;
+    timeoutHistory: Array<{
+      team: 'home' | 'away';
+      time: number; // Time of timeout
+      quarter: number;
+      timeoutsRemaining: number;
+    }>;
+  }>();
+
   constructor() {
     super('CFL');
   }
@@ -48,7 +64,7 @@ export class CFLEngine extends BaseSportEngine {
     try {
       // Validate against dynamically discovered alert types
       const validAlerts = await this.getAvailableAlertTypes();
-      
+
       if (!validAlerts.includes(alertType)) {
         console.log(`❌ ${alertType} is not a valid CFL alert type - rejecting`);
         return false;
@@ -256,7 +272,7 @@ export class CFLEngine extends BaseSportEngine {
 
         if (enhancedData && !enhancedData.error) {
           this.performanceMetrics.cacheHits++;
-          
+
           const enhancedGameState = {
             ...gameState,
             quarter: enhancedData.quarter || gameState.quarter || 1,
@@ -349,7 +365,7 @@ export class CFLEngine extends BaseSportEngine {
   // Load alert cylinder module for specific alert type
   async loadAlertModule(alertType: string): Promise<any | null> {
     const startTime = Date.now();
-    
+
     try {
       const moduleMap: Record<string, string> = {
         'CFL_GAME_START': './alert-cylinders/cfl/game-start-module.ts',
@@ -372,11 +388,11 @@ export class CFLEngine extends BaseSportEngine {
       const module = await import(modulePath);
       const loadTime = Date.now() - startTime;
       this.performanceMetrics.moduleLoadTime.push(loadTime);
-      
+
       if (loadTime > 50) {
         console.log(`⚠️ CFL Slow module load: ${alertType} took ${loadTime}ms`);
       }
-      
+
       return new module.default();
     } catch (error) {
       const loadTime = Date.now() - startTime;
@@ -436,7 +452,7 @@ export class CFLEngine extends BaseSportEngine {
     if (!possessionSide) return;
 
     let tracking = this.possessionTracking.get(gameId);
-    
+
     // Initialize tracking for new game
     if (!tracking) {
       tracking = {
@@ -454,7 +470,7 @@ export class CFLEngine extends BaseSportEngine {
     // Check if possession changed
     if (tracking.currentPossession !== possessionSide) {
       console.log(`🏈 CFL Possession Change: Game ${gameId} - ${possessionSide === 'home' ? homeTeam : awayTeam} now has possession`);
-      
+
       // Increment possession count
       if (possessionSide === 'home') {
         tracking.homePossessions++;
@@ -523,6 +539,36 @@ export class CFLEngine extends BaseSportEngine {
   public clearPossessionTracking(gameId: string): void {
     this.possessionTracking.delete(gameId);
     console.log(`🧹 CFL: Cleared possession tracking for game ${gameId}`);
+  }
+
+  // Get timeout statistics for a game
+  public getTimeoutStats(gameId: string): any {
+    const tracking = this.timeoutTracking.get(gameId);
+    if (!tracking) {
+      return {
+        gameId,
+        tracked: false,
+        message: 'No timeout data tracked for this game'
+      };
+    }
+
+    return {
+      gameId,
+      tracked: true,
+      homeTeam: tracking.homeTeam,
+      awayTeam: tracking.awayTeam,
+      homeTimeoutsRemaining: tracking.homeTimeoutsRemaining,
+      awayTimeoutsRemaining: tracking.awayTimeoutsRemaining,
+      homeTimeoutsUsed: tracking.homeTimeoutsUsed,
+      awayTimeoutsUsed: tracking.awayTimeoutsUsed,
+      timeoutHistory: tracking.timeoutHistory
+    };
+  }
+
+  // Clear timeout tracking for finished games
+  public clearTimeoutTracking(gameId: string): void {
+    this.timeoutTracking.delete(gameId);
+    console.log(`🧹 CFL: Cleared timeout tracking for game ${gameId}`);
   }
 
 

@@ -39,6 +39,22 @@ export class NCAAFEngine extends BaseSportEngine {
     }>;
   }> = new Map();
 
+  // Track timeouts per team per game (NCAAF has 3 timeouts per half per team)
+  private timeoutTracking = new Map<string, {
+    homeTeam: string;
+    awayTeam: string;
+    homeTimeoutsRemaining: number;
+    awayTimeoutsRemaining: number;
+    homeTimeoutsUsed: number;
+    awayTimeoutsUsed: number;
+    timeoutHistory: Array<{
+      team: 'home' | 'away';
+      quarter: number;
+      timeRemaining: string;
+      timestamp: number;
+    }>;
+  }>();
+
   constructor() {
     super('NCAAF');
   }
@@ -698,6 +714,36 @@ export class NCAAFEngine extends BaseSportEngine {
   public clearPossessionTracking(gameId: string): void {
     this.possessionTracking.delete(gameId);
     console.log(`🧹 NCAAF: Cleared possession tracking for game ${gameId}`);
+  }
+
+  // Get timeout statistics for a game
+  public getTimeoutStats(gameId: string): any {
+    const tracking = this.timeoutTracking.get(gameId);
+    if (!tracking) {
+      return {
+        gameId,
+        tracked: false,
+        message: 'No timeout data tracked for this game'
+      };
+    }
+
+    return {
+      gameId,
+      tracked: true,
+      homeTeam: tracking.homeTeam,
+      awayTeam: tracking.awayTeam,
+      homeTimeoutsRemaining: tracking.homeTimeoutsRemaining,
+      awayTimeoutsRemaining: tracking.awayTimeoutsRemaining,
+      homeTimeoutsUsed: tracking.homeTimeoutsUsed,
+      awayTimeoutsUsed: tracking.awayTimeoutsUsed,
+      timeoutHistory: tracking.timeoutHistory
+    };
+  }
+
+  // Clear timeout tracking for finished games
+  public clearTimeoutTracking(gameId: string): void {
+    this.timeoutTracking.delete(gameId);
+    console.log(`🧹 NCAAF: Cleared timeout tracking for game ${gameId}`);
   }
 
   // Memory cleanup and optimization
