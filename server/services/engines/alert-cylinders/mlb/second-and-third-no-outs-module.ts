@@ -8,7 +8,10 @@ export default class SecondAndThirdNoOutsModule extends BaseAlertModule {
   isTriggered(gameState: GameState): boolean {
     if (!gameState.isLive) return false;
 
-    const { hasFirst, hasSecond, hasThird, outs } = gameState;
+    const hasFirst = Boolean(gameState.hasFirst);
+    const hasSecond = Boolean(gameState.hasSecond);
+    const hasThird = Boolean(gameState.hasThird);
+    const outs = Number(gameState.outs) || 0;
 
     // Specifically: 2nd + 3rd, 0 outs (~85% scoring probability)
     return !hasFirst && hasSecond && hasThird && outs === 0;
