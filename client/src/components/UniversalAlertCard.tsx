@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Clock, Target, Bot, TrendingUp, Smartphone } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { BaseballDiamond } from '@/components/baseball-diamond';
 
 // Assuming formatTimeAgo is defined elsewhere or needs to be imported.
 // For the purpose of this example, let's assume it's available globally or imported.
@@ -202,6 +203,109 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
               {gameStateHeader}
             </div>
           </div>
+
+          {/* Sport-Specific Game State Details */}
+          {alert.context && (
+            <>
+              {/* MLB Game State */}
+              {alert.sport === 'MLB' && (alert.context.inning || alert.context.outs !== undefined) && (
+                <div className="mb-3 p-3 rounded-lg bg-slate-800/40 border border-slate-700" data-testid="game-state-mlb">
+                  <div className="flex items-center justify-center gap-4">
+                    {/* Inning Indicator */}
+                    {alert.context.inning && (
+                      <div className="flex items-center gap-2">
+                        <div className="text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
+                          {alert.context.isTopInning ? '▲' : '▼'} {alert.context.inning}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Baseball Diamond with Runners */}
+                    {(alert.context.hasFirst || alert.context.hasSecond || alert.context.hasThird) && (
+                      <BaseballDiamond
+                        runners={{
+                          first: alert.context.hasFirst,
+                          second: alert.context.hasSecond,
+                          third: alert.context.hasThird
+                        }}
+                        outs={alert.context.outs ?? 0}
+                        balls={alert.context.balls ?? 0}
+                        strikes={alert.context.strikes ?? 0}
+                        size="sm"
+                        showCount={false}
+                      />
+                    )}
+
+                    {/* Count and Outs */}
+                    <div className="flex items-center gap-3">
+                      {(alert.context.balls !== undefined || alert.context.strikes !== undefined) && (
+                        <div className="text-xs text-emerald-400 font-mono bg-slate-800/50 px-2 py-1 rounded">
+                          {alert.context.balls ?? 0}-{alert.context.strikes ?? 0}
+                        </div>
+                      )}
+                      {alert.context.outs !== undefined && (
+                        <div className="text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
+                          {alert.context.outs} out{alert.context.outs !== 1 ? 's' : ''}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* NFL/NCAAF/CFL Game State */}
+              {(alert.sport === 'NFL' || alert.sport === 'NCAAF' || alert.sport === 'CFL') && alert.context.quarter && (
+                <div className="mb-3 p-3 rounded-lg bg-slate-800/40 border border-slate-700" data-testid="game-state-football">
+                  <div className="flex items-center justify-center gap-4">
+                    {/* Quarter */}
+                    <div className="text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
+                      Q{alert.context.quarter}
+                    </div>
+
+                    {/* Down & Distance */}
+                    {alert.context.down && alert.context.yardsToGo !== undefined && (
+                      <div className="text-xs text-slate-300 bg-slate-800/50 px-2 py-1 rounded font-medium">
+                        {alert.context.down}{alert.context.down === 1 ? 'st' : alert.context.down === 2 ? 'nd' : alert.context.down === 3 ? 'rd' : 'th'} & {alert.context.yardsToGo}
+                      </div>
+                    )}
+
+                    {/* Field Position */}
+                    {alert.context.fieldPosition && (
+                      <div className="text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
+                        {alert.context.fieldPosition}
+                      </div>
+                    )}
+
+                    {/* Time Remaining */}
+                    {alert.context.timeRemaining && (
+                      <div className="text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
+                        {alert.context.timeRemaining}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* NBA/WNBA Game State */}
+              {(alert.sport === 'NBA' || alert.sport === 'WNBA') && alert.context.quarter && (
+                <div className="mb-3 p-3 rounded-lg bg-slate-800/40 border border-slate-700" data-testid="game-state-basketball">
+                  <div className="flex items-center justify-center gap-4">
+                    {/* Quarter */}
+                    <div className="text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
+                      Q{alert.context.quarter}
+                    </div>
+
+                    {/* Time Remaining */}
+                    {alert.context.timeRemaining && (
+                      <div className="text-xs text-slate-300 bg-slate-800/50 px-2 py-1 rounded font-medium">
+                        {alert.context.timeRemaining}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
 
           {/* Main Alert Content - Quality Validated Display */}
           <div className="mb-3 rounded-lg p-3 bg-slate-800/40 border border-slate-700">
