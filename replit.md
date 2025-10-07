@@ -4,6 +4,15 @@ ChirpBot V3 is an advanced multi-sport betting intelligence platform that provid
 
 # Recent Changes
 
+## October 7, 2025 - Alert Card Game State Display & AI Betting Fix
+- **Game State Display Added**: Enhanced UniversalAlertCard component to show detailed game information from alert.context for all sports:
+  - **MLB**: Inning indicator (▲/▼), baseball diamond visualization with runners on base, balls-strikes count, outs display
+  - **NFL/NCAAF/CFL**: Quarter badge, down & distance (e.g., "3rd & 7"), field position, time remaining
+  - **NBA/WNBA**: Quarter badge, time remaining
+- **AI Betting Advice Fixed**: Removed bad prompt examples that caused nonsensical betting suggestions (e.g., "Over 8.5" when score is 0-0). Updated examples to be contextual: "Runner scores likely → Tie game scenario", "TD likely (64%) → Over hits if scored".
+- **Tailwind Styling Fixed**: Replaced dynamic class construction with explicit Tailwind class names for sport accent colors (green-MLB, orange-NFL, purple-NBA, blue-NCAAF, pink-WNBA, red-CFL) to ensure proper build-time compilation.
+- **System Status**: Alert cards now display complete game context, AI provides accurate betting advice based on actual game situations, all sport accents render correctly.
+
 ## October 6, 2025 - Admin Session & Dashboard Fixes
 - **Production Session Fix**: Changed admin session cookie `sameSite` from 'strict' to 'lax' in `server/routes.ts` to resolve session persistence issues in published/production environments. The 'lax' policy allows cookies during top-level navigations while maintaining `secure`, `httpOnly`, and domain scoping for security.
 - **Dashboard API Call Optimization**: Removed redundant authenticated API call in `public/admin/dashboard.js` for Sports Alert Settings page. Now uses single public endpoint `/api/available-alerts/:sport` which already includes `globallyEnabled` field, eliminating 401 authentication errors.
