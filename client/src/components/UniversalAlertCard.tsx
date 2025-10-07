@@ -109,17 +109,73 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
     }
   })();
 
-  // Get sport configuration
+  // Get sport configuration with explicit Tailwind class names
   const getSportConfig = (sport: string) => {
     const configs = {
-      'MLB': { color: 'bg-green-500', icon: '⚾', label: 'Baseball' },
-      'NFL': { color: 'bg-orange-500', icon: '🏈', label: 'Football' },
-      'NBA': { color: 'bg-purple-500', icon: '🏀', label: 'Basketball' },
-      'NCAAF': { color: 'bg-blue-500', icon: '🏈', label: 'College Football' },
-      'WNBA': { color: 'bg-pink-500', icon: '🏀', label: 'Women\'s Basketball' },
-      'CFL': { color: 'bg-red-500', icon: '🏈', label: 'Canadian Football' }
+      'MLB': { 
+        bgColor: 'bg-green-500',
+        bgOpacity20: 'bg-green-500/20',
+        textColor: 'text-green-500',
+        borderColor: 'border-green-500',
+        borderOpacity30: 'border-green-500/30',
+        icon: '⚾', 
+        label: 'Baseball' 
+      },
+      'NFL': { 
+        bgColor: 'bg-orange-500',
+        bgOpacity20: 'bg-orange-500/20',
+        textColor: 'text-orange-500',
+        borderColor: 'border-orange-500',
+        borderOpacity30: 'border-orange-500/30',
+        icon: '🏈', 
+        label: 'Football' 
+      },
+      'NBA': { 
+        bgColor: 'bg-purple-500',
+        bgOpacity20: 'bg-purple-500/20',
+        textColor: 'text-purple-500',
+        borderColor: 'border-purple-500',
+        borderOpacity30: 'border-purple-500/30',
+        icon: '🏀', 
+        label: 'Basketball' 
+      },
+      'NCAAF': { 
+        bgColor: 'bg-blue-500',
+        bgOpacity20: 'bg-blue-500/20',
+        textColor: 'text-blue-500',
+        borderColor: 'border-blue-500',
+        borderOpacity30: 'border-blue-500/30',
+        icon: '🏈', 
+        label: 'College Football' 
+      },
+      'WNBA': { 
+        bgColor: 'bg-pink-500',
+        bgOpacity20: 'bg-pink-500/20',
+        textColor: 'text-pink-500',
+        borderColor: 'border-pink-500',
+        borderOpacity30: 'border-pink-500/30',
+        icon: '🏀', 
+        label: 'Women\'s Basketball' 
+      },
+      'CFL': { 
+        bgColor: 'bg-red-500',
+        bgOpacity20: 'bg-red-500/20',
+        textColor: 'text-red-500',
+        borderColor: 'border-red-500',
+        borderOpacity30: 'border-red-500/30',
+        icon: '🏈', 
+        label: 'Canadian Football' 
+      }
     };
-    return configs[sport as keyof typeof configs] || { color: 'bg-slate-500', icon: '⭐', label: sport };
+    return configs[sport as keyof typeof configs] || { 
+      bgColor: 'bg-slate-500',
+      bgOpacity20: 'bg-slate-500/20',
+      textColor: 'text-slate-500',
+      borderColor: 'border-slate-500',
+      borderOpacity30: 'border-slate-500/30',
+      icon: '⭐', 
+      label: sport 
+    };
   };
 
   const sportConfig = getSportConfig(alert.sport);
@@ -164,17 +220,17 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
     >
       <Card className={`relative backdrop-blur-sm bg-slate-900/50 border-slate-700 overflow-hidden`}>
         {/* Sport color accent */}
-        <div className={`h-1 ${sportConfig.color}`} />
+        <div className={`h-1 ${sportConfig.bgColor}`} />
 
         <CardContent className="p-4">
           {/* Header Row */}
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3 flex-1">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${sportConfig.color}/20 border border-${sportConfig.color}/30`}>
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${sportConfig.bgOpacity20} border ${sportConfig.borderOpacity30}`}>
                 {sportConfig.icon}
               </div>
               <div className="flex-1">
-                <h3 className={`text-sm font-bold uppercase tracking-wide text-${sportConfig.color.replace('bg-', '')}`}>
+                <h3 className={`text-sm font-bold uppercase tracking-wide ${sportConfig.textColor}`}>
                   {alert.type.replace(/^(MLB|NFL|NBA|NCAAF|WNBA|CFL)_/, '').replace(/_/g, ' ')}
                 </h3>
                 {/* Updated time display to use formatTimeAgo */}
@@ -311,8 +367,8 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
           <div className="mb-3 rounded-lg p-3 bg-slate-800/40 border border-slate-700">
             {presentation?.source === 'ai' && (
               <div className="flex items-center gap-2 mb-2">
-                <Bot className={`w-4 h-4 text-${sportConfig.color.replace('bg-', '')}`} />
-                <span className={`text-xs font-semibold uppercase tracking-wide text-${sportConfig.color.replace('bg-', '')}`}>
+                <Bot className={`w-4 h-4 ${sportConfig.textColor}`} />
+                <span className={`text-xs font-semibold uppercase tracking-wide ${sportConfig.textColor}`}>
                   AI Enhanced
                 </span>
               </div>
@@ -332,7 +388,7 @@ export function UniversalAlertCard({ alert, showEnhancements = false }: { alert:
           {/* Footer - Confidence & Tags */}
           <div className="flex items-center justify-between pt-2 border-t border-slate-700/50">
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className={`text-xs border-${sportConfig.color.replace('bg-', '')}/30 text-${sportConfig.color.replace('bg-', '')}`}>
+              <Badge variant="outline" className={`text-xs ${sportConfig.borderOpacity30} ${sportConfig.textColor}`}>
                 {alert.sport}
               </Badge>
               {displayTags.slice(0, 2).map((tag: string, idx: number) => (
