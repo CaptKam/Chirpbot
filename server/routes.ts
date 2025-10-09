@@ -4099,26 +4099,27 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
 
   // === CALENDAR SYNC API ROUTES ===
-  // Use MigrationAdapter instead of direct CalendarSyncService
-  const migrationAdapter = (global as any).migrationAdapter;
-
-  if (!migrationAdapter) {
-    console.warn('⚠️ MigrationAdapter not available - calendar API may not work properly');
-  }
+  // Use MigrationAdapter with fallback to CalendarSyncService
+  let migrationAdapter = (global as any).migrationAdapter;
+  const getCalendarSyncService = () => (global as any).calendarSyncService;
 
   // Get all calendar data
   app.get('/api/calendar', async (req, res) => {
     try {
       const { sport } = req.query;
+      migrationAdapter = (global as any).migrationAdapter;
+      const calendarSyncService = getCalendarSyncService();
 
-      if (!migrationAdapter) {
+      if (!migrationAdapter && !calendarSyncService) {
         return res.status(503).json({
-          error: 'Migration adapter not available',
+          error: 'Calendar service not available',
           message: 'Calendar service is initializing'
         });
       }
 
-      const games = migrationAdapter.getGameData(sport as string);
+      const games = migrationAdapter 
+        ? migrationAdapter.getGameData(sport as string)
+        : calendarSyncService.getAllGames();
 
       res.json({
         success: true,
@@ -4136,15 +4137,19 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/calendar/:sport', async (req, res) => {
     try {
       const { sport } = req.params;
+      migrationAdapter = (global as any).migrationAdapter;
+      const calendarSyncService = getCalendarSyncService();
 
-      if (!migrationAdapter) {
+      if (!migrationAdapter && !calendarSyncService) {
         return res.status(503).json({
-          error: 'Migration adapter not available',
+          error: 'Calendar service not available',
           message: 'Calendar service is initializing'
         });
       }
 
-      const games = migrationAdapter.getGameData(sport.toLowerCase());
+      const games = migrationAdapter 
+        ? migrationAdapter.getGameData(sport.toLowerCase())
+        : calendarSyncService.getGamesForSport(sport.toUpperCase());
 
       res.json({
         success: true,
@@ -4152,7 +4157,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         games,
         count: games.length,
         timestamp: new Date().toISOString(),
-        source: 'migration-adapter'
+        source: migrationAdapter ? 'migration-adapter' : 'calendar-sync-service'
       });
     } catch (error: any) {
       console.error(`❌ Calendar API: Error fetching ${req.params.sport} calendar data:`, error);
