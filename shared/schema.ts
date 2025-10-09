@@ -259,6 +259,15 @@ export interface Game {
   inningState?: string;
   gameState?: string;
   gamePk?: number;
+  // NFL/NCAAF/CFL-specific fields
+  quarter?: number;
+  timeRemaining?: string;
+  down?: number;
+  yardsToGo?: number;
+  fieldPosition?: string;
+  possession?: string;
+  // NBA/WNBA-specific fields
+  period?: number;
 }
 
 export interface GameDay {
