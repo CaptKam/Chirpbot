@@ -714,7 +714,11 @@ export default function Calendar() {
                       tracked: false,
                       currentPossession: game.possession === game.homeTeam?.name ? 'home' : 'away'
                     } : undefined}
-                    timeoutData={undefined}
+                    timeoutData={(game.homeTimeoutsRemaining != null || game.awayTimeoutsRemaining != null) ? {
+                      tracked: true,
+                      homeTimeoutsRemaining: game.homeTimeoutsRemaining ?? 0,
+                      awayTimeoutsRemaining: game.awayTimeoutsRemaining ?? 0
+                    } : undefined}
                     isSelected={isSelected}
                     onSelect={() => toggleGameSelection(game.id)}
                     size="lg"

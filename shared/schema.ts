@@ -266,6 +266,8 @@ export interface Game {
   yardsToGo?: number;
   fieldPosition?: string;
   possession?: string;
+  homeTimeoutsRemaining?: number;
+  awayTimeoutsRemaining?: number;
   // NBA/WNBA-specific fields
   period?: number;
 }

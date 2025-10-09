@@ -70,7 +70,9 @@ export class NFLApiService extends BaseSportApi {
         down: game.situation?.down || null,
         yardsToGo: game.situation?.distance || null,
         fieldPosition: game.situation?.yardLine || null,
-        possession: game.situation?.possession || null
+        possession: game.situation?.possession || null,
+        homeTimeoutsRemaining: homeTeam.timeoutsRemaining ?? null,
+        awayTimeoutsRemaining: awayTeam.timeoutsRemaining ?? null
       };
     });
   }
@@ -95,22 +97,25 @@ export class NFLApiService extends BaseSportApi {
     const quarter = competitions.status?.period || 0;
     const timeRemaining = competitions.status?.displayClock || '';
     
-    // Extract live scores
-    const homeScore = competitions.competitors?.find((c: any) => c.homeAway === 'home')?.score || 0;
-    const awayScore = competitions.competitors?.find((c: any) => c.homeAway === 'away')?.score || 0;
-    
-    console.log(`🔍 NFL enhanced data for game ${gameId}:`, {
-      quarter, timeRemaining, down, yardsToGo, fieldPosition, possession, homeScore, awayScore
-    });
-
     // Extract team competitor data for proper team ID to abbreviation mapping
     const homeCompetitor = competitions.competitors?.find((c: any) => c.homeAway === 'home');
     const awayCompetitor = competitions.competitors?.find((c: any) => c.homeAway === 'away');
     
+    // Extract live scores and timeouts
+    const homeScore = homeCompetitor?.score ? parseInt(homeCompetitor.score) : 0;
+    const awayScore = awayCompetitor?.score ? parseInt(awayCompetitor.score) : 0;
+    const homeTimeoutsRemaining = homeCompetitor?.timeoutsRemaining ?? null;
+    const awayTimeoutsRemaining = awayCompetitor?.timeoutsRemaining ?? null;
+    
+    console.log(`🔍 NFL enhanced data for game ${gameId}:`, {
+      quarter, timeRemaining, down, yardsToGo, fieldPosition, possession, 
+      homeScore, awayScore, homeTimeoutsRemaining, awayTimeoutsRemaining
+    });
+    
     // Map possession team ID to actual team info
-    let possessionSide = null; // 'home' or 'away'
-    let possessionTeamId = null;
-    let possessionTeamAbbrev = null;
+    let possessionSide: string | null = null; // 'home' or 'away'
+    let possessionTeamId: string | null = null;
+    let possessionTeamAbbrev: string | null = null;
     
     if (possession && homeCompetitor && awayCompetitor) {
       // Check if possession matches home team ID
@@ -368,8 +373,10 @@ export class NFLApiService extends BaseSportApi {
       possessionSide: aiParsedPossessionSide,
       possessionTeamAbbrev: aiParsedPossessionTeamAbbrev,
       possessionTeamName,
-      homeScore: parseInt(homeScore) || 0,
-      awayScore: parseInt(awayScore) || 0,
+      homeScore,
+      awayScore,
+      homeTimeoutsRemaining,
+      awayTimeoutsRemaining,
       gameState: competitions.status?.type?.state || 'unknown',
       currentPlayer,
       currentQuarterback: currentQuarterback || currentPlayer,

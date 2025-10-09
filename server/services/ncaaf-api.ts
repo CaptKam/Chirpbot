@@ -89,17 +89,20 @@ export class NCAAFApiService extends BaseSportApi {
     const quarter = competitions.status?.period || 0;
     const timeRemaining = competitions.status?.displayClock || '';
     
-    // OPTIMIZED: Extract live scores and competitors in one pass (performance optimization)
+    // OPTIMIZED: Extract live scores, timeouts, and competitors in one pass (performance optimization)
     const competitors = competitions.competitors || [];
     let homeScore = 0, awayScore = 0, homeCompetitor = null, awayCompetitor = null;
+    let homeTimeoutsRemaining = null, awayTimeoutsRemaining = null;
     
     for (const competitor of competitors) {
       if (competitor.homeAway === 'home') {
         homeScore = parseInt(competitor.score) || 0;
         homeCompetitor = competitor;
+        homeTimeoutsRemaining = competitor.timeoutsRemaining ?? null;
       } else if (competitor.homeAway === 'away') {
         awayScore = parseInt(competitor.score) || 0;
         awayCompetitor = competitor;
+        awayTimeoutsRemaining = competitor.timeoutsRemaining ?? null;
       }
     }
     
@@ -208,6 +211,8 @@ export class NCAAFApiService extends BaseSportApi {
       possessionTeamAbbrev,
       homeScore,
       awayScore,
+      homeTimeoutsRemaining,
+      awayTimeoutsRemaining,
       gameState: competitions.status?.type?.state || 'unknown',
       currentPlayer,
       currentQuarterback: currentQuarterback || currentPlayer,
@@ -326,6 +331,8 @@ export class NCAAFApiService extends BaseSportApi {
           yardsToGo: game.status?.distance || null,
           fieldPosition: game.status?.yardLine || null,
           possession: game.status?.possessionTeam?.abbreviation || null,
+          homeTimeoutsRemaining: homeTeam.timeoutsRemaining ?? null,
+          awayTimeoutsRemaining: awayTeam.timeoutsRemaining ?? null,
           homeRank: homeTeam.curatedRank?.current || 0,
           awayRank: awayTeam.curatedRank?.current || 0
         };
