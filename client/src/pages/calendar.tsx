@@ -710,6 +710,11 @@ export default function Calendar() {
                     balls={0}
                     strikes={0}
                     outs={0}
+                    possessionData={game.possession ? {
+                      tracked: false,
+                      currentPossession: game.possession === game.homeTeam?.name ? 'home' : 'away'
+                    } : undefined}
+                    timeoutData={undefined}
                     isSelected={isSelected}
                     onSelect={() => toggleGameSelection(game.id)}
                     size="lg"

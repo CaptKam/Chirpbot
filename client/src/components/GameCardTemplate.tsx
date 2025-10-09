@@ -51,6 +51,19 @@ interface GameCardTemplateProps {
   isSelected?: boolean;
   onSelect?: () => void;
 
+  // Football specific stats
+  possessionData?: {
+    tracked: boolean;
+    currentPossession?: 'home' | 'away';
+    homePossessions?: number;
+    awayPossessions?: number;
+  };
+  timeoutData?: {
+    tracked: boolean;
+    homeTimeoutsRemaining?: number;
+    awayTimeoutsRemaining?: number;
+  };
+
   // Display options
   size?: 'sm' | 'md' | 'lg';
   children?: React.ReactNode;
