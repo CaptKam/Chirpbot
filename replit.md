@@ -4,6 +4,16 @@ ChirpBot V3 is an advanced multi-sport betting intelligence platform that provid
 
 # Recent Changes
 
+## October 9, 2025 - Game Card Time Display Enhancement
+- **Time Remaining Added to Game Cards**: Updated GameCardTemplate component to display time remaining next to quarter/period badges for live games:
+  - **NFL/NCAAF/CFL**: Shows "Q1" badge with time remaining (e.g., "9:31") in emerald color
+  - **NBA/WNBA**: Shows quarter/period badge with time remaining
+  - Gracefully handles missing data when backend doesn't provide timing info
+- **Game Interface Extended**: Updated shared/schema.ts Game interface to include football-specific fields (quarter, timeRemaining, down, yardsToGo, fieldPosition, possession) and basketball fields (period)
+- **Calendar Integration**: Updated calendar.tsx to pass quarter, period, and timeRemaining props from game data to GameCardTemplate
+- **Backward Compatibility**: Component checks for both `period` and `quarter` for NBA/WNBA games to handle various data formats
+- **System Status**: Game cards ready to display time remaining when backend provides the data. Possession and timeout stats already implemented (lines 445-475 in GameCardTemplate).
+
 ## October 7, 2025 - Alert Card Game State Display & AI Betting Fix
 - **Game State Display Added**: Enhanced UniversalAlertCard component to show detailed game information from alert.context for all sports:
   - **MLB**: Inning indicator (▲/▼), baseball diamond visualization with runners on base, balls-strikes count, outs display
