@@ -702,7 +702,10 @@ export default function Calendar() {
                     startTime={game.startTime}
                     venue={game.venue}
                     inning={game.inning}
+                    quarter={game.quarter}
+                    period={game.period}
                     isTopInning={game.inningState === 'Top'}
+                    timeRemaining={game.timeRemaining}
                     runners={{ first: false, second: false, third: false }}
                     balls={0}
                     strikes={0}

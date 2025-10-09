@@ -29,6 +29,7 @@ interface GameCardTemplateProps {
   quarter?: number;
   period?: number;
   isTopInning?: boolean;
+  timeRemaining?: string;
 
   // Baseball specific (for enhanced display)
   runners?: {
@@ -180,6 +181,7 @@ export function GameCardTemplate({
   quarter,
   period,
   isTopInning,
+  timeRemaining,
   runners,
   balls = 0,
   strikes = 0,
@@ -217,15 +219,30 @@ export function GameCardTemplate({
     }
     if ((sport === 'NFL' || sport === 'NCAAF' || sport === 'CFL') && quarter) {
       return (
-        <div className="text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
-          Q{quarter}
+        <div className="flex items-center gap-2">
+          <div className="text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
+            Q{quarter}
+          </div>
+          {timeRemaining && (
+            <div className="text-xs text-emerald-400 bg-slate-800/50 px-2 py-1 rounded font-medium">
+              {timeRemaining}
+            </div>
+          )}
         </div>
       );
     }
-    if ((sport === 'NBA' || sport === 'WNBA') && quarter) {
+    if ((sport === 'NBA' || sport === 'WNBA') && (period || quarter)) {
+      const displayPeriod = period || quarter;
       return (
-        <div className="text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
-          Q{quarter}
+        <div className="flex items-center gap-2">
+          <div className="text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
+            Q{displayPeriod}
+          </div>
+          {timeRemaining && (
+            <div className="text-xs text-emerald-400 bg-slate-800/50 px-2 py-1 rounded font-medium">
+              {timeRemaining}
+            </div>
+          )}
         </div>
       );
     }
