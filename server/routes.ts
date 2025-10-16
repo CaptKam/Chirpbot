@@ -4103,6 +4103,47 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   let migrationAdapter = (global as any).migrationAdapter;
   const getCalendarSyncService = () => (global as any).calendarSyncService;
 
+  // Helper function to enrich game data with timeout/possession tracking
+  async function enrichGameWithTrackingData(game: any) {
+    if (!game) return game;
+    
+    const footballSports = ['NFL', 'NCAAF', 'CFL'];
+    if (!footballSports.includes(game.sport)) {
+      return game;
+    }
+
+    try {
+      const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
+      const engineManager = getEngineLifecycleManager();
+      const engine = engineManager.getEngine(game.sport);
+      
+      if (!engine) return game;
+
+      // Get timeout data
+      if (engine.getTimeoutStats) {
+        const timeoutStats = engine.getTimeoutStats(game.gameId);
+        if (timeoutStats && timeoutStats.tracked) {
+          game.homeTimeoutsRemaining = timeoutStats.homeTimeoutsRemaining;
+          game.awayTimeoutsRemaining = timeoutStats.awayTimeoutsRemaining;
+        }
+      }
+
+      // Get possession data
+      if (engine.getPossessionStats) {
+        const possessionStats = engine.getPossessionStats(game.gameId);
+        if (possessionStats && possessionStats.tracked) {
+          game.possession = possessionStats.currentPossession === 'home' ? game.homeTeam?.name : game.awayTeam?.name;
+          game.homePossessions = possessionStats.homePossessions;
+          game.awayPossessions = possessionStats.awayPossessions;
+        }
+      }
+    } catch (error) {
+      // Silently fail - tracking data is optional
+    }
+
+    return game;
+  }
+
   // Get all calendar data
   app.get('/api/calendar', async (req, res) => {
     try {
@@ -4121,9 +4162,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         ? migrationAdapter.getGameData(sport as string)
         : calendarSyncService.getAllGames();
 
+      // Enrich games with timeout/possession tracking data
+      const enrichedGames = await Promise.all(
+        (games || []).map(game => enrichGameWithTrackingData(game))
+      );
+
       res.json({
         success: true,
-        games: games || [],
+        games: enrichedGames,
         sport: sport || 'all',
         timestamp: new Date().toISOString()
       });
@@ -4151,11 +4197,16 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         ? migrationAdapter.getGameData(sport.toLowerCase())
         : calendarSyncService.getGamesForSport(sport.toUpperCase());
 
+      // Enrich games with timeout/possession tracking data
+      const enrichedGames = await Promise.all(
+        (games || []).map(game => enrichGameWithTrackingData(game))
+      );
+
       res.json({
         success: true,
         sport: sport.toUpperCase(),
-        games,
-        count: games.length,
+        games: enrichedGames,
+        count: enrichedGames.length,
         timestamp: new Date().toISOString(),
         source: migrationAdapter ? 'migration-adapter' : 'calendar-sync-service'
       });
