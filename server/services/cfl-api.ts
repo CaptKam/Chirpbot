@@ -75,14 +75,22 @@ export class CFLApiService extends BaseSportApi {
   protected async parseEnhancedGameResponse(data: any, gameId: string): Promise<any> {
     // CFL enhanced data - basic structure for Canadian Football League
     const competition = data.header?.competitions?.[0];
+    const homeCompetitor = competition?.competitors?.find((c: any) => c.homeAway === 'home');
+    const awayCompetitor = competition?.competitors?.find((c: any) => c.homeAway === 'away');
+    
+    // Extract timeout data from ESPN
+    const homeTimeoutsRemaining = homeCompetitor?.timeoutsRemaining ?? null;
+    const awayTimeoutsRemaining = awayCompetitor?.timeoutsRemaining ?? null;
     
     return {
       gameId,
-      homeScore: competition?.competitors?.find((c: any) => c.homeAway === 'home')?.score || 0,
-      awayScore: competition?.competitors?.find((c: any) => c.homeAway === 'away')?.score || 0,
+      homeScore: homeCompetitor?.score || 0,
+      awayScore: awayCompetitor?.score || 0,
       quarter: competition?.status?.period || 0,
       timeRemaining: competition?.status?.displayClock || '',
       isLive: competition?.status?.type?.state === 'in',
+      homeTimeoutsRemaining,
+      awayTimeoutsRemaining,
       // CFL-specific context
       period: competition?.status?.period || 0,
       clock: competition?.status?.displayClock || '',

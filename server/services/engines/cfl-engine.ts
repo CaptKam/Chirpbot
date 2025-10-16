@@ -291,13 +291,93 @@ export class CFLEngine extends BaseSportEngine {
           // Track possession changes for this game
           if (enhancedData.possessionSide) {
             this.trackPossessionChange(
+
+          // Track timeout data from ESPN
+          this.updateTimeoutsFromESPN(
+            gameState.gameId,
+            gameState.homeTeam as string,
+            gameState.awayTeam as string,
+            enhancedData.homeTimeoutsRemaining,
+            enhancedData.awayTimeoutsRemaining,
+            enhancedData.quarter
+          );
               gameState.gameId,
+
+          // Track timeout data from ESPN
+          this.updateTimeoutsFromESPN(
+            gameState.gameId,
+            gameState.homeTeam as string,
+            gameState.awayTeam as string,
+            enhancedData.homeTimeoutsRemaining,
+            enhancedData.awayTimeoutsRemaining,
+            enhancedData.quarter
+          );
               gameState.homeTeam as string,
+
+          // Track timeout data from ESPN
+          this.updateTimeoutsFromESPN(
+            gameState.gameId,
+            gameState.homeTeam as string,
+            gameState.awayTeam as string,
+            enhancedData.homeTimeoutsRemaining,
+            enhancedData.awayTimeoutsRemaining,
+            enhancedData.quarter
+          );
               gameState.awayTeam as string,
+
+          // Track timeout data from ESPN
+          this.updateTimeoutsFromESPN(
+            gameState.gameId,
+            gameState.homeTeam as string,
+            gameState.awayTeam as string,
+            enhancedData.homeTimeoutsRemaining,
+            enhancedData.awayTimeoutsRemaining,
+            enhancedData.quarter
+          );
               enhancedData.possessionSide,
+
+          // Track timeout data from ESPN
+          this.updateTimeoutsFromESPN(
+            gameState.gameId,
+            gameState.homeTeam as string,
+            gameState.awayTeam as string,
+            enhancedData.homeTimeoutsRemaining,
+            enhancedData.awayTimeoutsRemaining,
+            enhancedData.quarter
+          );
               enhancedData.quarter,
+
+          // Track timeout data from ESPN
+          this.updateTimeoutsFromESPN(
+            gameState.gameId,
+            gameState.homeTeam as string,
+            gameState.awayTeam as string,
+            enhancedData.homeTimeoutsRemaining,
+            enhancedData.awayTimeoutsRemaining,
+            enhancedData.quarter
+          );
               enhancedData.fieldPosition
+
+          // Track timeout data from ESPN
+          this.updateTimeoutsFromESPN(
+            gameState.gameId,
+            gameState.homeTeam as string,
+            gameState.awayTeam as string,
+            enhancedData.homeTimeoutsRemaining,
+            enhancedData.awayTimeoutsRemaining,
+            enhancedData.quarter
+          );
             );
+
+          // Track timeout data from ESPN
+          this.updateTimeoutsFromESPN(
+            gameState.gameId,
+            gameState.homeTeam as string,
+            gameState.awayTeam as string,
+            enhancedData.homeTimeoutsRemaining,
+            enhancedData.awayTimeoutsRemaining,
+            enhancedData.quarter
+          );
           }
 
           console.log(`🚀 CFL Enhancement: Game ${gameState.gameId} enhanced - isLive=${enhancedGameState.isLive}, quarter=${enhancedGameState.quarter}, down=${enhancedGameState.down}`);
