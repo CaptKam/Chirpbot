@@ -553,7 +553,7 @@ export class NFLEngine extends BaseSportEngine {
         timeoutHistory: []
       };
       this.timeoutTracking.set(gameId, tracking);
-      console.log(\`📊 NFL: Initialized timeout tracking for game \${gameId} - Home: \${homeTimeoutsRemaining}, Away: \${awayTimeoutsRemaining}\`);
+      console.log(`📊 NFL: Initialized timeout tracking for game ${gameId} - Home: ${homeTimeoutsRemaining}, Away: ${awayTimeoutsRemaining}`);
       return;
     }
 
@@ -573,7 +573,7 @@ export class NFLEngine extends BaseSportEngine {
           timeRemaining: '',
           timestamp: Date.now()
         });
-        console.log(\`⏱️ NFL: Home team timeout used in game \${gameId} - \${homeTimeoutsRemaining} remaining\`);
+        console.log(`⏱️ NFL: Home team timeout used in game ${gameId} - ${homeTimeoutsRemaining} remaining`);
       }
     }
 
@@ -589,7 +589,7 @@ export class NFLEngine extends BaseSportEngine {
           timeRemaining: '',
           timestamp: Date.now()
         });
-        console.log(\`⏱️ NFL: Away team timeout used in game \${gameId} - \${awayTimeoutsRemaining} remaining\`);
+        console.log(`⏱️ NFL: Away team timeout used in game ${gameId} - ${awayTimeoutsRemaining} remaining`);
       }
     }
   }

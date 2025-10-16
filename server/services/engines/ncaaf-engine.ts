@@ -222,94 +222,24 @@ export class NCAAFEngine extends BaseSportEngine {
         // Track possession changes for this game
         if (enhancedData.possessionSide) {
           this.trackPossessionChange(
-
-          // Track timeout data from ESPN
-          this.updateTimeoutsFromESPN(
             gameState.gameId,
             gameState.homeTeam as string,
             gameState.awayTeam as string,
-            enhancedData.homeTimeoutsRemaining,
-            enhancedData.awayTimeoutsRemaining,
-            enhancedData.quarter
-          );
-            gameState.gameId,
-
-          // Track timeout data from ESPN
-          this.updateTimeoutsFromESPN(
-            gameState.gameId,
-            gameState.homeTeam as string,
-            gameState.awayTeam as string,
-            enhancedData.homeTimeoutsRemaining,
-            enhancedData.awayTimeoutsRemaining,
-            enhancedData.quarter
-          );
-            gameState.homeTeam as string,
-
-          // Track timeout data from ESPN
-          this.updateTimeoutsFromESPN(
-            gameState.gameId,
-            gameState.homeTeam as string,
-            gameState.awayTeam as string,
-            enhancedData.homeTimeoutsRemaining,
-            enhancedData.awayTimeoutsRemaining,
-            enhancedData.quarter
-          );
-            gameState.awayTeam as string,
-
-          // Track timeout data from ESPN
-          this.updateTimeoutsFromESPN(
-            gameState.gameId,
-            gameState.homeTeam as string,
-            gameState.awayTeam as string,
-            enhancedData.homeTimeoutsRemaining,
-            enhancedData.awayTimeoutsRemaining,
-            enhancedData.quarter
-          );
             enhancedData.possessionSide,
-
-          // Track timeout data from ESPN
-          this.updateTimeoutsFromESPN(
-            gameState.gameId,
-            gameState.homeTeam as string,
-            gameState.awayTeam as string,
-            enhancedData.homeTimeoutsRemaining,
-            enhancedData.awayTimeoutsRemaining,
-            enhancedData.quarter
-          );
             enhancedData.quarter,
-
-          // Track timeout data from ESPN
-          this.updateTimeoutsFromESPN(
-            gameState.gameId,
-            gameState.homeTeam as string,
-            gameState.awayTeam as string,
-            enhancedData.homeTimeoutsRemaining,
-            enhancedData.awayTimeoutsRemaining,
-            enhancedData.quarter
-          );
             enhancedData.fieldPosition
-
-          // Track timeout data from ESPN
-          this.updateTimeoutsFromESPN(
-            gameState.gameId,
-            gameState.homeTeam as string,
-            gameState.awayTeam as string,
-            enhancedData.homeTimeoutsRemaining,
-            enhancedData.awayTimeoutsRemaining,
-            enhancedData.quarter
-          );
-          );
-
-          // Track timeout data from ESPN
-          this.updateTimeoutsFromESPN(
-            gameState.gameId,
-            gameState.homeTeam as string,
-            gameState.awayTeam as string,
-            enhancedData.homeTimeoutsRemaining,
-            enhancedData.awayTimeoutsRemaining,
-            enhancedData.quarter
           );
         }
+
+        // Track timeout data from ESPN
+        this.updateTimeoutsFromESPN(
+          gameState.gameId,
+          gameState.homeTeam as string,
+          gameState.awayTeam as string,
+          enhancedData.homeTimeoutsRemaining,
+          enhancedData.awayTimeoutsRemaining,
+          enhancedData.quarter
+        );
 
         this.performanceMetrics.cacheHits++;
         
@@ -794,6 +724,75 @@ export class NCAAFEngine extends BaseSportEngine {
   public clearPossessionTracking(gameId: string): void {
     this.possessionTracking.delete(gameId);
     console.log(`🧹 NCAAF: Cleared possession tracking for game ${gameId}`);
+  }
+
+  // Update timeout tracking from ESPN data
+  private updateTimeoutsFromESPN(
+    gameId: string,
+    homeTeam: string,
+    awayTeam: string,
+    homeTimeoutsRemaining: number | null | undefined,
+    awayTimeoutsRemaining: number | null | undefined,
+    quarter: number
+  ): void {
+    // Skip if no timeout data from ESPN
+    if (homeTimeoutsRemaining == null && awayTimeoutsRemaining == null) {
+      return;
+    }
+
+    let tracking = this.timeoutTracking.get(gameId);
+
+    // Initialize tracking for new game
+    if (!tracking) {
+      tracking = {
+        homeTeam,
+        awayTeam,
+        homeTimeoutsRemaining: homeTimeoutsRemaining ?? 3,
+        awayTimeoutsRemaining: awayTimeoutsRemaining ?? 3,
+        homeTimeoutsUsed: 0,
+        awayTimeoutsUsed: 0,
+        timeoutHistory: []
+      };
+      this.timeoutTracking.set(gameId, tracking);
+      console.log(`📊 NCAAF: Initialized timeout tracking for game ${gameId} - Home: ${homeTimeoutsRemaining}, Away: ${awayTimeoutsRemaining}`);
+      return;
+    }
+
+    // Update timeouts from ESPN data
+    const prevHomeTimeouts = tracking.homeTimeoutsRemaining;
+    const prevAwayTimeouts = tracking.awayTimeoutsRemaining;
+
+    if (homeTimeoutsRemaining != null) {
+      tracking.homeTimeoutsRemaining = homeTimeoutsRemaining;
+      tracking.homeTimeoutsUsed = 3 - homeTimeoutsRemaining;
+      
+      // Detect timeout usage
+      if (homeTimeoutsRemaining < prevHomeTimeouts) {
+        tracking.timeoutHistory.push({
+          team: 'home',
+          quarter,
+          timeRemaining: '',
+          timestamp: Date.now()
+        });
+        console.log(`⏱️ NCAAF: Home team timeout used in game ${gameId} - ${homeTimeoutsRemaining} remaining`);
+      }
+    }
+
+    if (awayTimeoutsRemaining != null) {
+      tracking.awayTimeoutsRemaining = awayTimeoutsRemaining;
+      tracking.awayTimeoutsUsed = 3 - awayTimeoutsRemaining;
+      
+      // Detect timeout usage
+      if (awayTimeoutsRemaining < prevAwayTimeouts) {
+        tracking.timeoutHistory.push({
+          team: 'away',
+          quarter,
+          timeRemaining: '',
+          timestamp: Date.now()
+        });
+        console.log(`⏱️ NCAAF: Away team timeout used in game ${gameId} - ${awayTimeoutsRemaining} remaining`);
+      }
+    }
   }
 
   // Get timeout statistics for a game
