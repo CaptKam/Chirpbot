@@ -3486,6 +3486,22 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Demo account verification endpoint
+  app.get('/api/auth/demo-check', async (req, res) => {
+    try {
+      const demoUser = await storage.getUserByUsername('demo');
+      res.json({
+        exists: !!demoUser,
+        username: demoUser?.username || 'not found',
+        hasPassword: !!demoUser?.password,
+        email: demoUser?.email || 'not found'
+      });
+    } catch (error) {
+      console.error('Error checking demo user:', error);
+      res.status(500).json({ message: 'Error checking demo user' });
+    }
+  });
+
   // Debug endpoint to diagnose cookie/session issues
   app.get('/api/admin-auth/debug', async (req, res) => {
     const cookieHeader = req.headers.cookie || 'none';
