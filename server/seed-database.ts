@@ -1,5 +1,5 @@
-import bcrypt from 'bcrypt';
-import * as storage from './storage';
+import bcrypt from 'bcryptjs';
+import { storage } from './storage';
 
 export async function seedDatabase() {
   console.log('🌱 Starting database seeding...');
