@@ -711,8 +711,10 @@ export default function Calendar() {
                     strikes={0}
                     outs={0}
                     possessionData={game.possession ? {
-                      tracked: false,
-                      currentPossession: game.possession === game.homeTeam?.name ? 'home' : 'away'
+                      tracked: true,
+                      currentPossession: game.possession === game.homeTeam?.name ? 'home' : 'away',
+                      homePossessions: (game as any).homePossessions || 0,
+                      awayPossessions: (game as any).awayPossessions || 0
                     } : undefined}
                     timeoutData={(game.homeTimeoutsRemaining != null || game.awayTimeoutsRemaining != null) ? {
                       tracked: true,

@@ -200,6 +200,8 @@ export function GameCardTemplate({
   strikes = 0,
   outs = 0,
   weather,
+  possessionData,
+  timeoutData,
   isSelected = false,
   onSelect,
   size = 'md',
@@ -289,8 +291,8 @@ export function GameCardTemplate({
     enabled: showWeather && sport === 'MLB' // Only fetch for MLB games when weather is shown
   });
 
-  // Fetch possession stats for NFL and NCAAF games
-  const { data: possessionData } = useQuery({
+  // Fetch possession stats for NFL and NCAAF games (only if not provided as props)
+  const { data: fetchedPossessionData } = useQuery({
     queryKey: ['possession', gameId, sport],
     queryFn: async () => {
       const response = await fetch(`/api/${sport.toLowerCase()}/possession/${gameId}`, {
@@ -302,11 +304,11 @@ export function GameCardTemplate({
     staleTime: 5 * 1000, // Cache for 5 seconds
     refetchInterval: status === 'live' ? 5000 : false, // Refetch every 5s for live games
     retry: 1,
-    enabled: (sport === 'NFL' || sport === 'NCAAF') && status === 'live'
+    enabled: !possessionData && (sport === 'NFL' || sport === 'NCAAF') && status === 'live'
   });
 
-  // Fetch timeout stats for NFL/NCAAF/CFL games
-  const { data: timeoutData } = useQuery({
+  // Fetch timeout stats for NFL/NCAAF/CFL games (only if not provided as props)
+  const { data: fetchedTimeoutData } = useQuery({
     queryKey: ['timeouts', gameId, sport],
     queryFn: async () => {
       const response = await fetch(`/api/${sport.toLowerCase()}/timeouts/${gameId}`, {
@@ -318,8 +320,12 @@ export function GameCardTemplate({
     staleTime: 5 * 1000, // Cache for 5 seconds
     refetchInterval: status === 'live' ? 5000 : false, // Refetch every 5s for live games
     retry: 1,
-    enabled: (sport === 'NFL' || sport === 'NCAAF' || sport === 'CFL') && status === 'live'
+    enabled: !timeoutData && (sport === 'NFL' || sport === 'NCAAF' || sport === 'CFL') && status === 'live'
   });
+
+  // Use props first, fallback to fetched data
+  const displayPossessionData = possessionData || fetchedPossessionData;
+  const displayTimeoutData = timeoutData || fetchedTimeoutData;
 
   // Convert wind direction degrees to cardinal direction
   const getCardinalDirection = (degrees: number) => {
@@ -473,32 +479,32 @@ export function GameCardTemplate({
         )}
 
         {/* Possession Stats for NFL/NCAAF */}
-        {(sport === 'NFL' || sport === 'NCAAF') && status === 'live' && possessionData?.tracked && (
+        {(sport === 'NFL' || sport === 'NCAAF') && status === 'live' && displayPossessionData?.tracked && (
           <div className="flex items-center space-x-2">
             <div className="text-xs bg-slate-800/50 px-2 py-1 rounded">
               <span className="text-slate-400">Poss: </span>
-              <span className={possessionData.currentPossession === 'home' ? 'text-emerald-400 font-bold' : 'text-slate-300'}>
-                {possessionData.homePossessions}
+              <span className={displayPossessionData.currentPossession === 'home' ? 'text-emerald-400 font-bold' : 'text-slate-300'}>
+                {displayPossessionData.homePossessions}
               </span>
               <span className="text-slate-500 mx-1">-</span>
-              <span className={possessionData.currentPossession === 'away' ? 'text-emerald-400 font-bold' : 'text-slate-300'}>
-                {possessionData.awayPossessions}
+              <span className={displayPossessionData.currentPossession === 'away' ? 'text-emerald-400 font-bold' : 'text-slate-300'}>
+                {displayPossessionData.awayPossessions}
               </span>
             </div>
           </div>
         )}
 
         {/* Timeout Stats for NFL/NCAAF/CFL */}
-        {(sport === 'NFL' || sport === 'NCAAF' || sport === 'CFL') && status === 'live' && timeoutData?.tracked && (
+        {(sport === 'NFL' || sport === 'NCAAF' || sport === 'CFL') && status === 'live' && displayTimeoutData?.tracked && (
           <div className="flex items-center space-x-2">
             <div className="text-xs bg-slate-800/50 px-2 py-1 rounded">
               <span className="text-slate-400">TO: </span>
               <span className="text-slate-300">
-                {timeoutData.homeTimeoutsRemaining}
+                {displayTimeoutData.homeTimeoutsRemaining}
               </span>
               <span className="text-slate-500 mx-1">-</span>
               <span className="text-slate-300">
-                {timeoutData.awayTimeoutsRemaining}
+                {displayTimeoutData.awayTimeoutsRemaining}
               </span>
             </div>
           </div>
