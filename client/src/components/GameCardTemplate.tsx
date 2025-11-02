@@ -83,7 +83,7 @@ const removeCity = (teamName: string) => {
 // Helper function to remove mascot from NCAAF team names
 const removeNcaafMascot = (teamName: string, sport?: string) => {
   if (!teamName || sport !== 'NCAAF') return teamName;
-  
+
   // Common NCAAF mascots to remove
   const mascots = [
     'Tigers', 'Bulldogs', 'Crimson Tide', 'Volunteers', 'Gators', 'Wildcats',
@@ -99,14 +99,14 @@ const removeNcaafMascot = (teamName: string, sport?: string) => {
     'Bearcats', 'Rebels', 'Rainbow Warriors', 'Aztecs', 'Broncos', 'Mustangs',
     'Mean Green', 'Owls', 'Golden Panthers', 'Blazers', 'Roadrunners'
   ];
-  
+
   // Remove mascot if found at the end
   for (const mascot of mascots) {
     if (teamName.endsWith(mascot)) {
       return teamName.replace(mascot, '').trim();
     }
   }
-  
+
   return teamName;
 };
 
