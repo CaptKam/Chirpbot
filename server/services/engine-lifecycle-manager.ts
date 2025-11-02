@@ -857,6 +857,19 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
           }
         }
 
+        // CRITICAL FIX: Check for active engines with no modules loaded
+        if (engine.state === EngineState.ACTIVE && engine.instance) {
+          const moduleCount = (engine.instance as any).alertModules?.size || 0;
+          if (moduleCount === 0 && engine.activeGames.size > 0) {
+            console.log(`🚨 HEALTH CHECK: ${sport} engine is ACTIVE but has 0 modules loaded - reinitializing...`);
+            const enabledAlerts = await this.getEnabledAlerts(sport);
+            if (enabledAlerts.length > 0) {
+              await engine.instance.initializeUserAlertModules(enabledAlerts);
+              console.log(`✅ HEALTH CHECK: ${sport} engine reinitialized with ${enabledAlerts.length} modules`);
+            }
+          }
+        }
+
         // Check if engine needs recovery (existing logic)
         if (engine.state === EngineState.ERROR && engine.nextRetryTime && new Date() >= engine.nextRetryTime) {
           await this.transitionEngine(sport, EngineState.RECOVERY);
