@@ -160,10 +160,10 @@ const userSessionParser = session({
   saveUninitialized: false,
   cookie: {
     path: '/',
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // Allow cookies over HTTP for Replit deployment
     httpOnly: true,
     sameSite: 'lax',
-    domain: process.env.COOKIE_DOMAIN || undefined,
+    domain: undefined, // Let browser determine domain
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days for better persistence
   }
 });
@@ -176,10 +176,10 @@ const adminSessionParser = session({
   saveUninitialized: false,
   cookie: {
     path: '/', // Admin cookie needs global access for both /admin and /api/admin* routes
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // Allow cookies over HTTP for Replit deployment
     httpOnly: true,
     sameSite: 'lax', // Secure but compatible with production deployments
-    domain: process.env.COOKIE_DOMAIN || undefined,
+    domain: undefined, // Let browser determine domain
     maxAge: 4 * 60 * 60 * 1000 // 4 hours (shorter for security)
   }
 });
