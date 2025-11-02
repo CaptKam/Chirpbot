@@ -13,11 +13,13 @@ interface GameCardTemplateProps {
     name: string;
     abbreviation?: string;
     score?: number;
+    id?: string; // Added for possession tracking
   };
   awayTeam: {
     name: string;
     abbreviation?: string;
     score?: number;
+    id?: string; // Added for possession tracking
   };
   sport: string;
   status?: 'live' | 'scheduled' | 'final';

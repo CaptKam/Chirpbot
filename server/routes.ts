@@ -464,7 +464,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
       const engineManager = getEngineLifecycleManager();
       const nflEngine = engineManager.getEngine('NFL');
-      
+
       if (!nflEngine || !nflEngine.getPossessionStats) {
         return res.status(404).json({ error: 'NFL engine not available' });
       }
@@ -483,7 +483,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
       const engineManager = getEngineLifecycleManager();
       const ncaafEngine = engineManager.getEngine('NCAAF');
-      
+
       if (!ncaafEngine || !ncaafEngine.getPossessionStats) {
         return res.status(404).json({ error: 'NCAAF engine not available' });
       }
@@ -502,7 +502,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
       const engineManager = getEngineLifecycleManager();
       const nflEngine = engineManager.getEngine('NFL');
-      
+
       if (!nflEngine || !nflEngine.getTimeoutStats) {
         return res.status(404).json({ error: 'NFL engine not available' });
       }
@@ -521,7 +521,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
       const engineManager = getEngineLifecycleManager();
       const ncaafEngine = engineManager.getEngine('NCAAF');
-      
+
       if (!ncaafEngine || !ncaafEngine.getTimeoutStats) {
         return res.status(404).json({ error: 'NCAAF engine not available' });
       }
@@ -540,7 +540,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
       const engineManager = getEngineLifecycleManager();
       const cflEngine = engineManager.getEngine('CFL');
-      
+
       if (!cflEngine || !cflEngine.getTimeoutStats) {
         return res.status(404).json({ error: 'CFL engine not available' });
       }
@@ -1415,7 +1415,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const filteredPreferences = preferences; // Save all user preferences as-is
 
       const result = await storage.bulkSetUserAlertPreferences(userId, sport.toLowerCase(), filteredPreferences);
-      
+
       // CRITICAL FIX: Refresh engine with new preferences immediately
       try {
         const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
@@ -3325,7 +3325,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { gameId } = req.params;
       const { gameStateManager } = await import('./services/game-state-manager');
       const ncaafEngine = gameStateManager.getEngine('NCAAF');
-      
+
       if (!ncaafEngine) {
         return res.status(503).json({ error: 'NCAAF engine not available' });
       }
@@ -3342,7 +3342,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       const { gameStateManager } = await import('./services/game-state-manager');
       const ncaafEngine = gameStateManager.getEngine('NCAAF');
-      
+
       if (!ncaafEngine) {
         return res.status(503).json({ error: 'NCAAF engine not available' });
       }
@@ -4140,7 +4140,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Helper function to enrich game data with timeout/possession tracking
   async function enrichGameWithTrackingData(game: any) {
     if (!game) return game;
-    
+
     const footballSports = ['NFL', 'NCAAF', 'CFL'];
     if (!footballSports.includes(game.sport)) {
       return game;
@@ -4150,7 +4150,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
       const engineManager = getEngineLifecycleManager();
       const engine = engineManager.getEngine(game.sport);
-      
+
       if (!engine) return game;
 
       // Get timeout data
@@ -4192,7 +4192,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         });
       }
 
-      const games = migrationAdapter 
+      const games = migrationAdapter
         ? migrationAdapter.getGameData(sport as string)
         : calendarSyncService.getAllGames();
 
@@ -4227,7 +4227,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         });
       }
 
-      const games = migrationAdapter 
+      const games = migrationAdapter
         ? migrationAdapter.getGameData(sport.toLowerCase())
         : calendarSyncService.getGamesForSport(sport.toUpperCase());
 
