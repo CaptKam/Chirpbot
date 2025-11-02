@@ -287,6 +287,9 @@ export class NFLEngine extends BaseSportEngine {
             enhancedData.quarter
           );
 
+          // Get timeout data from tracking (which includes SportsData.io fallback)
+          const timeoutStats = this.getTimeoutStats(gameState.gameId);
+          
           const enhancedGameState = {
             ...gameState,
             quarter: enhancedData.quarter || gameState.quarter || 1,
@@ -302,6 +305,9 @@ export class NFLEngine extends BaseSportEngine {
             possessionTeamName: enhancedData.possessionTeamName ?? null,
             homeScore: enhancedData.homeScore || gameState.homeScore,
             awayScore: enhancedData.awayScore || gameState.awayScore,
+            // Include timeout data from ESPN or SportsData.io
+            homeTimeoutsRemaining: timeoutStats.tracked ? timeoutStats.homeTimeoutsRemaining : null,
+            awayTimeoutsRemaining: timeoutStats.tracked ? timeoutStats.awayTimeoutsRemaining : null,
             weatherContext,
             weather: weatherContext,
             // Respect original game status - only force false for finished games, preserve original live state

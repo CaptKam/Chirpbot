@@ -273,6 +273,19 @@ export class CFLEngine extends BaseSportEngine {
         if (enhancedData && !enhancedData.error) {
           this.performanceMetrics.cacheHits++;
 
+          // Track timeout data from ESPN first (includes SportsData.io fallback)
+          this.updateTimeoutsFromESPN(
+            gameState.gameId,
+            gameState.homeTeam as string,
+            gameState.awayTeam as string,
+            enhancedData.homeTimeoutsRemaining,
+            enhancedData.awayTimeoutsRemaining,
+            enhancedData.quarter
+          );
+
+          // Get timeout data from tracking
+          const timeoutStats = this.getTimeoutStats(gameState.gameId);
+
           const enhancedGameState = {
             ...gameState,
             quarter: enhancedData.quarter || gameState.quarter || 1,
@@ -284,6 +297,9 @@ export class CFLEngine extends BaseSportEngine {
             awayScore: enhancedData.awayScore || gameState.awayScore,
             possession: enhancedData.possession || gameState.possession,
             possessionSide: enhancedData.possessionSide || null,
+            // Include timeout data from ESPN or SportsData.io
+            homeTimeoutsRemaining: timeoutStats.tracked ? timeoutStats.homeTimeoutsRemaining : null,
+            awayTimeoutsRemaining: timeoutStats.tracked ? timeoutStats.awayTimeoutsRemaining : null,
             // Respect original game status - only force false for finished games, preserve original live state
             isLive: gameState.status === 'final' ? false : gameState.isLive
           };
@@ -299,16 +315,6 @@ export class CFLEngine extends BaseSportEngine {
               enhancedData.fieldPosition
             );
           }
-
-          // Track timeout data from ESPN
-          this.updateTimeoutsFromESPN(
-            gameState.gameId,
-            gameState.homeTeam as string,
-            gameState.awayTeam as string,
-            enhancedData.homeTimeoutsRemaining,
-            enhancedData.awayTimeoutsRemaining,
-            enhancedData.quarter
-          );
 
           console.log(`🚀 CFL Enhancement: Game ${gameState.gameId} enhanced - isLive=${enhancedGameState.isLive}, quarter=${enhancedGameState.quarter}, down=${enhancedGameState.down}`);
           return enhancedGameState;

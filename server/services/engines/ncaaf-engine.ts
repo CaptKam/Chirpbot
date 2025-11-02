@@ -204,6 +204,19 @@ export class NCAAFEngine extends BaseSportEngine {
 
       // Fast validation and enhancement
       if (enhancedData && !enhancedData.error && this.isEnhancedDataMeaningful(enhancedData, gameState)) {
+        // Track timeout data from ESPN first (includes SportsData.io fallback)
+        this.updateTimeoutsFromESPN(
+          gameState.gameId,
+          gameState.homeTeam as string,
+          gameState.awayTeam as string,
+          enhancedData.homeTimeoutsRemaining,
+          enhancedData.awayTimeoutsRemaining,
+          enhancedData.quarter
+        );
+
+        // Get timeout data from tracking
+        const timeoutStats = this.getTimeoutStats(gameState.gameId);
+
         // OPTIMIZED: Direct object spread with faster property access
         const enhancedGameState = {
           ...gameState,
@@ -216,7 +229,10 @@ export class NCAAFEngine extends BaseSportEngine {
           homeScore: this.shouldUseEnhancedScore(enhancedData.homeScore, gameState.homeScore),
           awayScore: this.shouldUseEnhancedScore(enhancedData.awayScore, gameState.awayScore),
           homeRank: enhancedData.homeRank ?? (gameState.homeRank || 0),
-          awayRank: enhancedData.awayRank ?? (gameState.awayRank || 0)
+          awayRank: enhancedData.awayRank ?? (gameState.awayRank || 0),
+          // Include timeout data from ESPN or SportsData.io
+          homeTimeoutsRemaining: timeoutStats.tracked ? timeoutStats.homeTimeoutsRemaining : null,
+          awayTimeoutsRemaining: timeoutStats.tracked ? timeoutStats.awayTimeoutsRemaining : null
         };
 
         // Track possession changes for this game
@@ -230,16 +246,6 @@ export class NCAAFEngine extends BaseSportEngine {
             enhancedData.fieldPosition
           );
         }
-
-        // Track timeout data from ESPN
-        this.updateTimeoutsFromESPN(
-          gameState.gameId,
-          gameState.homeTeam as string,
-          gameState.awayTeam as string,
-          enhancedData.homeTimeoutsRemaining,
-          enhancedData.awayTimeoutsRemaining,
-          enhancedData.quarter
-        );
 
         this.performanceMetrics.cacheHits++;
         
