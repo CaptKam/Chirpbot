@@ -560,14 +560,9 @@ export class CFLEngine extends BaseSportEngine {
     awayTimeoutsRemaining: number | null | undefined,
     quarter: number
   ): void {
-    // Skip if no timeout data from ESPN
-    if (homeTimeoutsRemaining == null && awayTimeoutsRemaining == null) {
-      return;
-    }
-
     let tracking = this.timeoutTracking.get(gameId);
 
-    // Initialize tracking for new game
+    // Initialize tracking for new game with defaults if no tracking exists
     if (!tracking) {
       tracking = {
         homeTeam,
@@ -579,7 +574,16 @@ export class CFLEngine extends BaseSportEngine {
         timeoutHistory: []
       };
       this.timeoutTracking.set(gameId, tracking);
-      console.log(`📊 CFL: Initialized timeout tracking for game ${gameId} - Home: ${homeTimeoutsRemaining}, Away: ${awayTimeoutsRemaining}`);
+      console.log(`📊 CFL: Initialized timeout tracking for game ${gameId} - Home: ${homeTimeoutsRemaining ?? 1}, Away: ${awayTimeoutsRemaining ?? 1}`);
+      
+      // If ESPN has no data, we still initialized with defaults, so continue to update
+      if (homeTimeoutsRemaining == null && awayTimeoutsRemaining == null) {
+        return;
+      }
+    }
+    
+    // Skip update if no new timeout data from ESPN (but we already have tracking)
+    if (homeTimeoutsRemaining == null && awayTimeoutsRemaining == null) {
       return;
     }
 
