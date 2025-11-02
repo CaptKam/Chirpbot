@@ -1157,7 +1157,8 @@ export class EngineLifecycleManager implements IEngineLifecycleManager {
 
   // Get current engine instance
   getEngine(sport: string): BaseSportEngine | null {
-    return this.engines.get(sport) || null;
+    const engine = this.engines.get(sport.toUpperCase());
+    return engine?.instance || null;
   }
 
   // Force refresh engine with latest user preferences
