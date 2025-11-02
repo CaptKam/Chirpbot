@@ -535,6 +535,12 @@ export class NFLEngine extends BaseSportEngine {
     console.log(`🧹 NFL: Cleared possession tracking for game ${gameId}`);
   }
 
+  // Initialize timeout tracking for a live game (public method for game state manager)
+  public async initializeTimeoutTracking(gameId: string, homeTeam: string, awayTeam: string): Promise<void> {
+    // Call the private method with null values to initialize with defaults (3 timeouts each)
+    await this.updateTimeoutsFromESPN(gameId, homeTeam, awayTeam, null, null, 1);
+  }
+
   // Update timeout tracking from ESPN data with SportsData.io fallback
   private async updateTimeoutsFromESPN(
     gameId: string,

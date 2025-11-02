@@ -693,6 +693,25 @@ export class GameStateManager {
 
       // CRITICAL FIX: Trigger alert generation for live games
       if (gameInfo.currentState === RuntimeGameState.LIVE && this.engineManager) {
+        // Initialize timeout/possession tracking for ALL live football games (NFL, NCAAF, CFL)
+        const footballSports = ['NFL', 'NCAAF', 'CFL'];
+        if (footballSports.includes(gameInfo.sport.toUpperCase())) {
+          const sport = gameInfo.sport.toUpperCase();
+          const engine = this.engineManager.getEngine(sport);
+          
+          if (engine && engine.initializeTimeoutTracking) {
+            try {
+              await engine.initializeTimeoutTracking(
+                gameInfo.gameId,
+                newGameData.homeTeam?.name || gameInfo.homeTeam || 'Home',
+                newGameData.awayTeam?.name || gameInfo.awayTeam || 'Away'
+              );
+            } catch (error) {
+              // Silently fail - tracking data is optional
+            }
+          }
+        }
+        
         // OPTIMIZATION: Skip alert processing for unmonitored games
         if (!gameInfo.isUserMonitored || gameInfo.userIds.size === 0) {
           console.log(`⏭️ Skipping alert generation for unmonitored game ${gameId}`);
