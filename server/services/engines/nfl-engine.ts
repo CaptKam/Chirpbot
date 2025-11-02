@@ -529,15 +529,15 @@ export class NFLEngine extends BaseSportEngine {
     console.log(`🧹 NFL: Cleared possession tracking for game ${gameId}`);
   }
 
-  // Update timeout tracking from ESPN data
-  private updateTimeoutsFromESPN(
+  // Update timeout tracking from ESPN data with SportsData.io fallback
+  private async updateTimeoutsFromESPN(
     gameId: string,
     homeTeam: string,
     awayTeam: string,
     homeTimeoutsRemaining: number | null | undefined,
     awayTimeoutsRemaining: number | null | undefined,
     quarter: number
-  ): void {
+  ): Promise<void> {
     let tracking = this.timeoutTracking.get(gameId);
 
     // Initialize tracking for new game with defaults if no tracking exists
@@ -554,13 +554,28 @@ export class NFLEngine extends BaseSportEngine {
       this.timeoutTracking.set(gameId, tracking);
       console.log(`📊 NFL: Initialized timeout tracking for game ${gameId} - Home: ${homeTimeoutsRemaining ?? 3}, Away: ${awayTimeoutsRemaining ?? 3}`);
       
-      // If ESPN has no data, we still initialized with defaults, so continue to update
+      // If ESPN has no data, try SportsData.io as fallback
       if (homeTimeoutsRemaining == null && awayTimeoutsRemaining == null) {
-        return;
+        try {
+          const { getSportsDataApi } = await import('../sportsdata-api');
+          const sportsDataApi = getSportsDataApi();
+          const sportsDataTimeouts = await sportsDataApi.getTimeoutData('NFL', gameId);
+          
+          if (sportsDataTimeouts.homeTimeoutsRemaining !== null || sportsDataTimeouts.awayTimeoutsRemaining !== null) {
+            homeTimeoutsRemaining = sportsDataTimeouts.homeTimeoutsRemaining ?? undefined;
+            awayTimeoutsRemaining = sportsDataTimeouts.awayTimeoutsRemaining ?? undefined;
+            console.log(`✅ NFL: Using SportsData.io timeout data for game ${gameId} - Home: ${homeTimeoutsRemaining}, Away: ${awayTimeoutsRemaining}`);
+          } else {
+            return;
+          }
+        } catch (error) {
+          console.error(`❌ NFL: SportsData.io fallback failed for game ${gameId}:`, error);
+          return;
+        }
       }
     }
     
-    // Skip update if no new timeout data from ESPN (but we already have tracking)
+    // Skip update if no new timeout data from either source (but we already have tracking)
     if (homeTimeoutsRemaining == null && awayTimeoutsRemaining == null) {
       return;
     }

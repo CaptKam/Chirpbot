@@ -552,6 +552,31 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Test SportsData.io timeout data
+  app.get('/api/test-sportsdata/:sport/:gameId', async (req, res) => {
+    try {
+      const { sport, gameId } = req.params;
+      
+      if (!['NFL', 'NCAAF', 'CFL'].includes(sport)) {
+        return res.status(400).json({ error: 'Invalid sport. Must be NFL, NCAAF, or CFL' });
+      }
+
+      const { getSportsDataApi } = await import('./services/sportsdata-api');
+      const sportsDataApi = getSportsDataApi();
+      
+      const timeoutData = await sportsDataApi.getTimeoutData(sport as 'NFL' | 'NCAAF' | 'CFL', gameId);
+      
+      res.json({
+        sport,
+        gameId,
+        timeoutData,
+        apiConfigured: !!process.env.SPORTSDATA_API_KEY
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Wind speed test for specific stadiums
   app.get('/api/test-wind-speeds', async (req, res) => {
     try {

@@ -551,15 +551,15 @@ export class CFLEngine extends BaseSportEngine {
     console.log(`🧹 CFL: Cleared possession tracking for game ${gameId}`);
   }
 
-  // Update timeout tracking from ESPN data
-  private updateTimeoutsFromESPN(
+  // Update timeout tracking from ESPN data with SportsData.io fallback
+  private async updateTimeoutsFromESPN(
     gameId: string,
     homeTeam: string,
     awayTeam: string,
     homeTimeoutsRemaining: number | null | undefined,
     awayTimeoutsRemaining: number | null | undefined,
     quarter: number
-  ): void {
+  ): Promise<void> {
     let tracking = this.timeoutTracking.get(gameId);
 
     // Initialize tracking for new game with defaults if no tracking exists
@@ -576,9 +576,24 @@ export class CFLEngine extends BaseSportEngine {
       this.timeoutTracking.set(gameId, tracking);
       console.log(`📊 CFL: Initialized timeout tracking for game ${gameId} - Home: ${homeTimeoutsRemaining ?? 1}, Away: ${awayTimeoutsRemaining ?? 1}`);
       
-      // If ESPN has no data, we still initialized with defaults, so continue to update
+      // If ESPN has no data, try SportsData.io as fallback
       if (homeTimeoutsRemaining == null && awayTimeoutsRemaining == null) {
-        return;
+        try {
+          const { getSportsDataApi } = await import('../sportsdata-api');
+          const sportsDataApi = getSportsDataApi();
+          const sportsDataTimeouts = await sportsDataApi.getTimeoutData('CFL', gameId);
+          
+          if (sportsDataTimeouts.homeTimeoutsRemaining !== null || sportsDataTimeouts.awayTimeoutsRemaining !== null) {
+            homeTimeoutsRemaining = sportsDataTimeouts.homeTimeoutsRemaining ?? undefined;
+            awayTimeoutsRemaining = sportsDataTimeouts.awayTimeoutsRemaining ?? undefined;
+            console.log(`✅ CFL: Using SportsData.io timeout data for game ${gameId} - Home: ${homeTimeoutsRemaining}, Away: ${awayTimeoutsRemaining}`);
+          } else {
+            return;
+          }
+        } catch (error) {
+          console.error(`❌ CFL: SportsData.io fallback failed for game ${gameId}:`, error);
+          return;
+        }
       }
     }
     
