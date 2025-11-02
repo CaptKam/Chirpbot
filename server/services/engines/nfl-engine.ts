@@ -185,6 +185,10 @@ export class NFLEngine extends BaseSportEngine {
       // Enhance game state with NFL-specific data if needed
       const enhancedGameState = await this.enhanceGameStateWithLiveData(gameState);
 
+      // DIAGNOSTIC: Log loaded alert modules
+      console.log(`🔍 NFL: Game ${enhancedGameState.gameId} - Loaded modules: ${Array.from(this.alertModules.keys()).join(', ') || 'NONE'}`);
+      console.log(`🔍 NFL: Game state - Q${enhancedGameState.quarter}, down=${enhancedGameState.down}, yardsToGo=${enhancedGameState.yardsToGo}, fieldPos=${enhancedGameState.fieldPosition}`);
+
       // Use the parent class method which properly calls all loaded modules
       const rawAlerts = await super.generateLiveAlerts(enhancedGameState);
 
@@ -192,7 +196,7 @@ export class NFLEngine extends BaseSportEngine {
       if (rawAlerts.length > 0) {
         console.log(`🔄 NFL: Generated ${rawAlerts.length} raw alerts - GameStateManager will handle enhancement`);
       } else {
-        console.log(`🔄 NFL: No alerts generated for game ${enhancedGameState.gameId}`);
+        console.log(`🔄 NFL: No alerts generated for game ${enhancedGameState.gameId} (${this.alertModules.size} modules loaded)`);
       }
 
       // Track NFL-specific metrics

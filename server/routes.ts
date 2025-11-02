@@ -1415,6 +1415,18 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const filteredPreferences = preferences; // Save all user preferences as-is
 
       const result = await storage.bulkSetUserAlertPreferences(userId, sport.toLowerCase(), filteredPreferences);
+      
+      // CRITICAL FIX: Refresh engine with new preferences immediately
+      try {
+        const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
+        const engineManager = getEngineLifecycleManager();
+        await engineManager.refreshEngineForUser(sport.toUpperCase(), userId);
+        console.log(`✅ Engine refreshed for ${sport} after preference update`);
+      } catch (engineError) {
+        console.error(`⚠️ Failed to refresh engine:`, engineError);
+        // Don't fail the request if engine refresh fails
+      }
+
       res.json({
         message: 'Alert preferences updated successfully',
         count: result.length,
