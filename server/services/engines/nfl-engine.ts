@@ -278,7 +278,7 @@ export class NFLEngine extends BaseSportEngine {
           );
 
           // Track timeout data from ESPN
-          this.updateTimeoutsFromESPN(
+          await this.updateTimeoutsFromESPN(
             gameState.gameId,
             gameState.homeTeam as string,
             gameState.awayTeam as string,

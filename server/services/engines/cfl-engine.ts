@@ -274,7 +274,7 @@ export class CFLEngine extends BaseSportEngine {
           this.performanceMetrics.cacheHits++;
 
           // Track timeout data from ESPN first (includes SportsData.io fallback)
-          this.updateTimeoutsFromESPN(
+          await this.updateTimeoutsFromESPN(
             gameState.gameId,
             gameState.homeTeam as string,
             gameState.awayTeam as string,

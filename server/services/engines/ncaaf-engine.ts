@@ -205,7 +205,7 @@ export class NCAAFEngine extends BaseSportEngine {
       // Fast validation and enhancement
       if (enhancedData && !enhancedData.error && this.isEnhancedDataMeaningful(enhancedData, gameState)) {
         // Track timeout data from ESPN first (includes SportsData.io fallback)
-        this.updateTimeoutsFromESPN(
+        await this.updateTimeoutsFromESPN(
           gameState.gameId,
           gameState.homeTeam as string,
           gameState.awayTeam as string,
