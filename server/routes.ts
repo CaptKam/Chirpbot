@@ -1252,6 +1252,71 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Multi-day games route with enriched timeout/possession data
+  app.get('/api/games/multi-day', async (req, res) => {
+    try {
+      const { sport = 'all', dates } = req.query;
+      
+      // Parse dates array from query string
+      const datesArray = Array.isArray(dates) ? dates : (dates ? [dates] : []);
+      
+      // Get calendar sync service
+      const calendarSyncService = getCalendarSyncService();
+      
+      if (!calendarSyncService) {
+        return res.status(503).json({
+          error: 'Calendar service not available',
+          message: 'Calendar service is initializing'
+        });
+      }
+
+      // Import the game state manager to get games
+      const { getGameStateManager } = await import('./services/game-state-manager');
+      const gameStateManager = getGameStateManager();
+      
+      if (!gameStateManager) {
+        return res.status(503).json({
+          error: 'Game state manager not available',
+          message: 'System is initializing'
+        });
+      }
+
+      // Get all tracked games from the game state manager
+      const allTrackedGames = gameStateManager.getAllGames();
+      
+      // Filter by sport if specified
+      let filteredGames = allTrackedGames;
+      if (sport !== 'all') {
+        filteredGames = allTrackedGames.filter((g: any) => g.sport?.toUpperCase() === sport.toString().toUpperCase());
+      }
+      
+      // Filter games by dates if specified
+      if (datesArray.length > 0) {
+        filteredGames = filteredGames.filter((game: any) => {
+          const gameDate = game.gameDate?.split('T')[0] || game.date?.split('T')[0];
+          return datesArray.includes(gameDate);
+        });
+      }
+
+      // Enrich games with timeout/possession tracking data
+      const enrichedGames = await Promise.all(
+        (filteredGames || []).map(game => enrichGameWithTrackingData(game))
+      );
+
+      res.json({
+        success: true,
+        games: enrichedGames,
+        sport: sport,
+        dates: datesArray,
+        count: enrichedGames.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Multi-day API: Error fetching game data:', error);
+      res.status(500).json({ error: 'Failed to fetch multi-day game data', details: error.message });
+    }
+  });
+
   // Enhanced live game data route
   app.get('/api/games/:gameId/enhanced', async (req, res) => {
     try {
@@ -4181,9 +4246,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Get timeout data
       if (engine.getTimeoutStats) {
         const timeoutStats = engine.getTimeoutStats(game.gameId);
+        console.log(`🔍 Enrichment: Game ${game.gameId} (${game.sport}) - Timeout stats:`, JSON.stringify(timeoutStats, null, 2));
         if (timeoutStats && timeoutStats.tracked) {
           game.homeTimeoutsRemaining = timeoutStats.homeTimeoutsRemaining;
           game.awayTimeoutsRemaining = timeoutStats.awayTimeoutsRemaining;
+          console.log(`✅ Enrichment: Added timeout data to game ${game.gameId} - Home: ${game.homeTimeoutsRemaining}, Away: ${game.awayTimeoutsRemaining}`);
+        } else {
+          console.log(`⚠️ Enrichment: No tracked timeout data for game ${game.gameId}`);
         }
       }
 
