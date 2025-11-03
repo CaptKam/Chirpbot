@@ -703,7 +703,7 @@ export default function Calendar() {
                         return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
                       })
                       .map((game, index) => {
-              const isSelected = selectedGames.has(game.id);
+              const isSelected = selectedGames.has(game.gameId);
               const startTime = new Date(game.startTime);
               const formattedTime = isNaN(startTime.getTime()) 
                 ? 'TBD'
@@ -713,7 +713,7 @@ export default function Calendar() {
                   });
 
               // Validate game data before rendering
-              const gameId = game.id && !game.id.includes('undefined') ? game.id : `${activeSport}-game-${index}`;
+              const gameId = game.gameId && !game.gameId.includes('undefined') ? game.gameId : `${activeSport}-game-${index}`;
               const awayTeamName = game.awayTeam?.name || 'TBD';
               const homeTeamName = game.homeTeam?.name || 'TBD';
               const awayTeamAbbr = extractTeamAbbreviation(awayTeamName);
@@ -758,7 +758,7 @@ export default function Calendar() {
                       awayTimeoutsRemaining: game.awayTimeoutsRemaining ?? 0
                     } : undefined}
                     isSelected={isSelected}
-                    onSelect={() => toggleGameSelection(game.id)}
+                    onSelect={() => toggleGameSelection(game.gameId)}
                     size="lg"
                     showWeather={true}
                     showVenue={true}
