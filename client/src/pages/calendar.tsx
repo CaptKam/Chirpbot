@@ -10,6 +10,7 @@ import { TeamLogo } from "@/components/team-logo";
 import { GameCardTemplate } from "@/components/GameCardTemplate";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 // Helper functions
 const removeCity = (teamName: string) => {
@@ -188,6 +189,7 @@ function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?
 }
 
 export default function Calendar() {
+  const { toast } = useToast();
   const [activeSport, setActiveSport] = useState("MLB");
   const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -343,6 +345,18 @@ export default function Calendar() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}/monitored-games`] });
+      toast({
+        title: "Game added to monitoring",
+        description: "You'll receive alerts for this game",
+      });
+    },
+    onError: (error) => {
+      console.error('Failed to add game monitoring:', error);
+      toast({
+        title: "Failed to add game",
+        description: "Please try again or check if you're logged in",
+        variant: "destructive",
+      });
     }
   });
 
@@ -353,10 +367,32 @@ export default function Calendar() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}/monitored-games`] });
+      toast({
+        title: "Game removed from monitoring",
+        description: "You won't receive alerts for this game",
+      });
+    },
+    onError: (error) => {
+      console.error('Failed to remove game monitoring:', error);
+      toast({
+        title: "Failed to remove game",
+        description: "Please try again or check if you're logged in",
+        variant: "destructive",
+      });
     }
   });
 
   const toggleGameSelection = (gameId: string) => {
+    // Check if user is authenticated
+    if (!userId) {
+      toast({
+        title: "Login required",
+        description: "Please log in to monitor games",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const game = games.find(g => g.id === gameId);
     if (!game) return;
 
