@@ -499,9 +499,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/nfl/timeouts/:gameId', async (req, res) => {
     try {
       const { gameId } = req.params;
-      const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
-      const engineManager = getEngineLifecycleManager();
-      const nflEngine = engineManager.getEngine('NFL');
+      const { engineLifecycleManager } = await import('./services/engine-lifecycle-manager');
+      const nflEngine = engineLifecycleManager.getEngine('NFL');
 
       if (!nflEngine || !nflEngine.getTimeoutStats) {
         return res.status(404).json({ error: 'NFL engine not available' });
@@ -518,9 +517,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/ncaaf/timeouts/:gameId', async (req, res) => {
     try {
       const { gameId } = req.params;
-      const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
-      const engineManager = getEngineLifecycleManager();
-      const ncaafEngine = engineManager.getEngine('NCAAF');
+      const { engineLifecycleManager } = await import('./services/engine-lifecycle-manager');
+      const ncaafEngine = engineLifecycleManager.getEngine('NCAAF');
 
       if (!ncaafEngine || !ncaafEngine.getTimeoutStats) {
         return res.status(404).json({ error: 'NCAAF engine not available' });
@@ -537,9 +535,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get('/api/cfl/timeouts/:gameId', async (req, res) => {
     try {
       const { gameId } = req.params;
-      const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
-      const engineManager = getEngineLifecycleManager();
-      const cflEngine = engineManager.getEngine('CFL');
+      const { engineLifecycleManager } = await import('./services/engine-lifecycle-manager');
+      const cflEngine = engineLifecycleManager.getEngine('CFL');
 
       if (!cflEngine || !cflEngine.getTimeoutStats) {
         return res.status(404).json({ error: 'CFL engine not available' });
