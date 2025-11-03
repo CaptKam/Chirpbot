@@ -1191,61 +1191,41 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   app.get('/api/games/today', async (req, res) => {
     try {
-      const { sport = 'MLB' } = req.query;
+      const { sport = 'MLB', date } = req.query;
 
       // Validate sport parameter
       if (typeof sport !== 'string' || sport.includes('[object')) {
         return res.status(400).json({ error: 'Invalid sport parameter', games: [], date: new Date().toISOString().split('T')[0] });
       }
 
-      let games = [];
-
-      const { getSeasonAwareSports } = await import('../shared/season-manager');
-      const SPORTS = getSeasonAwareSports();
-
-      switch(sport) {
-        case 'MLB':
-          const { MLBApiService } = await import('./services/mlb-api');
-          const mlbService = new MLBApiService();
-          games = await mlbService.getTodaysGames(req.query.date as string);
-          break;
-
-        case 'NFL':
-          const { NFLApiService } = await import('./services/nfl-api');
-          const nflService = new NFLApiService();
-          games = await nflService.getTodaysGames(req.query.date as string);
-          break;
-
-        case 'NBA':
-          const { NBAApiService } = await import('./services/nba-api');
-          const nbaService = new NBAApiService();
-          games = await nbaService.getTodaysGames(req.query.date as string);
-          break;
-
-        case 'CFL':
-          const { CFLApiService } = await import('./services/cfl-api');
-          const cflService = new CFLApiService();
-          games = await cflService.getTodaysGames(req.query.date as string);
-          break;
-
-        case 'NCAAF':
-          const { NCAAFApiService } = await import('./services/ncaaf-api');
-          const ncaafService = new NCAAFApiService();
-          games = await ncaafService.getTodaysGames(req.query.date as string);
-          break;
-
-        case 'WNBA':
-          const { WNBAApiService } = await import('./services/wnba-api');
-          const wnbaService = new WNBAApiService();
-          games = await wnbaService.getTodaysGames(req.query.date as string);
-          break;
-
-        default:
-          games = [];
+      const calendarSyncService = getCalendarSyncService();
+      
+      if (!calendarSyncService) {
+        return res.status(503).json({
+          error: 'Calendar service not available',
+          message: 'Calendar service is initializing'
+        });
       }
 
       const { getPacificDate } = await import('./utils/timezone');
-      res.json({ games, date: req.query.date || getPacificDate() });
+      const targetDate = (date as string) || getPacificDate();
+      
+      // Get games from CalendarSyncService (avoids rate limiting)
+      const sportUpper = sport.toString().toUpperCase();
+      const allGames = calendarSyncService.getCalendarData(sportUpper);
+      
+      // Filter by date
+      const games = allGames.filter((game: any) => {
+        const gameDate = game.gameDate?.split('T')[0] || game.date?.split('T')[0] || targetDate;
+        return gameDate === targetDate;
+      });
+
+      // Enrich games with timeout/possession tracking data for football sports
+      const enrichedGames = await Promise.all(
+        (games || []).map(game => enrichGameWithTrackingData(game))
+      );
+
+      res.json({ games: enrichedGames, date: targetDate });
     } catch (error) {
       console.error('Error fetching games:', error);
       res.status(500).json({ message: 'Failed to fetch games' });
@@ -4229,36 +4209,66 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   // Helper function to enrich game data with timeout/possession tracking
   async function enrichGameWithTrackingData(game: any) {
+    // CalendarSyncService uses 'gameId' while some other sources use 'id'
+    const gameId = game?.gameId || game?.id;
+    console.log(`🔍 enrichGameWithTrackingData called for game: ${gameId}, sport: ${game?.sport}`);
+    
     if (!game) return game;
 
     const footballSports = ['NFL', 'NCAAF', 'CFL'];
     if (!footballSports.includes(game.sport)) {
+      console.log(`⏭️ Skipping enrichment for non-football sport: ${game.sport}`);
       return game;
     }
 
     try {
-      const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
-      const engineManager = getEngineLifecycleManager();
-      const engine = engineManager.getEngine(game.sport);
+      // First, ensure the game is adopted by GameStateManager and timeout tracking is initialized
+      const { gameStateManager } = await import('./services/game-state-manager');
+      
+      // Wait a short time for GameStateManager to adopt and initialize the game if needed
+      // GameStateManager processes games async via CalendarSyncService
+      let retries = 3;
+      let waitTime = 100; // ms
+      
+      while (retries > 0) {
+        const gameState = gameStateManager.getGameState(gameId);
+        if (gameState) {
+          console.log(`✅ Game ${gameId} found in GameStateManager with state: ${gameState.currentState}`);
+          break;
+        }
+        console.log(`⏳ Waiting for GameStateManager to adopt game ${gameId}... (${retries} retries left)`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        retries--;
+      }
+      
+      const { engineLifecycleManager } = await import('./services/engine-lifecycle-manager');
+      const engine = engineLifecycleManager.getEngine(game.sport);
 
-      if (!engine) return game;
+      console.log(`🔍 Enrichment attempt for game ${gameId} (${game.sport}) - engine found: ${!!engine}`);
+
+      if (!engine) {
+        console.log(`❌ No engine found for ${game.sport}`);
+        return game;
+      }
 
       // Get timeout data
       if (engine.getTimeoutStats) {
-        const timeoutStats = engine.getTimeoutStats(game.gameId);
-        console.log(`🔍 Enrichment: Game ${game.gameId} (${game.sport}) - Timeout stats:`, JSON.stringify(timeoutStats, null, 2));
+        const timeoutStats = engine.getTimeoutStats(gameId);
+        console.log(`🔍 Timeout stats for game ${gameId}:`, JSON.stringify(timeoutStats, null, 2));
         if (timeoutStats && timeoutStats.tracked) {
           game.homeTimeoutsRemaining = timeoutStats.homeTimeoutsRemaining;
           game.awayTimeoutsRemaining = timeoutStats.awayTimeoutsRemaining;
-          console.log(`✅ Enrichment: Added timeout data to game ${game.gameId} - Home: ${game.homeTimeoutsRemaining}, Away: ${game.awayTimeoutsRemaining}`);
+          console.log(`✅ Added timeout data: Home ${game.homeTimeoutsRemaining}, Away ${game.awayTimeoutsRemaining}`);
         } else {
-          console.log(`⚠️ Enrichment: No tracked timeout data for game ${game.gameId}`);
+          console.log(`⚠️ Timeout stats not tracked or missing for game ${gameId}`);
         }
+      } else {
+        console.log(`❌ Engine ${game.sport} does not have getTimeoutStats method`);
       }
 
       // Get possession data
       if (engine.getPossessionStats) {
-        const possessionStats = engine.getPossessionStats(game.gameId);
+        const possessionStats = engine.getPossessionStats(gameId);
         if (possessionStats && possessionStats.tracked) {
           game.possession = possessionStats.currentPossession === 'home' ? game.homeTeam?.name : game.awayTeam?.name;
           game.homePossessions = possessionStats.homePossessions;
@@ -4266,7 +4276,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         }
       }
     } catch (error) {
-      // Silently fail - tracking data is optional
+      console.error(`❌ Error enriching game ${gameId}:`, error);
     }
 
     return game;

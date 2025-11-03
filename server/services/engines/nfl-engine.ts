@@ -663,6 +663,7 @@ export class NFLEngine extends BaseSportEngine {
 
   // Get timeout statistics for a game
   public getTimeoutStats(gameId: string): any {
+    console.log(`🔍 NFL getTimeoutStats: Looking for gameId="${gameId}", Map has ${this.timeoutTracking.size} entries:`, Array.from(this.timeoutTracking.keys()));
     const tracking = this.timeoutTracking.get(gameId);
     if (!tracking) {
       return {
