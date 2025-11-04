@@ -208,10 +208,15 @@ export default function Calendar() {
     staleTime: 60000,
   });
 
-  // Initialize selectedDates with server date once it's available
+  // Initialize selectedDates with current date
   const [selectedDates, setSelectedDates] = useState<Set<string>>(() => {
-    // Start with empty set - will be populated by useEffect
-    return new Set<string>();
+    // Start with current date immediately (will update when server date loads)
+    const dates = new Set<string>();
+    const now = new Date();
+    for (let i = 0; i < 4; i++) {
+      dates.add(format(addDays(now, i), 'yyyy-MM-dd'));
+    }
+    return dates;
   });
 
   useEffect(() => {
