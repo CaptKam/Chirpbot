@@ -772,8 +772,7 @@ export default function Calendar() {
                   });
 
               // Validate game data before rendering
-              // NBA games use 'id' field, other sports use 'gameId'
-              const gameId = game.gameId || game.id || `${activeSport.toLowerCase()}-${index}-${game.startTime || Date.now()}`;
+              const gameId = game.gameId || `${activeSport.toLowerCase()}-${index}-${game.startTime || Date.now()}`;
 
               // Skip games with invalid IDs
               if (!gameId || gameId === 'undefined' || gameId.includes('undefined') || gameId === 'null') {
