@@ -105,11 +105,11 @@ import { getSeasonAwareSports } from '@shared/season-manager';
 const SPORTS = getSeasonAwareSports();
 
 // Enhanced Game Display Component for Live MLB Games
-function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: { 
-  gameId: string; 
-  inning: number; 
-  isTopInning: boolean; 
-  isLive: boolean 
+function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: {
+  gameId: string;
+  inning: number;
+  isTopInning: boolean;
+  isLive: boolean
 }) {
   const { data: enhancedData } = useQuery({
     queryKey: ['enhanced-game', gameId],
@@ -128,7 +128,7 @@ function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: {
   });
 
   return (
-    <BaseballDiamond 
+    <BaseballDiamond
       runners={enhancedData?.runners || {
         first: false,
         second: false,
@@ -164,7 +164,7 @@ function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?
   if (!weather) {
     // Show loading state with fallback data
     return (
-      <WeatherDisplay 
+      <WeatherDisplay
         windSpeed={5}
         windDirection="N"
         size={size}
@@ -180,7 +180,7 @@ function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?
   };
 
   return (
-    <WeatherDisplay 
+    <WeatherDisplay
       windSpeed={weather.windSpeed}
       windDirection={getCardinalDirection(weather.windDirection)}
       size={size}
@@ -248,7 +248,7 @@ export default function Calendar() {
       const results = await Promise.all(promises);
 
       // Combine all games with date labels
-      const allGames = results.flatMap(({ date, games }) => 
+      const allGames = results.flatMap(({ date, games }) =>
         games.map((game: any) => ({ ...game, fetchDate: date }))
       );
 
@@ -259,8 +259,8 @@ export default function Calendar() {
   const allGames = allGamesData?.games || [];
 
   // Apply team filter if active
-  const filteredGames = teamFilter 
-    ? allGames.filter(game => 
+  const filteredGames = teamFilter
+    ? allGames.filter(game =>
         (teamFilter.homeTeam && game.homeTeam?.name === teamFilter.homeTeam) ||
         (teamFilter.awayTeam && game.awayTeam?.name === teamFilter.awayTeam) ||
         (teamFilter.homeTeam && game.awayTeam?.name === teamFilter.homeTeam) ||
@@ -319,7 +319,7 @@ export default function Calendar() {
   });
 
   // Filter monitored games by active sport on the frontend (case-insensitive)
-  const monitoredGames = allMonitoredGames?.filter((game: any) => 
+  const monitoredGames = allMonitoredGames?.filter((game: any) =>
     (game.sport || '').toUpperCase() === activeSport.toUpperCase()
   ) || [];
 
@@ -333,14 +333,14 @@ export default function Calendar() {
 
   // Add game monitoring
   const addMonitoringMutation = useMutation({
-    mutationFn: async ({ gameId, sport, homeTeamName, awayTeamName }: { 
-      gameId: string; 
-      sport: string; 
-      homeTeamName: string; 
-      awayTeamName: string; 
+    mutationFn: async ({ gameId, sport, homeTeamName, awayTeamName }: {
+      gameId: string;
+      sport: string;
+      homeTeamName: string;
+      awayTeamName: string;
     }) => {
-      return apiRequest("POST", `/api/user/${userId}/monitored-games`, { 
-        gameId, sport, homeTeamName, awayTeamName 
+      return apiRequest("POST", `/api/user/${userId}/monitored-games`, {
+        gameId, sport, homeTeamName, awayTeamName
       });
     },
     onSuccess: () => {
@@ -383,6 +383,17 @@ export default function Calendar() {
   });
 
   const toggleGameSelection = (gameId: string) => {
+    // Strict validation for gameId
+    if (!gameId || gameId === 'undefined' || gameId === 'null' || gameId.includes('undefined') || gameId.includes('null')) {
+      console.error(`Invalid gameId attempted: ${gameId}`);
+      toast({
+        title: "Invalid game",
+        description: "This game cannot be monitored (missing or invalid ID)",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Check if user is authenticated
     if (!userId) {
       toast({
@@ -393,8 +404,34 @@ export default function Calendar() {
       return;
     }
 
-    const game = games.find(g => g.gameId === gameId);
-    if (!game) return;
+    // Find game with fallback to both id and gameId fields
+    const game = games.find(g => {
+      const gId = g.gameId || g.id;
+      return gId === gameId;
+    });
+
+    if (!game) {
+      console.error(`Game not found for ID: ${gameId}`, {
+        searchedGames: games.map(g => ({ gameId: g.gameId, id: g.id }))
+      });
+      toast({
+        title: "Game not found",
+        description: "Unable to locate game data",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate game has required team data
+    if (!game.homeTeam?.name || !game.awayTeam?.name) {
+      console.error(`Game ${gameId} missing team data`, game);
+      toast({
+        title: "Incomplete game data",
+        description: "This game is missing team information",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const newSelected = new Set(selectedGames);
     if (newSelected.has(gameId)) {
@@ -402,10 +439,27 @@ export default function Calendar() {
       // Remove from database
       removeMonitoringMutation.mutate(gameId);
     } else {
-      newSelected.add(gameId);
-      // Add to database (normalize sport to uppercase)
+      // Final validation before API call
+      const validGameId = gameId && gameId !== 'null' && gameId !== 'undefined' ? gameId : null;
+      if (!validGameId) {
+        console.error(`Cannot monitor game: gameId is invalid`, { gameId, game });
+        toast({
+          title: "Cannot monitor game",
+          description: "Game ID is invalid",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log(`📡 Calling API to add monitored game:`, {
+        gameId: validGameId,
+        sport: activeSport.toUpperCase(),
+        homeTeam: game.homeTeam.name,
+        awayTeam: game.awayTeam.name
+      });
+
       addMonitoringMutation.mutate({
-        gameId,
+        gameId: validGameId,
         sport: activeSport.toUpperCase(),
         homeTeamName: game.homeTeam.name,
         awayTeamName: game.awayTeam.name
@@ -439,9 +493,9 @@ export default function Calendar() {
 
 
     <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
-      <PageHeader 
-        title="ChirpBot" 
-        subtitle="Game Calendar & Monitoring" 
+      <PageHeader
+        title="ChirpBot"
+        subtitle="Game Calendar & Monitoring"
       />
 
       {/* Sport Tabs */}
@@ -705,19 +759,29 @@ export default function Calendar() {
                       .map((game, index) => {
               const isSelected = selectedGames.has(game.gameId);
               const startTime = new Date(game.startTime);
-              const formattedTime = isNaN(startTime.getTime()) 
+              const formattedTime = isNaN(startTime.getTime())
                 ? 'TBD'
-                : startTime.toLocaleTimeString('en-US', { 
-                    hour: 'numeric', 
-                    minute: '2-digit' 
+                : startTime.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit'
                   });
 
               // Validate game data before rendering
-              const gameId = game.gameId && !game.gameId.includes('undefined') ? game.gameId : `${activeSport}-game-${index}`;
+              // NBA games use 'id' field, other sports use 'gameId'
+              const gameId = game.gameId || game.id || `${activeSport.toLowerCase()}-${index}-${game.startTime || Date.now()}`;
+
+              // Skip games with invalid IDs
+              if (!gameId || gameId === 'undefined' || gameId.includes('undefined') || gameId === 'null') {
+                console.warn(`Skipping game with invalid ID at index ${index}`, game);
+                return null;
+              }
+
               const awayTeamName = game.awayTeam?.name || 'TBD';
               const homeTeamName = game.homeTeam?.name || 'TBD';
               const awayTeamAbbr = extractTeamAbbreviation(awayTeamName);
               const homeTeamAbbr = extractTeamAbbreviation(homeTeamName);
+
+              console.log(`🔍 Rendering game card: gameId=${gameId}, sport=${activeSport}, home=${homeTeamName}, away=${awayTeamName}`);
 
               return (
                 <div key={gameId} className="relative">
@@ -758,7 +822,7 @@ export default function Calendar() {
                       awayTimeoutsRemaining: game.awayTimeoutsRemaining ?? 0
                     } : undefined}
                     isSelected={isSelected}
-                    onSelect={() => toggleGameSelection(game.gameId)}
+                    onSelect={() => toggleGameSelection(gameId)}
                     size="lg"
                     showWeather={true}
                     showVenue={true}
