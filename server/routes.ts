@@ -1190,6 +1190,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       const { sport = 'MLB', date } = req.query;
 
+      console.log(`📅 /api/games/today called: sport=${sport}, date=${date}`);
+
       // Validate sport parameter
       if (typeof sport !== 'string' || sport.includes('[object')) {
         return res.status(400).json({ error: 'Invalid sport parameter', games: [], date: new Date().toISOString().split('T')[0] });
@@ -1198,24 +1200,37 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const calendarSyncService = getCalendarSyncService();
       
       if (!calendarSyncService) {
+        console.warn('⚠️ CalendarSyncService not available');
         return res.status(503).json({
           error: 'Calendar service not available',
-          message: 'Calendar service is initializing'
+          message: 'Calendar service is initializing',
+          games: []
         });
       }
 
       const { getPacificDate } = await import('./utils/timezone');
       const targetDate = (date as string) || getPacificDate();
       
+      console.log(`🔍 Fetching games for ${sport.toUpperCase()} on ${targetDate}`);
+      
       // Get games from CalendarSyncService (avoids rate limiting)
       const sportUpper = sport.toString().toUpperCase();
       const allGames = calendarSyncService.getCalendarData(sportUpper);
       
-      // Filter by date
+      console.log(`📊 CalendarSyncService returned ${allGames.length} ${sportUpper} games`);
+      
+      // Filter by date - check multiple date fields
       const games = allGames.filter((game: any) => {
-        const gameDate = game.gameDate?.split('T')[0] || game.date?.split('T')[0] || targetDate;
-        return gameDate === targetDate;
+        const gameStartTime = game.startTime || '';
+        const gameDate = gameStartTime.split('T')[0] || targetDate;
+        const matches = gameDate === targetDate;
+        if (!matches) {
+          console.log(`⏭️ Skipping game ${game.gameId}: date ${gameDate} doesn't match ${targetDate}`);
+        }
+        return matches;
       });
+
+      console.log(`✅ Filtered to ${games.length} games for date ${targetDate}`);
 
       // Enrich games with timeout/possession tracking data for football sports
       const enrichedGames = await Promise.all(
@@ -1224,10 +1239,48 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       res.json({ games: enrichedGames, date: targetDate });
     } catch (error) {
-      console.error('Error fetching games:', error);
-      res.status(500).json({ message: 'Failed to fetch games' });
+      console.error('❌ Error fetching games:', error);
+      res.status(500).json({ message: 'Failed to fetch games', games: [], error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
+
+  // Helper function to enrich games with tracking data
+  async function enrichGameWithTrackingData(game: any): Promise<any> {
+    try {
+      // For football sports, add timeout/possession data
+      const footballSports = ['NFL', 'NCAAF', 'CFL'];
+      if (footballSports.includes(game.sport?.toUpperCase())) {
+        const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
+        const engineManager = getEngineLifecycleManager();
+        const engine = engineManager.getEngine(game.sport.toUpperCase());
+        
+        if (engine) {
+          // Add timeout data
+          if (engine.getTimeoutStats) {
+            const timeoutStats = engine.getTimeoutStats(game.gameId);
+            if (timeoutStats) {
+              game.homeTimeoutsRemaining = timeoutStats.homeTimeoutsRemaining;
+              game.awayTimeoutsRemaining = timeoutStats.awayTimeoutsRemaining;
+            }
+          }
+          
+          // Add possession data
+          if (engine.getPossessionStats) {
+            const possessionStats = engine.getPossessionStats(game.gameId);
+            if (possessionStats) {
+              game.possession = possessionStats.currentPossession;
+              game.homePossessions = possessionStats.homePossessions;
+              game.awayPossessions = possessionStats.awayPossessions;
+            }
+          }
+        }
+      }
+      return game;
+    } catch (error) {
+      console.warn(`⚠️ Failed to enrich game ${game.gameId} with tracking data:`, error);
+      return game;
+    }
+  }
 
   // Multi-day games route with enriched timeout/possession data
   app.get('/api/games/multi-day', async (req, res) => {
