@@ -208,19 +208,12 @@ export default function Calendar() {
     staleTime: 60000,
   });
 
-  // Initialize selectedDates with current date
-  const [selectedDates, setSelectedDates] = useState<Set<string>>(() => {
-    // Start with current date immediately (will update when server date loads)
-    const dates = new Set<string>();
-    const now = new Date();
-    for (let i = 0; i < 4; i++) {
-      dates.add(format(addDays(now, i), 'yyyy-MM-dd'));
-    }
-    return dates;
-  });
+  // Initialize selectedDates - will be updated when server date loads
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    if (serverDate?.date) {
+    if (serverDate?.date && !isInitialized) {
       const dates = new Set<string>();
       // Parse the date string at noon to avoid timezone shifts
       const serverNow = parseISO(serverDate.date + 'T12:00:00');
@@ -228,14 +221,15 @@ export default function Calendar() {
         dates.add(format(addDays(serverNow, i), 'yyyy-MM-dd'));
       }
       setSelectedDates(dates);
-      // Force refresh games when dates are initialized
-      queryClient.invalidateQueries({ queryKey: ["/api/games/multi-day"] });
+      setIsInitialized(true);
+      console.log('📅 Calendar initialized with server date:', serverDate.date, 'Selected dates:', Array.from(dates));
     }
-  }, [serverDate?.date]);
+  }, [serverDate?.date, isInitialized]);
 
-  // Fetch games for all selected dates
+  // Fetch games for all selected dates - only when initialized
   const { data: allGamesData, isLoading: isLoadingGames } = useQuery({
     queryKey: ["/api/games/multi-day", { sport: activeSport, dates: Array.from(selectedDates).sort() }],
+    enabled: isInitialized && selectedDates.size > 0,
     queryFn: async ({ queryKey }) => {
       const [_, params] = queryKey as [string, { sport: string; dates: string[] }];
 
@@ -712,7 +706,11 @@ export default function Calendar() {
           </div>
         )}
 
-        {isLoading ? (
+        {!isInitialized ? (
+          <div className="space-y-3">
+            <SportsLoading sport={activeSport} message="Initializing calendar..." size="lg" />
+          </div>
+        ) : isLoading ? (
           <div className="space-y-3">
             <SportsLoading sport={activeSport} message={`Loading ${activeSport} games...`} size="lg" />
             {[...Array(2)].map((_, i) => (

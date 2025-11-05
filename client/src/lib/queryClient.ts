@@ -151,6 +151,9 @@ export const queryClient = new QueryClient({
       gcTime: 5 * 60 * 1000, // 5 minutes - reasonable cache retention
       retry: 0, // Disable React Query retries - p-retry handles all retry logic
       retryDelay: undefined, // No retry delay needed since retry is disabled
+      onError: (error) => {
+        console.error('Query error:', error);
+      }
     },
     mutations: {
       retry: 0, // Disable React Query retries - p-retry handles all retry logic

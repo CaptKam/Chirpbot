@@ -4222,10 +4222,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // First, ensure the game is adopted by GameStateManager and timeout tracking is initialized
       const { gameStateManager } = await import('./services/game-state-manager');
       
-      // Wait a short time for GameStateManager to adopt and initialize the game if needed
+      // Wait for GameStateManager to adopt and initialize the game if needed
       // GameStateManager processes games async via CalendarSyncService
-      let retries = 3;
-      let waitTime = 100; // ms
+      let retries = 10; // Increased from 3
+      let waitTime = 200; // Increased from 100ms
       
       while (retries > 0) {
         const gameState = gameStateManager.getGameState(gameId);
