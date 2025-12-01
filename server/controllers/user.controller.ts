@@ -118,9 +118,15 @@ router.post('/api/settings', requireAuthentication, async (req: Request, res: Re
   }
 });
 
-router.get('/api/user/:userId/alert-preferences', async (req: Request, res: Response) => {
+router.get('/api/user/:userId/alert-preferences', requireAuthentication, async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
+    const currentUserId = req.user?.id || req.session?.userId;
+    
+    if (userId !== currentUserId) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    
     const preferences = await storage.getUserAlertPreferences(userId);
     res.json(preferences);
   } catch (error) {
@@ -129,9 +135,15 @@ router.get('/api/user/:userId/alert-preferences', async (req: Request, res: Resp
   }
 });
 
-router.get('/api/user/:userId/alert-preferences/:sport', async (req: Request, res: Response) => {
+router.get('/api/user/:userId/alert-preferences/:sport', requireAuthentication, async (req: Request, res: Response) => {
   try {
     const { userId, sport } = req.params;
+    const currentUserId = req.user?.id || req.session?.userId;
+    
+    if (userId !== currentUserId) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    
     const preferences = await storage.getUserAlertPreferencesBySport(userId, sport.toLowerCase());
     res.json(preferences);
   } catch (error) {
@@ -192,6 +204,12 @@ router.post('/api/user/:userId/alert-preferences/bulk', requireUserAuth, async (
 router.get('/api/user/:userId/monitored-games', requireAuthentication, async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
+    const currentUserId = req.user?.id || req.session?.userId;
+    
+    if (userId !== currentUserId) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    
     const monitoredGames = await storage.getUserMonitoredTeams(userId);
     res.json(monitoredGames);
   } catch (error) {
@@ -203,7 +221,13 @@ router.get('/api/user/:userId/monitored-games', requireAuthentication, async (re
 router.post('/api/user/:userId/monitored-games', requireAuthentication, async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
-    const { gameId, sport, homeTeam, awayTeam, gameDate } = req.body;
+    const currentUserId = req.user?.id || req.session?.userId;
+    
+    if (userId !== currentUserId) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    
+    const { gameId, sport, homeTeam, awayTeam } = req.body;
 
     if (!gameId) {
       return res.status(400).json({ message: 'gameId is required' });
