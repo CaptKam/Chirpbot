@@ -196,7 +196,7 @@ export default function Calendar() {
   const [teamFilter, setTeamFilter] = useState<{homeTeam?: string, awayTeam?: string} | null>(null);
 
   // Fetch server's Pacific date to ensure timezone alignment
-  const { data: serverDate } = useQuery({
+  const { data: serverDate, isError: serverDateError, isLoading: serverDateLoading } = useQuery({
     queryKey: ["/api/server-date"],
     queryFn: async () => {
       const response = await fetch("/api/server-date", {
@@ -206,6 +206,8 @@ export default function Calendar() {
       return response.json();
     },
     staleTime: 60000,
+    retry: 2,
+    retryDelay: 1000,
   });
 
   // Initialize selectedDates - will be updated when server date loads
@@ -213,18 +215,39 @@ export default function Calendar() {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    if (serverDate?.date && !isInitialized) {
+    // Timeout fallback - if server date doesn't load in 3 seconds, use client date
+    const timeout = setTimeout(() => {
+      if (!isInitialized) {
+        console.warn('⚠️ Server date timeout - using client date as fallback');
+        const dates = new Set<string>();
+        const clientNow = new Date();
+        for (let i = 0; i < 4; i++) {
+          dates.add(format(addDays(clientNow, i), 'yyyy-MM-dd'));
+        }
+        setSelectedDates(dates);
+        setIsInitialized(true);
+      }
+    }, 3000);
+
+    if ((serverDate?.date || serverDateError) && !isInitialized) {
+      clearTimeout(timeout);
       const dates = new Set<string>();
-      // Parse the date string at noon to avoid timezone shifts
-      const serverNow = parseISO(serverDate.date + 'T12:00:00');
+      
+      // Use server date if available, otherwise use client date
+      const baseDate = serverDate?.date 
+        ? parseISO(serverDate.date + 'T12:00:00')
+        : new Date();
+      
       for (let i = 0; i < 4; i++) {
-        dates.add(format(addDays(serverNow, i), 'yyyy-MM-dd'));
+        dates.add(format(addDays(baseDate, i), 'yyyy-MM-dd'));
       }
       setSelectedDates(dates);
       setIsInitialized(true);
-      console.log('📅 Calendar initialized with server date:', serverDate.date, 'Selected dates:', Array.from(dates));
+      console.log('📅 Calendar initialized:', serverDate?.date ? 'server date' : 'client date', 'Selected dates:', Array.from(dates));
     }
-  }, [serverDate?.date, isInitialized]);
+
+    return () => clearTimeout(timeout);
+  }, [serverDate?.date, serverDateError, isInitialized]);
 
   // Fetch games for all selected dates - only when initialized
   const { data: allGamesData, isLoading: isLoadingGames } = useQuery({

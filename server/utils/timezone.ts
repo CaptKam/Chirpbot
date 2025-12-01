@@ -3,19 +3,21 @@
 export function getPacificDate(date?: Date): string {
   const targetDate = date || new Date();
 
-  // Use toLocaleString with Pacific timezone to get the date components
-  const pacificDateStr = targetDate.toLocaleString('en-US', {
+  // Use Intl.DateTimeFormat for more reliable timezone handling
+  const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Los_Angeles',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'
   });
 
-  // Parse the MM/DD/YYYY format
-  const [month, day, year] = pacificDateStr.split('/');
+  const parts = formatter.formatToParts(targetDate);
+  const year = parts.find(p => p.type === 'year')?.value || '';
+  const month = parts.find(p => p.type === 'month')?.value || '';
+  const day = parts.find(p => p.type === 'day')?.value || '';
 
   // Return in YYYY-MM-DD format
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  return `${year}-${month}-${day}`;
 }
 
 export function getPacificDateTime(): Date {
