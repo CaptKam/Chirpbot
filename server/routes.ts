@@ -228,6 +228,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // SECURITY FIX: Move request deduplication AFTER session parsing so cache keys include userId
   app.use(unifiedDeduplicator.requestMiddleware());
 
+  // Mount modular controllers
+  app.use(authController);
+  app.use(userController);
+  app.use(gamesController);
+  app.use(alertsController);
+  app.use(adminController);
+  app.use(integrationsController);
+
   // MigrationAdapter diagnostic endpoint for runtime verification
   app.get('/api/diagnostics/ingestion-status', async (req, res) => {
     try {
