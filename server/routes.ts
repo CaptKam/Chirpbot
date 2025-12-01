@@ -21,6 +21,12 @@ import { eq, desc, and, gte, inArray } from "drizzle-orm";
 // Migration Adapter replaces direct CalendarSyncService usage
 // import { getCalendarSyncService } from "./services/calendar-sync-service";
 import { unifiedAIProcessor } from './services/unified-ai-processor';
+import authController from './controllers/auth.controller';
+import userController from './controllers/user.controller';
+import gamesController from './controllers/games.controller';
+import alertsController from './controllers/alerts.controller';
+import adminController from './controllers/admin.controller';
+import integrationsController from './controllers/integrations.controller';
 
 // Extend session data interface
 declare module 'express-session' {
