@@ -3,10 +3,11 @@ import { storage } from '../storage';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
 import type { Alert } from '@shared/schema';
+import { requireAuthentication } from '../middleware/auth';
 
 const router = Router();
 
-router.get('/api/alerts', async (req: Request, res: Response) => {
+router.get('/api/alerts', requireAuthentication, async (req: Request, res: Response) => {
   try {
     const masterAlertsEnabled = await storage.getMasterAlertEnabled();
     if (!masterAlertsEnabled) {
@@ -14,20 +15,17 @@ router.get('/api/alerts', async (req: Request, res: Response) => {
       return;
     }
 
-    const currentUserId = req.session?.userId;
-    console.log(`🔍 ALERTS API: Session user ID: ${currentUserId || 'none'}`);
-
+    const currentUserId = req.user?.id;
     if (!currentUserId) {
-      console.log(`⚠️ ALERTS API: No authenticated user, returning empty array`);
-      res.json([]);
-      return;
+      return res.status(401).json({ message: 'Authentication required' });
     }
+
+    console.log(`🔍 ALERTS API: Authenticated user ID: ${currentUserId}`);
 
     const user = await storage.getUserById(currentUserId);
     if (!user) {
       console.log(`⚠️ ALERTS API: User not found in database`);
-      res.json([]);
-      return;
+      return res.status(404).json({ message: 'User not found' });
     }
 
     const monitoredGames = await storage.getUserMonitoredTeams(currentUserId);
@@ -55,18 +53,16 @@ router.get('/api/alerts', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/api/alerts/snapshot', async (req: Request, res: Response) => {
+router.get('/api/alerts/snapshot', requireAuthentication, async (req: Request, res: Response) => {
   try {
-    const currentUserId = req.session?.userId;
+    const currentUserId = req.user?.id;
     if (!currentUserId) {
-      res.json([]);
-      return;
+      return res.status(401).json({ message: 'Authentication required' });
     }
 
     const user = await storage.getUserById(currentUserId);
     if (!user) {
-      res.json([]);
-      return;
+      return res.status(404).json({ message: 'User not found' });
     }
 
     const since = req.query.since as string;
@@ -74,9 +70,8 @@ router.get('/api/alerts/snapshot', async (req: Request, res: Response) => {
 
     console.log(`📸 Snapshot request: userId=${currentUserId}, since=${since}, seq=${sinceSeq}`);
 
-    const monitoredGames = await storage.getAllMonitoredGames();
-    const userMonitoredGames = monitoredGames.filter(g => g.userId === currentUserId);
-    const monitoredGameIds = userMonitoredGames.map(g => g.gameId);
+    const monitoredGames = await storage.getUserMonitoredTeams(currentUserId);
+    const monitoredGameIds = monitoredGames.map(g => g.gameId);
 
     if (monitoredGameIds.length === 0) {
       res.json([]);
@@ -128,22 +123,36 @@ router.get('/api/alerts/count', async (req: Request, res: Response) => {
   }
 });
 
-router.delete('/api/alerts/:alertId', async (req: Request, res: Response) => {
+router.delete('/api/alerts/:alertId', requireAuthentication, async (req: Request, res: Response) => {
   try {
     const { alertId } = req.params;
+    const currentUserId = req.user?.id;
+
+    if (!currentUserId) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
 
     if (!alertId) {
       return res.status(400).json({ message: 'Alert ID is required' });
     }
 
-    const result = await db.execute(sql`
+    const alertCheck = await db.execute(sql`
+      SELECT user_id FROM alerts WHERE id = ${alertId}
+    `);
+    
+    if (alertCheck.rows.length === 0) {
+      return res.status(404).json({ message: 'Alert not found' });
+    }
+    
+    const alertUserId = alertCheck.rows[0]?.user_id;
+    if (alertUserId && alertUserId !== currentUserId) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    await db.execute(sql`
       DELETE FROM alerts
       WHERE id = ${alertId}
     `);
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({ message: 'Alert not found' });
-    }
 
     res.json({ message: 'Alert deleted successfully' });
   } catch (error) {

@@ -7,23 +7,37 @@ import { updateUserProfileSchema } from "../types";
 
 const router = Router();
 
-router.get('/api/user/:userId', async (req: Request, res: Response) => {
+router.get('/api/user/:userId', requireAuthentication, async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
+    const currentUserId = req.user?.id;
+    
+    if (userId !== currentUserId) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    
     const user = await storage.getUserById(userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.json(user);
+    
+    const safeUser = sanitizeUserForClient(user);
+    res.json(safeUser);
   } catch (error) {
     console.error('Error fetching user:', error);
     res.status(500).json({ message: 'Failed to fetch user' });
   }
 });
 
-router.get('/api/user/:userId/telegram', async (req: Request, res: Response) => {
+router.get('/api/user/:userId/telegram', requireAuthentication, async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
+    const currentUserId = req.user?.id;
+    
+    if (userId !== currentUserId) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    
     const user = await storage.getUserById(userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -39,9 +53,15 @@ router.get('/api/user/:userId/telegram', async (req: Request, res: Response) => 
   }
 });
 
-router.post('/api/user/:userId/telegram', async (req: Request, res: Response) => {
+router.post('/api/user/:userId/telegram', requireAuthentication, async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
+    const currentUserId = req.user?.id;
+    
+    if (userId !== currentUserId) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    
     const { botToken, chatId, enabled } = req.body;
 
     await storage.updateUserTelegramSettings(userId, botToken, chatId, enabled);
@@ -121,7 +141,7 @@ router.post('/api/settings', requireAuthentication, async (req: Request, res: Re
 router.get('/api/user/:userId/alert-preferences', requireAuthentication, async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
-    const currentUserId = req.user?.id || req.session?.userId;
+    const currentUserId = req.user?.id;
     
     if (userId !== currentUserId) {
       return res.status(403).json({ message: 'Access denied' });
@@ -138,7 +158,7 @@ router.get('/api/user/:userId/alert-preferences', requireAuthentication, async (
 router.get('/api/user/:userId/alert-preferences/:sport', requireAuthentication, async (req: Request, res: Response) => {
   try {
     const { userId, sport } = req.params;
-    const currentUserId = req.user?.id || req.session?.userId;
+    const currentUserId = req.user?.id;
     
     if (userId !== currentUserId) {
       return res.status(403).json({ message: 'Access denied' });
@@ -204,7 +224,7 @@ router.post('/api/user/:userId/alert-preferences/bulk', requireUserAuth, async (
 router.get('/api/user/:userId/monitored-games', requireAuthentication, async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
-    const currentUserId = req.user?.id || req.session?.userId;
+    const currentUserId = req.user?.id;
     
     if (userId !== currentUserId) {
       return res.status(403).json({ message: 'Access denied' });
@@ -221,7 +241,7 @@ router.get('/api/user/:userId/monitored-games', requireAuthentication, async (re
 router.post('/api/user/:userId/monitored-games', requireAuthentication, async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
-    const currentUserId = req.user?.id || req.session?.userId;
+    const currentUserId = req.user?.id;
     
     if (userId !== currentUserId) {
       return res.status(403).json({ message: 'Access denied' });
@@ -251,6 +271,12 @@ router.post('/api/user/:userId/monitored-games', requireAuthentication, async (r
 router.delete('/api/user/:userId/monitored-games/:gameId', requireAuthentication, async (req: Request, res: Response) => {
   try {
     const { userId, gameId } = req.params;
+    const currentUserId = req.user?.id;
+    
+    if (userId !== currentUserId) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    
     await storage.removeUserMonitoredTeam(userId, gameId);
     res.json({ message: 'Game removed from monitoring' });
   } catch (error) {
