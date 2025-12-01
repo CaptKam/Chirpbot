@@ -1,22 +1,20 @@
-
 // Timezone utility for West Coast (Pacific Time)
 export function getPacificDate(date?: Date): string {
   const targetDate = date || new Date();
 
-  // Use Intl.DateTimeFormat for more reliable timezone handling
-  const formatter = new Intl.DateTimeFormat('en-US', {
+  // Convert to Pacific Time and format as YYYY-MM-DD
+  const pacificTimeString = targetDate.toLocaleString('en-US', {
     timeZone: 'America/Los_Angeles',
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit'
+    day: '2-digit',
+    hour12: false
   });
 
-  const parts = formatter.formatToParts(targetDate);
-  const year = parts.find(p => p.type === 'year')?.value || '';
-  const month = parts.find(p => p.type === 'month')?.value || '';
-  const day = parts.find(p => p.type === 'day')?.value || '';
+  // Parse the localized string (format: MM/DD/YYYY, HH:MM:SS)
+  const [datePart] = pacificTimeString.split(', ');
+  const [month, day, year] = datePart.split('/');
 
-  // Return in YYYY-MM-DD format
   return `${year}-${month}-${day}`;
 }
 

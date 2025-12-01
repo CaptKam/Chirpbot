@@ -196,7 +196,7 @@ export default function Calendar() {
   const [teamFilter, setTeamFilter] = useState<{homeTeam?: string, awayTeam?: string} | null>(null);
 
   // Fetch server's Pacific date to ensure timezone alignment
-  const { data: serverDate, isError: serverDateError, isLoading: serverDateLoading } = useQuery({
+  const { data: serverDate } = useQuery({
     queryKey: ["/api/server-date"],
     queryFn: async () => {
       const response = await fetch("/api/server-date", {
@@ -206,8 +206,6 @@ export default function Calendar() {
       return response.json();
     },
     staleTime: 60000,
-    retry: 2,
-    retryDelay: 1000,
   });
 
   // Initialize selectedDates - will be updated when server date loads
@@ -215,39 +213,18 @@ export default function Calendar() {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    // Timeout fallback - if server date doesn't load in 3 seconds, use client date
-    const timeout = setTimeout(() => {
-      if (!isInitialized) {
-        console.warn('⚠️ Server date timeout - using client date as fallback');
-        const dates = new Set<string>();
-        const clientNow = new Date();
-        for (let i = 0; i < 4; i++) {
-          dates.add(format(addDays(clientNow, i), 'yyyy-MM-dd'));
-        }
-        setSelectedDates(dates);
-        setIsInitialized(true);
-      }
-    }, 3000);
-
-    if ((serverDate?.date || serverDateError) && !isInitialized) {
-      clearTimeout(timeout);
+    if (serverDate?.date && !isInitialized) {
       const dates = new Set<string>();
-      
-      // Use server date if available, otherwise use client date
-      const baseDate = serverDate?.date 
-        ? parseISO(serverDate.date + 'T12:00:00')
-        : new Date();
-      
+      // Parse the date string at noon to avoid timezone shifts
+      const serverNow = parseISO(serverDate.date + 'T12:00:00');
       for (let i = 0; i < 4; i++) {
-        dates.add(format(addDays(baseDate, i), 'yyyy-MM-dd'));
+        dates.add(format(addDays(serverNow, i), 'yyyy-MM-dd'));
       }
       setSelectedDates(dates);
       setIsInitialized(true);
-      console.log('📅 Calendar initialized:', serverDate?.date ? 'server date' : 'client date', 'Selected dates:', Array.from(dates));
+      console.log('📅 Calendar initialized with server date:', serverDate.date, 'Selected dates:', Array.from(dates));
     }
-
-    return () => clearTimeout(timeout);
-  }, [serverDate?.date, serverDateError, isInitialized]);
+  }, [serverDate?.date, isInitialized]);
 
   // Fetch games for all selected dates - only when initialized
   const { data: allGamesData, isLoading: isLoadingGames } = useQuery({
@@ -256,26 +233,15 @@ export default function Calendar() {
     queryFn: async ({ queryKey }) => {
       const [_, params] = queryKey as [string, { sport: string; dates: string[] }];
 
-      console.log('📅 Fetching games for:', params.sport, 'dates:', params.dates);
-
       // Fetch games for each selected date
       const promises = params.dates.map(async (date) => {
-        try {
-          const searchParams = new URLSearchParams({ sport: params.sport, date });
-          const response = await fetch(`/api/games/today?${searchParams}`, {
-            credentials: "include",
-          });
-          if (!response.ok) {
-            console.warn(`Failed to fetch ${params.sport} games for ${date}: ${response.status}`);
-            return { date, games: [] };
-          }
-          const data = await response.json();
-          console.log(`✅ Fetched ${data.games?.length || 0} ${params.sport} games for ${date}`);
-          return { date, games: data.games || [] };
-        } catch (error) {
-          console.error(`Error fetching games for ${date}:`, error);
-          return { date, games: [] };
-        }
+        const searchParams = new URLSearchParams({ sport: params.sport, date });
+        const response = await fetch(`/api/games/today?${searchParams}`, {
+          credentials: "include",
+        });
+        if (!response.ok) throw new Error("Failed to fetch games");
+        const data = await response.json();
+        return { date, games: data.games || [] };
       });
 
       const results = await Promise.all(promises);
@@ -285,11 +251,8 @@ export default function Calendar() {
         games.map((game: any) => ({ ...game, fetchDate: date }))
       );
 
-      console.log(`📊 Total games loaded: ${allGames.length} for ${params.sport}`);
       return { games: allGames, dates: params.dates };
     },
-    staleTime: 30000, // 30 seconds
-    gcTime: 60000, // 1 minute
   });
 
   const allGames = allGamesData?.games || [];

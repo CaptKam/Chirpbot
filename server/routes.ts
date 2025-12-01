@@ -8,7 +8,7 @@ import csrf from "csrf";
 import { storage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
-import { insertTeamSchema, insertSettingsSchema, insertUserSchema, insertUserMonitoredTeamSchema } from "@shared/schema";
+import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
 import { z } from "zod";
 import { oddsApiService } from './services/odds-api-service';
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
@@ -21,12 +21,6 @@ import { eq, desc, and, gte, inArray } from "drizzle-orm";
 // Migration Adapter replaces direct CalendarSyncService usage
 // import { getCalendarSyncService } from "./services/calendar-sync-service";
 import { unifiedAIProcessor } from './services/unified-ai-processor';
-import authController from './controllers/auth.controller';
-import userController from './controllers/user.controller';
-import gamesController from './controllers/games.controller';
-import alertsController from './controllers/alerts.controller';
-import adminController from './controllers/admin.controller';
-import integrationsController from './controllers/integrations.controller';
 
 // Extend session data interface
 declare module 'express-session' {
@@ -227,14 +221,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   // SECURITY FIX: Move request deduplication AFTER session parsing so cache keys include userId
   app.use(unifiedDeduplicator.requestMiddleware());
-
-  // Mount modular controllers
-  app.use(authController);
-  app.use(userController);
-  app.use(gamesController);
-  app.use(alertsController);
-  app.use(adminController);
-  app.use(integrationsController);
 
   // MigrationAdapter diagnostic endpoint for runtime verification
   app.get('/api/diagnostics/ingestion-status', async (req, res) => {
@@ -1204,8 +1190,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       const { sport = 'MLB', date } = req.query;
 
-      console.log(`📅 /api/games/today called: sport=${sport}, date=${date}`);
-
       // Validate sport parameter
       if (typeof sport !== 'string' || sport.includes('[object')) {
         return res.status(400).json({ error: 'Invalid sport parameter', games: [], date: new Date().toISOString().split('T')[0] });
@@ -1214,37 +1198,24 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const calendarSyncService = getCalendarSyncService();
       
       if (!calendarSyncService) {
-        console.warn('⚠️ CalendarSyncService not available');
         return res.status(503).json({
           error: 'Calendar service not available',
-          message: 'Calendar service is initializing',
-          games: []
+          message: 'Calendar service is initializing'
         });
       }
 
       const { getPacificDate } = await import('./utils/timezone');
       const targetDate = (date as string) || getPacificDate();
       
-      console.log(`🔍 Fetching games for ${sport.toUpperCase()} on ${targetDate}`);
-      
       // Get games from CalendarSyncService (avoids rate limiting)
       const sportUpper = sport.toString().toUpperCase();
       const allGames = calendarSyncService.getCalendarData(sportUpper);
       
-      console.log(`📊 CalendarSyncService returned ${allGames.length} ${sportUpper} games`);
-      
-      // Filter by date - check multiple date fields
+      // Filter by date
       const games = allGames.filter((game: any) => {
-        const gameStartTime = game.startTime || '';
-        const gameDate = gameStartTime.split('T')[0] || targetDate;
-        const matches = gameDate === targetDate;
-        if (!matches) {
-          console.log(`⏭️ Skipping game ${game.gameId}: date ${gameDate} doesn't match ${targetDate}`);
-        }
-        return matches;
+        const gameDate = game.gameDate?.split('T')[0] || game.date?.split('T')[0] || targetDate;
+        return gameDate === targetDate;
       });
-
-      console.log(`✅ Filtered to ${games.length} games for date ${targetDate}`);
 
       // Enrich games with timeout/possession tracking data for football sports
       const enrichedGames = await Promise.all(
@@ -1253,48 +1224,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       res.json({ games: enrichedGames, date: targetDate });
     } catch (error) {
-      console.error('❌ Error fetching games:', error);
-      res.status(500).json({ message: 'Failed to fetch games', games: [], error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error fetching games:', error);
+      res.status(500).json({ message: 'Failed to fetch games' });
     }
   });
-
-  // Helper function to enrich games with tracking data
-  async function enrichGameWithTrackingData(game: any): Promise<any> {
-    try {
-      // For football sports, add timeout/possession data
-      const footballSports = ['NFL', 'NCAAF', 'CFL'];
-      if (footballSports.includes(game.sport?.toUpperCase())) {
-        const { getEngineLifecycleManager } = await import('./services/engine-lifecycle-manager');
-        const engineManager = getEngineLifecycleManager();
-        const engine = engineManager.getEngine(game.sport.toUpperCase());
-        
-        if (engine) {
-          // Add timeout data
-          if (engine.getTimeoutStats) {
-            const timeoutStats = engine.getTimeoutStats(game.gameId);
-            if (timeoutStats) {
-              game.homeTimeoutsRemaining = timeoutStats.homeTimeoutsRemaining;
-              game.awayTimeoutsRemaining = timeoutStats.awayTimeoutsRemaining;
-            }
-          }
-          
-          // Add possession data
-          if (engine.getPossessionStats) {
-            const possessionStats = engine.getPossessionStats(game.gameId);
-            if (possessionStats) {
-              game.possession = possessionStats.currentPossession;
-              game.homePossessions = possessionStats.homePossessions;
-              game.awayPossessions = possessionStats.awayPossessions;
-            }
-          }
-        }
-      }
-      return game;
-    } catch (error) {
-      console.warn(`⚠️ Failed to enrich game ${game.gameId} with tracking data:`, error);
-      return game;
-    }
-  }
 
   // Multi-day games route with enriched timeout/possession data
   app.get('/api/games/multi-day', async (req, res) => {
@@ -5265,134 +5198,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error('Error fetching AI health and metrics:', error);
       res.status(500).json({ error: 'Failed to fetch AI health and metrics' });
-    }
-  });
-
-  // ====== GAME MONITORING ROUTES ======
-
-  // POST /api/games/monitor - Add a game to user's monitored games
-  app.post('/api/games/monitor', requireUserAuth, async (req, res) => {
-    try {
-      const userId = req.session?.userId;
-      if (!userId) {
-        return res.status(401).json({ error: 'User ID required' });
-      }
-
-      // Validate request body
-      const validationResult = insertUserMonitoredTeamSchema.safeParse(req.body);
-      if (!validationResult.success) {
-        return res.status(400).json({
-          error: 'Validation failed',
-          details: validationResult.error.flatten().fieldErrors,
-          timestamp: new Date().toISOString()
-        });
-      }
-
-      const { gameId, sport, homeTeamName, awayTeamName } = validationResult.data;
-
-      // Check if game is already monitored by this user
-      const isMonitored = await storage.isGameMonitoredByUser(userId, gameId);
-      if (isMonitored) {
-        return res.status(409).json({
-          error: 'Game already monitored',
-          message: `Game ${gameId} is already being monitored by this user`,
-          timestamp: new Date().toISOString()
-        });
-      }
-
-      // Add game to monitored list
-      const monitoredGame = await storage.addUserMonitoredTeam(
-        userId,
-        gameId,
-        sport,
-        homeTeamName,
-        awayTeamName
-      );
-
-      console.log(`✅ Game monitoring added: user=${userId}, game=${gameId}, sport=${sport}`);
-
-      res.status(201).json({
-        success: true,
-        data: monitoredGame,
-        message: `Now monitoring ${homeTeamName} vs ${awayTeamName}`,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error: any) {
-      console.error('❌ Error adding game to monitored list:', error);
-      res.status(500).json({
-        error: 'Failed to monitor game',
-        message: error.message,
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
-
-  // GET /api/games/monitored - Get all games monitored by user
-  app.get('/api/games/monitored', requireUserAuth, async (req, res) => {
-    try {
-      const userId = req.session?.userId;
-      if (!userId) {
-        return res.status(401).json({ error: 'User ID required' });
-      }
-
-      const monitoredGames = await storage.getUserMonitoredGames(userId);
-
-      res.json({
-        success: true,
-        data: monitoredGames,
-        count: monitoredGames.length,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error: any) {
-      console.error('❌ Error fetching monitored games:', error);
-      res.status(500).json({
-        error: 'Failed to fetch monitored games',
-        message: error.message,
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
-
-  // DELETE /api/games/monitor/:gameId - Remove a game from monitoring
-  app.delete('/api/games/monitor/:gameId', requireUserAuth, async (req, res) => {
-    try {
-      const userId = req.session?.userId;
-      if (!userId) {
-        return res.status(401).json({ error: 'User ID required' });
-      }
-
-      const { gameId } = req.params;
-      if (!gameId) {
-        return res.status(400).json({ error: 'Game ID is required' });
-      }
-
-      // Check if game is monitored by this user before removing
-      const isMonitored = await storage.isGameMonitoredByUser(userId, gameId);
-      if (!isMonitored) {
-        return res.status(404).json({
-          error: 'Game not monitored',
-          message: `Game ${gameId} is not being monitored by this user`,
-          timestamp: new Date().toISOString()
-        });
-      }
-
-      // Remove game from monitored list
-      await storage.removeUserMonitoredGame(userId, gameId);
-
-      console.log(`✅ Game monitoring removed: user=${userId}, game=${gameId}`);
-
-      res.json({
-        success: true,
-        message: `Game ${gameId} removed from monitoring`,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error: any) {
-      console.error('❌ Error removing game from monitored list:', error);
-      res.status(500).json({
-        error: 'Failed to remove game from monitoring',
-        message: error.message,
-        timestamp: new Date().toISOString()
-      });
     }
   });
 
