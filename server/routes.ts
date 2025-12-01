@@ -8,7 +8,7 @@ import csrf from "csrf";
 import { storage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
-import { insertTeamSchema, insertSettingsSchema, insertUserSchema } from "@shared/schema";
+import { insertTeamSchema, insertSettingsSchema, insertUserSchema, insertUserMonitoredTeamSchema } from "@shared/schema";
 import { z } from "zod";
 import { oddsApiService } from './services/odds-api-service';
 import { sendTelegramAlert, testTelegramConnection, type TelegramConfig } from "./services/telegram";
@@ -5251,6 +5251,134 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error('Error fetching AI health and metrics:', error);
       res.status(500).json({ error: 'Failed to fetch AI health and metrics' });
+    }
+  });
+
+  // ====== GAME MONITORING ROUTES ======
+
+  // POST /api/games/monitor - Add a game to user's monitored games
+  app.post('/api/games/monitor', requireUserAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'User ID required' });
+      }
+
+      // Validate request body
+      const validationResult = insertUserMonitoredTeamSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({
+          error: 'Validation failed',
+          details: validationResult.error.flatten().fieldErrors,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      const { gameId, sport, homeTeamName, awayTeamName } = validationResult.data;
+
+      // Check if game is already monitored by this user
+      const isMonitored = await storage.isGameMonitoredByUser(userId, gameId);
+      if (isMonitored) {
+        return res.status(409).json({
+          error: 'Game already monitored',
+          message: `Game ${gameId} is already being monitored by this user`,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Add game to monitored list
+      const monitoredGame = await storage.addUserMonitoredTeam(
+        userId,
+        gameId,
+        sport,
+        homeTeamName,
+        awayTeamName
+      );
+
+      console.log(`✅ Game monitoring added: user=${userId}, game=${gameId}, sport=${sport}`);
+
+      res.status(201).json({
+        success: true,
+        data: monitoredGame,
+        message: `Now monitoring ${homeTeamName} vs ${awayTeamName}`,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Error adding game to monitored list:', error);
+      res.status(500).json({
+        error: 'Failed to monitor game',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // GET /api/games/monitored - Get all games monitored by user
+  app.get('/api/games/monitored', requireUserAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'User ID required' });
+      }
+
+      const monitoredGames = await storage.getUserMonitoredGames(userId);
+
+      res.json({
+        success: true,
+        data: monitoredGames,
+        count: monitoredGames.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Error fetching monitored games:', error);
+      res.status(500).json({
+        error: 'Failed to fetch monitored games',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // DELETE /api/games/monitor/:gameId - Remove a game from monitoring
+  app.delete('/api/games/monitor/:gameId', requireUserAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'User ID required' });
+      }
+
+      const { gameId } = req.params;
+      if (!gameId) {
+        return res.status(400).json({ error: 'Game ID is required' });
+      }
+
+      // Check if game is monitored by this user before removing
+      const isMonitored = await storage.isGameMonitoredByUser(userId, gameId);
+      if (!isMonitored) {
+        return res.status(404).json({
+          error: 'Game not monitored',
+          message: `Game ${gameId} is not being monitored by this user`,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Remove game from monitored list
+      await storage.removeUserMonitoredGame(userId, gameId);
+
+      console.log(`✅ Game monitoring removed: user=${userId}, game=${gameId}`);
+
+      res.json({
+        success: true,
+        message: `Game ${gameId} removed from monitoring`,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Error removing game from monitored list:', error);
+      res.status(500).json({
+        error: 'Failed to remove game from monitoring',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
     }
   });
 
