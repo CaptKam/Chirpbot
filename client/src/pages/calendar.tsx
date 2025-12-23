@@ -457,6 +457,9 @@ export default function Calendar() {
         awayTeam: game.awayTeam.name
       });
 
+      // Add to local Set for immediate UI feedback
+      newSelected.add(gameId);
+
       addMonitoringMutation.mutate({
         gameId: validGameId,
         sport: activeSport.toUpperCase(),
@@ -468,7 +471,7 @@ export default function Calendar() {
   };
 
   // Calculate selected count only for current sport's games
-  const selectedCount = games.filter(game => selectedGames.has(game.gameId)).length;
+  const selectedCount = games.filter(game => selectedGames.has(game.gameId || game.id)).length;
 
   const getWeatherIcon = (condition: string) => {
     switch (condition.toLowerCase()) {
