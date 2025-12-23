@@ -190,7 +190,7 @@ function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?
 
 export default function Calendar() {
   const { toast } = useToast();
-  const [activeSport, setActiveSport] = useState("MLB");
+  const [activeSport, setActiveSport] = useState("NBA");
   const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [teamFilter, setTeamFilter] = useState<{homeTeam?: string, awayTeam?: string} | null>(null);
