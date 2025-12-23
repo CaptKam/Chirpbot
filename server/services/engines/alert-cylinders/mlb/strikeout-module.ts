@@ -165,7 +165,6 @@ export default class StrikeoutModule extends BaseAlertModule {
     };
 
     return alertResult;
-    };
   }
 
   calculateProbability(gameState: GameState): number {
