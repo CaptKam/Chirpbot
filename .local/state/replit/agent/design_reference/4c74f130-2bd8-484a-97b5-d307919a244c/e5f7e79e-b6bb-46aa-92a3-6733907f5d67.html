@@ -1,0 +1,587 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChirpBot V2 - Sports Alert Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'chirp-blue': '#1D2E5F',
+                        'chirp-red': '#E23237',
+                        'chirp-gray': '#F3F4F6',
+                        'chirp-dark': '#4A4A4A'
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-chirp-gray font-sans">
+    <!-- @COMPONENT: App [main app container] -->
+    <div class="max-w-md mx-auto bg-white min-h-screen relative">
+        
+        <!-- @COMPONENT: Header [app header with logo and notifications] -->
+        <header class="bg-chirp-blue text-white p-4 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-chirp-red rounded-full flex items-center justify-center">
+                    <i class="fas fa-bolt text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-black uppercase tracking-wide">ChirpBot</h1>
+                    <p class="text-blue-200 text-xs font-medium">V2 Alert System</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <!-- Live indicator -->
+                <div class="bg-chirp-red px-3 py-1 rounded-full">
+                    <span class="text-white text-xs font-bold uppercase tracking-wide">
+                        <i class="fas fa-circle text-red-300 text-[6px] mr-1 animate-pulse"></i>
+                        LIVE
+                    </span>
+                </div>
+                <button class="relative">
+                    <i class="fas fa-bell text-xl"></i>
+                    <span class="absolute -top-1 -right-1 bg-chirp-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+                </button>
+            </div>
+        </header>
+        <!-- @END_COMPONENT: Header -->
+
+        <!-- @COMPONENT: MainContent [tabbed content area] -->
+        <div class="pb-20">
+            
+            <!-- Calendar Page Content -->
+            <div id="calendar-page" class="page-content">
+                <!-- Sport Tabs -->
+                <div class="bg-white border-b border-gray-200">
+                    <div class="flex overflow-x-auto">
+                        <button class="sport-tab active px-6 py-4 text-sm font-bold uppercase tracking-wide whitespace-nowrap border-b-2 border-chirp-red text-chirp-red">
+                            MLB
+                        </button>
+                        <button class="sport-tab px-6 py-4 text-sm font-bold uppercase tracking-wide whitespace-nowrap border-b-2 border-transparent text-chirp-dark hover:text-chirp-blue">
+                            NFL
+                        </button>
+                        <button class="sport-tab px-6 py-4 text-sm font-bold uppercase tracking-wide whitespace-nowrap border-b-2 border-transparent text-chirp-dark hover:text-chirp-blue">
+                            NBA
+                        </button>
+                        <button class="sport-tab px-6 py-4 text-sm font-bold uppercase tracking-wide whitespace-nowrap border-b-2 border-transparent text-chirp-dark hover:text-chirp-blue">
+                            NHL
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Teams List -->
+                <div class="p-4 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-black uppercase tracking-wide text-chirp-blue">Monitor Teams</h2>
+                        <span class="text-sm font-medium text-chirp-dark">8/30 Active</span>
+                    </div>
+
+                    <!-- Team Cards -->
+                    <!-- @MAP: teams.map(team => ( -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-4">
+                                <!-- Team logo placeholder -->
+                                <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                                    <span class="text-white font-bold text-lg" data-bind="team.initials">LAD</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-chirp-blue" data-bind="team.name">Los Angeles Dodgers</h3>
+                                    <div class="flex items-center space-x-2 mt-1">
+                                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                                            <i class="fas fa-play text-green-600 mr-1"></i>
+                                            Live
+                                        </span>
+                                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                                            <i class="fas fa-cloud-sun mr-1"></i>
+                                            72°F
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Toggle Switch -->
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer" checked data-event="change:toggleTeamMonitoring">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-chirp-red"></div>
+                            </label>
+                        </div>
+                        
+                        <!-- Game Info -->
+                        <div class="mt-3 pt-3 border-t border-gray-100">
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-chirp-dark">vs San Francisco Giants</span>
+                                <span class="font-medium text-chirp-blue">Bottom 7th • 2 outs</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center">
+                                    <span class="text-white font-bold text-lg">SF</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-chirp-blue">San Francisco Giants</h3>
+                                    <div class="flex items-center space-x-2 mt-1">
+                                        <span class="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs font-medium">
+                                            <i class="fas fa-clock text-gray-600 mr-1"></i>
+                                            Scheduled
+                                        </span>
+                                        <span class="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
+                                            <i class="fas fa-cloud-rain mr-1"></i>
+                                            65°F
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-chirp-red"></div>
+                            </label>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-gray-100">
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-chirp-dark">@ Los Angeles Dodgers</span>
+                                <span class="font-medium text-chirp-blue">Tomorrow 7:10 PM</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 bg-yellow-600 rounded-full flex items-center justify-center">
+                                    <span class="text-white font-bold text-lg">SD</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-chirp-blue">San Diego Padres</h3>
+                                    <div class="flex items-center space-x-2 mt-1">
+                                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                                            <i class="fas fa-play text-green-600 mr-1"></i>
+                                            Live
+                                        </span>
+                                        <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">
+                                            <i class="fas fa-sun mr-1"></i>
+                                            78°F
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer" checked>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-chirp-red"></div>
+                            </label>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-gray-100">
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-chirp-dark">vs Arizona Diamondbacks</span>
+                                <span class="font-medium text-chirp-blue">Top 3rd • 1 out</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_MAP )) -->
+                </div>
+            </div>
+
+            <!-- Alerts Page Content -->
+            <div id="alerts-page" class="page-content hidden">
+                <!-- Filters -->
+                <div class="bg-white border-b border-gray-200 p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-lg font-black uppercase tracking-wide text-chirp-blue">Live Alerts</h2>
+                        <button class="bg-chirp-red text-white px-3 py-1 rounded-full text-xs font-bold uppercase">
+                            <i class="fas fa-filter mr-1"></i>
+                            Filter
+                        </button>
+                    </div>
+                    <div class="flex space-x-2 overflow-x-auto">
+                        <button class="bg-chirp-blue text-white px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap">All Sports</button>
+                        <button class="bg-gray-100 text-chirp-dark px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap">High Impact</button>
+                        <button class="bg-gray-100 text-chirp-dark px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap">AI Verified</button>
+                    </div>
+                </div>
+
+                <!-- Alerts Feed -->
+                <div class="p-4 space-y-4">
+                    <!-- @MAP: alerts.map(alert => ( -->
+                    <div class="bg-white rounded-xl shadow-sm border-l-4 border-chirp-red p-4">
+                        <div class="flex items-start justify-between mb-2">
+                            <div class="flex items-center space-x-2">
+                                <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-bold uppercase">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    RISP Alert
+                                </span>
+                                <span class="text-xs text-chirp-dark" data-bind="alert.timestamp">2 min ago</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <span class="text-yellow-500"><i class="fas fa-star"></i></span>
+                                <span class="text-xs font-medium text-chirp-dark">95% AI</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h3 class="font-bold text-chirp-blue mb-1" data-bind="alert.title">Dodgers - Bases Loaded Situation</h3>
+                            <p class="text-sm text-chirp-dark" data-bind="alert.description">
+                                Mookie Betts at bat with runners in scoring position. Historical data shows 67% success rate in similar situations.
+                            </p>
+                        </div>
+
+                        <!-- AI Context -->
+                        <div class="bg-blue-50 rounded-lg p-3 mb-3">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <i class="fas fa-robot text-blue-600"></i>
+                                <span class="text-xs font-bold uppercase text-blue-800 tracking-wide">AI Analysis</span>
+                            </div>
+                            <p class="text-sm text-blue-800" data-bind="alert.aiContext">
+                                Weather conditions favor hitters (tailwind 8mph). Betts has .340 BA against right-handed pitching this season with RISP.
+                            </p>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-4">
+                                <span class="text-sm font-medium text-chirp-dark">LAD vs SF</span>
+                                <span class="text-sm text-chirp-blue">Bottom 7th</span>
+                            </div>
+                            <button class="text-chirp-red hover:text-red-700">
+                                <i class="fas fa-share-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border-l-4 border-yellow-500 p-4">
+                        <div class="flex items-start justify-between mb-2">
+                            <div class="flex items-center space-x-2">
+                                <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-bold uppercase">
+                                    <i class="fas fa-football-ball mr-1"></i>
+                                    Red Zone
+                                </span>
+                                <span class="text-xs text-chirp-dark">5 min ago</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <span class="text-yellow-500"><i class="fas fa-star"></i></span>
+                                <span class="text-xs font-medium text-chirp-dark">89% AI</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h3 class="font-bold text-chirp-blue mb-1">Chiefs - Goal Line Stand</h3>
+                            <p class="text-sm text-chirp-dark">
+                                4th down and goal from the 2-yard line. Chiefs defense has allowed only 52% success rate in similar situations this season.
+                            </p>
+                        </div>
+
+                        <div class="bg-yellow-50 rounded-lg p-3 mb-3">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <i class="fas fa-robot text-yellow-600"></i>
+                                <span class="text-xs font-bold uppercase text-yellow-800 tracking-wide">AI Analysis</span>
+                            </div>
+                            <p class="text-sm text-yellow-800">
+                                Home field advantage and crowd noise factor. Chiefs defense ranked #3 in red zone efficiency this season.
+                            </p>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-4">
+                                <span class="text-sm font-medium text-chirp-dark">KC vs BUF</span>
+                                <span class="text-sm text-chirp-blue">4th Quarter</span>
+                            </div>
+                            <button class="text-chirp-red hover:text-red-700">
+                                <i class="fas fa-share-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border-l-4 border-green-500 p-4">
+                        <div class="flex items-start justify-between mb-2">
+                            <div class="flex items-center space-x-2">
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-bold uppercase">
+                                    <i class="fas fa-basketball-ball mr-1"></i>
+                                    Clutch Time
+                                </span>
+                                <span class="text-xs text-chirp-dark">12 min ago</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <span class="text-yellow-500"><i class="fas fa-star"></i></span>
+                                <span class="text-xs font-medium text-chirp-dark">92% AI</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h3 class="font-bold text-chirp-blue mb-1">Lakers - Final 2 Minutes</h3>
+                            <p class="text-sm text-chirp-dark">
+                                LeBron James shooting critical free throws with 1:43 remaining. Lakers trailing by 2 points.
+                            </p>
+                        </div>
+
+                        <div class="bg-green-50 rounded-lg p-3 mb-3">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <i class="fas fa-robot text-green-600"></i>
+                                <span class="text-xs font-bold uppercase text-green-800 tracking-wide">AI Analysis</span>
+                            </div>
+                            <p class="text-sm text-green-800">
+                                LeBron shoots 84% from the line in clutch situations this season. High probability outcome scenario.
+                            </p>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-4">
+                                <span class="text-sm font-medium text-chirp-dark">LAL vs BOS</span>
+                                <span class="text-sm text-chirp-blue">4th Quarter</span>
+                            </div>
+                            <button class="text-chirp-red hover:text-red-700">
+                                <i class="fas fa-share-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- @END_MAP )) -->
+                </div>
+            </div>
+
+            <!-- Settings Page Content -->
+            <div id="settings-page" class="page-content hidden">
+                <!-- Sport Settings Tabs -->
+                <div class="bg-white border-b border-gray-200">
+                    <div class="flex overflow-x-auto">
+                        <button class="sport-tab active px-6 py-4 text-sm font-bold uppercase tracking-wide whitespace-nowrap border-b-2 border-chirp-red text-chirp-red">
+                            MLB
+                        </button>
+                        <button class="sport-tab px-6 py-4 text-sm font-bold uppercase tracking-wide whitespace-nowrap border-b-2 border-transparent text-chirp-dark hover:text-chirp-blue">
+                            NFL
+                        </button>
+                        <button class="sport-tab px-6 py-4 text-sm font-bold uppercase tracking-wide whitespace-nowrap border-b-2 border-transparent text-chirp-dark hover:text-chirp-blue">
+                            NBA
+                        </button>
+                        <button class="sport-tab px-6 py-4 text-sm font-bold uppercase tracking-wide whitespace-nowrap border-b-2 border-transparent text-chirp-dark hover:text-chirp-blue">
+                            NHL
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Settings Content -->
+                <div class="p-4 space-y-6">
+                    <!-- Alert Types Section -->
+                    <div>
+                        <h2 class="text-lg font-black uppercase tracking-wide text-chirp-blue mb-4">Alert Types</h2>
+                        <div class="space-y-4">
+                            
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h3 class="font-bold text-chirp-blue">Runners in Scoring Position</h3>
+                                        <p class="text-sm text-chirp-dark mt-1">Alerts when team has runners on 2nd or 3rd base</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer" checked data-event="change:toggleAlertType">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-chirp-red"></div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h3 class="font-bold text-chirp-blue">Home Run Situations</h3>
+                                        <p class="text-sm text-chirp-dark mt-1">High-leverage at-bats with power hitters</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer" checked>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-chirp-red"></div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h3 class="font-bold text-chirp-blue">Late Inning Pressure</h3>
+                                        <p class="text-sm text-chirp-dark mt-1">Critical situations in 7th inning or later</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-chirp-red"></div>
+                                    </label>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- AI Settings Section -->
+                    <div>
+                        <h2 class="text-lg font-black uppercase tracking-wide text-chirp-blue mb-4">AI Analysis</h2>
+                        
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="font-bold text-chirp-blue">AI Context Enhancement</h3>
+                                    <p class="text-sm text-chirp-dark mt-1">Add AI analysis to all alerts</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" class="sr-only peer" checked data-event="change:toggleAI">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-chirp-red"></div>
+                                </label>
+                            </div>
+
+                            <div class="border-t border-gray-100 pt-4">
+                                <label class="block text-sm font-medium text-chirp-blue mb-2">AI Confidence Threshold</label>
+                                <div class="flex items-center space-x-4">
+                                    <span class="text-sm text-chirp-dark">75%</span>
+                                    <input type="range" min="75" max="100" value="85" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" data-implementation="Should update confidence threshold value">
+                                    <span class="text-sm text-chirp-dark">100%</span>
+                                </div>
+                                <div class="mt-2">
+                                    <span class="text-sm font-medium text-chirp-red">Current: 85%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notification Settings -->
+                    <div>
+                        <h2 class="text-lg font-black uppercase tracking-wide text-chirp-blue mb-4">Notifications</h2>
+                        
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="font-bold text-chirp-blue">Telegram Alerts</h3>
+                                    <p class="text-sm text-chirp-dark mt-1">Send notifications to Telegram bot</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" class="sr-only peer" checked data-event="change:toggleTelegram">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-chirp-red"></div>
+                                </label>
+                            </div>
+
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="font-bold text-chirp-blue">Push Notifications</h3>
+                                    <p class="text-sm text-chirp-dark mt-1">Browser notifications for live alerts</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-chirp-red"></div>
+                                </label>
+                            </div>
+
+                            <div class="border-t border-gray-100 pt-4">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-medium text-chirp-dark">Telegram Bot Status</span>
+                                    <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                                        <i class="fas fa-check-circle mr-1"></i>
+                                        Connected
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+        <!-- @END_COMPONENT: MainContent -->
+
+        <!-- @COMPONENT: BottomNavigation [navigation bar] -->
+        <div class="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200">
+            <div class="flex">
+                <button id="nav-calendar" class="nav-btn flex-1 py-3 px-4 text-center active" data-event="click:navigateToCalendar">
+                    <i class="fas fa-calendar-alt text-xl mb-1 block"></i>
+                    <span class="text-xs font-bold uppercase tracking-wide">Calendar</span>
+                </button>
+                <button id="nav-alerts" class="nav-btn flex-1 py-3 px-4 text-center" data-event="click:navigateToAlerts">
+                    <i class="fas fa-exclamation-triangle text-xl mb-1 block"></i>
+                    <span class="text-xs font-bold uppercase tracking-wide">Alerts</span>
+                </button>
+                <button id="nav-settings" class="nav-btn flex-1 py-3 px-4 text-center" data-event="click:navigateToSettings">
+                    <i class="fas fa-cog text-xl mb-1 block"></i>
+                    <span class="text-xs font-bold uppercase tracking-wide">Settings</span>
+                </button>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: BottomNavigation -->
+
+    </div>
+    <!-- @END_COMPONENT: App -->
+
+    <script>
+        (function() {
+            // Navigation functionality
+            const navButtons = document.querySelectorAll('.nav-btn');
+            const pages = document.querySelectorAll('.page-content');
+
+            function showPage(pageId) {
+                // Hide all pages
+                pages.forEach(page => page.classList.add('hidden'));
+                // Show selected page
+                document.getElementById(pageId).classList.remove('hidden');
+                
+                // Update nav button states
+                navButtons.forEach(btn => btn.classList.remove('active'));
+                document.getElementById(`nav-${pageId.replace('-page', '')}`).classList.add('active');
+            }
+
+            // Add click event listeners
+            document.getElementById('nav-calendar').addEventListener('click', () => showPage('calendar-page'));
+            document.getElementById('nav-alerts').addEventListener('click', () => showPage('alerts-page'));
+            document.getElementById('nav-settings').addEventListener('click', () => showPage('settings-page'));
+
+            // Sport tab functionality for both pages
+            document.querySelectorAll('.sport-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Remove active class from all tabs in the same container
+                    const container = this.closest('.flex');
+                    container.querySelectorAll('.sport-tab').forEach(t => {
+                        t.classList.remove('active', 'border-chirp-red', 'text-chirp-red');
+                        t.classList.add('border-transparent', 'text-chirp-dark');
+                    });
+                    
+                    // Add active class to clicked tab
+                    this.classList.add('active', 'border-chirp-red', 'text-chirp-red');
+                    this.classList.remove('border-transparent', 'text-chirp-dark');
+                    
+                    // TODO: Load sport-specific data
+                });
+            });
+
+            // CSS for navigation states
+            const style = document.createElement('style');
+            style.textContent = `
+                .nav-btn {
+                    color: #4A4A4A;
+                    transition: all 0.2s ease;
+                }
+                .nav-btn.active {
+                    color: #E23237;
+                }
+                .nav-btn:hover {
+                    color: #1D2E5F;
+                }
+                .nav-btn.active:hover {
+                    color: #E23237;
+                }
+            `;
+            document.head.appendChild(style);
+
+            // TODO: Implement team monitoring toggle functionality
+            // TODO: Implement alert filtering
+            // TODO: Implement settings persistence
+            // TODO: Connect to sports data APIs
+            // TODO: Implement OpenAI integration for alert context
+            // TODO: Connect Telegram bot functionality
+            // TODO: Add real-time data updates
+        })();
+    </script>
+</body>
+</html>
