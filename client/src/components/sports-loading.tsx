@@ -111,7 +111,7 @@ export function SportsLoading({
               🏆
             </div>
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-full h-full border-2 border-emerald-500 border-t-transparent rounded-full animate-spin opacity-50"></div>
+              <div className="w-full h-full border-2 border-primaryBlue border-t-transparent rounded-full animate-spin opacity-50"></div>
             </div>
           </div>
         );
@@ -215,18 +215,18 @@ export function SportsLoading({
 
 export function GameCardLoading({ sport = 'MLB' }: { sport?: string }) {
   return (
-    <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+    <div className="bg-surface rounded-xl p-6 border border-[#1E293B]">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           {/* Team loading placeholder with pulse */}
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-slate-700 rounded animate-pulse"></div>
-            <div className="h-4 w-16 bg-slate-700 rounded animate-pulse"></div>
+            <div className="w-8 h-8 bg-[#1E293B] rounded animate-pulse"></div>
+            <div className="h-4 w-16 bg-[#1E293B] rounded animate-pulse"></div>
           </div>
           <div className="text-xl font-bold text-slate-400 animate-pulse">vs</div>
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-slate-700 rounded animate-pulse"></div>
-            <div className="h-4 w-16 bg-slate-700 rounded animate-pulse"></div>
+            <div className="w-8 h-8 bg-[#1E293B] rounded animate-pulse"></div>
+            <div className="h-4 w-16 bg-[#1E293B] rounded animate-pulse"></div>
           </div>
         </div>
         
@@ -238,8 +238,8 @@ export function GameCardLoading({ sport = 'MLB' }: { sport?: string }) {
       
       {/* Game details loading */}
       <div className="mt-4 space-y-2">
-        <div className="h-3 w-24 bg-slate-700 rounded animate-pulse"></div>
-        <div className="h-3 w-32 bg-slate-700 rounded animate-pulse"></div>
+        <div className="h-3 w-24 bg-[#1E293B] rounded animate-pulse"></div>
+        <div className="h-3 w-32 bg-[#1E293B] rounded animate-pulse"></div>
       </div>
     </div>
   );
@@ -295,7 +295,7 @@ export function AlertLoading() {
 
 export function AuthLoading() {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0D1117] to-[#0D0D0D] text-slate-100">
+    <div className="flex items-center justify-center min-h-screen bg-solidBackground text-white">
       <div className="text-center space-y-4">
         <div className="relative">
           {/* Spinning shield */}

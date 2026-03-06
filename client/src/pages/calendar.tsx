@@ -498,7 +498,7 @@ export default function Calendar() {
     <>
 
 
-    <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0D1117] to-[#0D0D0D] text-slate-100 antialiased min-h-screen">
+    <div className="pb-24 sm:pb-28 bg-solidBackground text-white antialiased min-h-screen">
       <PageHeader
         title="ChirpBot"
         subtitle="Game Calendar & Monitoring"
@@ -529,7 +529,7 @@ export default function Calendar() {
                   ? "Next 4 Days"
                   : `${selectedDates.size} Days Selected`}
                 {teamFilter && (
-                  <span className="text-sm font-normal text-emerald-400 ml-2">
+                  <span className="text-sm font-normal text-primaryBlue ml-2">
                     - {teamFilter.homeTeam || teamFilter.awayTeam} games
                   </span>
                 )}
@@ -538,7 +538,7 @@ export default function Calendar() {
                 variant="outline"
                 size="default"
                 onClick={() => setShowDatePicker(!showDatePicker)}
-                className="bg-emerald-500/30 backdrop-blur-sm border-emerald-500/60 ring-2 ring-emerald-500/40 text-emerald-200 hover:bg-emerald-500/40 hover:text-emerald-100 hover:border-emerald-400 hover:ring-emerald-400/60 transition-all duration-200 font-bold shadow-lg shadow-emerald-500/20"
+                className="bg-primaryBlue/30 backdrop-blur-sm border-primaryBlue/60 ring-2 ring-primaryBlue/40 text-blue-200 hover:bg-primaryBlue/40 hover:text-blue-100 hover:border-primaryBlue hover:ring-primaryBlue/60 transition-all duration-200 font-bold shadow-lg shadow-primaryBlue/20"
                 data-testid="button-date-picker"
               >
                 <CalendarIcon className="w-5 h-5 mr-2" />
@@ -556,7 +556,7 @@ export default function Calendar() {
 
         {/* Date Picker */}
         {showDatePicker && (
-          <div className="mb-4 bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5" data-testid="date-picker-container">
+          <div className="mb-4 bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-primaryBlue/5" data-testid="date-picker-container">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-black uppercase tracking-wide text-slate-100">
@@ -569,10 +569,10 @@ export default function Calendar() {
 
               {/* Team Filter Section */}
               {teamFilter && (
-                <div className="p-3 bg-emerald-500/10 backdrop-blur-sm ring-1 ring-emerald-500/30 rounded-lg">
+                <div className="p-3 bg-primaryBlue/10 backdrop-blur-sm ring-1 ring-primaryBlue/30 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <span className="text-sm font-semibold text-emerald-300">Filtering:</span>
+                      <span className="text-sm font-semibold text-blue-300">Filtering:</span>
                       <span className="text-sm text-slate-200">{teamFilter.homeTeam || teamFilter.awayTeam}</span>
                     </div>
                     <Button
@@ -624,7 +624,7 @@ export default function Calendar() {
                       }}
                       className={`h-10 text-sm rounded-xl transition-all duration-200 ${
                         isSelected
-                          ? 'bg-emerald-500/30 text-emerald-300 ring-2 ring-emerald-500/50 backdrop-blur-sm shadow-lg shadow-emerald-500/20 font-bold'
+                          ? 'bg-primaryBlue/30 text-blue-300 ring-2 ring-primaryBlue/50 backdrop-blur-sm shadow-lg shadow-primaryBlue/20 font-bold'
                           : isToday
                           ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/30 backdrop-blur-sm'
                           : 'text-slate-300 hover:text-slate-100 hover:bg-white/5 hover:ring-1 hover:ring-white/10 backdrop-blur-sm'
@@ -654,7 +654,7 @@ export default function Calendar() {
                     // Force refresh the games after updating dates
                     queryClient.invalidateQueries({ queryKey: ["/api/games/multi-day"] });
                   }}
-                  className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 ring-1 ring-emerald-500/20 backdrop-blur-sm rounded-xl transition-all duration-200 font-semibold"
+                  className="text-primaryBlue border-primaryBlue/30 bg-primaryBlue/10 hover:bg-primaryBlue/20 ring-1 ring-primaryBlue/20 backdrop-blur-sm rounded-xl transition-all duration-200 font-semibold"
                   data-testid="button-today"
                 >
                   Next 4 Days
@@ -725,9 +725,9 @@ export default function Calendar() {
             ))}
           </div>
         ) : games.length === 0 ? (
-          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-8 text-center shadow-xl shadow-emerald-500/5" data-testid="empty-state">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center">
-              <CalendarIcon className="w-8 h-8 text-emerald-400" />
+          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-8 text-center shadow-xl shadow-primaryBlue/5" data-testid="empty-state">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primaryBlue/20 ring-1 ring-primaryBlue/30 flex items-center justify-center">
+              <CalendarIcon className="w-8 h-8 text-primaryBlue" />
             </div>
             <h3 className="text-xl font-black uppercase tracking-wide text-slate-100 mb-2">No Games Scheduled</h3>
             <p className="text-sm text-slate-400">Check back later or try a different sport</p>
@@ -748,11 +748,11 @@ export default function Calendar() {
                   <div key={dateStr} className="space-y-3">
                     {selectedDates.size > 1 && (
                       <div className="flex items-center space-x-2 mt-6 first:mt-0">
-                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
-                        <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-400 px-3 py-1 bg-emerald-500/10 rounded-full ring-1 ring-emerald-500/20">
+                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primaryBlue/30 to-transparent" />
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-primaryBlue px-3 py-1 bg-primaryBlue/10 rounded-full ring-1 ring-primaryBlue/20">
                           {isToday ? 'Today' : format(date, 'EEEE, MMM d')}
                         </h3>
-                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primaryBlue/30 to-transparent" />
                       </div>
                     )}
                     {dateGames

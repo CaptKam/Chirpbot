@@ -18,12 +18,12 @@ export function PageHeader({
   children
 }: PageHeaderProps) {
   return (
-    <header className="bg-white/5 backdrop-blur-sm border-b border-white/10 text-slate-100 p-4 flex items-center justify-between">
+    <header className="bg-solidBackground/95 backdrop-blur-xl border-b border-[#1E293B] text-white p-4 flex items-center justify-between sticky top-0 z-30">
       <div className="flex items-center space-x-3">
         <ChirpBotLogo size="md" showText={false} />
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">{title}</h1>
-          <p className="text-emerald-400/80 text-xs font-semibold">{subtitle}</p>
+          <h1 className="text-xl font-black text-white tracking-tight uppercase">{title}</h1>
+          <p className="text-primaryBlue text-[10px] font-bold tracking-widest uppercase">{subtitle}</p>
         </div>
       </div>
       {children}

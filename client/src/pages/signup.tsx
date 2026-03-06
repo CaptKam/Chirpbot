@@ -92,18 +92,18 @@ export default function Signup() {
   const renderFieldStatus = (name: string) => (
     <>
       {fieldValid[name] && !fieldErrors[name] && (
-        <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-emerald-400" aria-hidden="true" />
+        <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primaryBlue" aria-hidden="true" />
       )}
     </>
   );
 
   const inputClass = (name: string) =>
-    `pl-11 min-h-[48px] bg-white/[0.06] border-white/[0.12] text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-emerald-500/30 ${
+    `pl-11 min-h-[48px] bg-white/[0.06] border-white/[0.12] text-white placeholder-slate-500 focus:border-primaryBlue focus:ring-primaryBlue/30 ${
       fieldErrors[name] ? 'border-red-500 ring-1 ring-red-500/30' : ''
-    } ${fieldValid[name] && !fieldErrors[name] ? 'border-emerald-500/40' : ''}`;
+    } ${fieldValid[name] && !fieldErrors[name] ? 'border-primaryBlue/40' : ''}`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0D1117] to-[#0D0D0D] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-solidBackground flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -115,7 +115,7 @@ export default function Signup() {
         </div>
 
         {/* Signup Form — Card surface (#161B22) */}
-        <Card className="bg-[#161B22]/80 backdrop-blur-sm ring-1 ring-white/[0.08] border-0 shadow-xl">
+        <Card className="glass-card border-0 shadow-xl">
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-2xl text-center text-white font-bold">Create Account</CardTitle>
             <CardDescription className="text-center text-slate-300" style={{ fontSize: '15px' }}>
@@ -136,7 +136,7 @@ export default function Signup() {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="First name"
-                    className="min-h-[48px] bg-white/[0.06] border-white/[0.12] text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-emerald-500/30"
+                    className="min-h-[48px] bg-white/[0.06] border-white/[0.12] text-white placeholder-slate-500 focus:border-primaryBlue focus:ring-primaryBlue/30"
                     disabled={isLoading}
                     autoComplete="given-name"
                   />
@@ -152,7 +152,7 @@ export default function Signup() {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="Last name"
-                    className="min-h-[48px] bg-white/[0.06] border-white/[0.12] text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-emerald-500/30"
+                    className="min-h-[48px] bg-white/[0.06] border-white/[0.12] text-white placeholder-slate-500 focus:border-primaryBlue focus:ring-primaryBlue/30"
                     disabled={isLoading}
                     autoComplete="family-name"
                   />
@@ -255,7 +255,7 @@ export default function Signup() {
               <Button
                 type="submit"
                 data-testid="button-signup"
-                className="w-full min-h-[48px] bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold shadow-lg shadow-emerald-500/25 text-base"
+                className="w-full min-h-[48px] bg-primaryBlue hover:bg-blue-600 text-white font-bold shadow-lg shadow-primaryBlue/25 text-base"
                 disabled={isLoading}
                 aria-busy={isLoading}
               >
@@ -306,7 +306,7 @@ export default function Signup() {
               <p className="text-slate-300" style={{ fontSize: '15px' }}>
                 Already have an account?{" "}
                 <Link href="/login">
-                  <span className="text-emerald-400 hover:text-emerald-300 hover:underline font-semibold cursor-pointer">
+                  <span className="text-primaryBlue hover:text-emerald-300 hover:underline font-semibold cursor-pointer">
                     Sign in here
                   </span>
                 </Link>

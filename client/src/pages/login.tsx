@@ -81,7 +81,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0D1117] to-[#0D0D0D] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-solidBackground flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -93,7 +93,7 @@ export default function Login() {
         </div>
 
         {/* Login Form — Card surface layer (#161B22) */}
-        <Card className="bg-[#161B22]/80 backdrop-blur-sm ring-1 ring-white/[0.08] border-0 shadow-xl">
+        <Card className="glass-card border-0 shadow-xl">
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-2xl text-center text-white font-bold">Sign In</CardTitle>
             <CardDescription className="text-center text-slate-300" style={{ fontSize: '15px' }}>
@@ -117,16 +117,16 @@ export default function Login() {
                     onChange={(e) => setUsernameOrEmail(e.target.value)}
                     onBlur={() => usernameOrEmail && validateField('usernameOrEmail', usernameOrEmail)}
                     placeholder="Enter username or email"
-                    className={`pl-11 min-h-[48px] bg-white/[0.06] border-white/[0.12] text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-emerald-500/30 ${
+                    className={`pl-11 min-h-[48px] bg-white/[0.06] border-white/[0.12] text-white placeholder-slate-500 focus:border-primaryBlue focus:ring-primaryBlue/30 ${
                       fieldErrors.usernameOrEmail ? 'border-red-500 ring-1 ring-red-500/30' : ''
-                    } ${fieldValid.usernameOrEmail ? 'border-emerald-500/40' : ''}`}
+                    } ${fieldValid.usernameOrEmail ? 'border-primaryBlue/40' : ''}`}
                     disabled={isLoading}
                     autoComplete="username email"
                     aria-invalid={!!fieldErrors.usernameOrEmail}
                     aria-describedby={fieldErrors.usernameOrEmail ? "usernameOrEmail-error" : undefined}
                   />
                   {fieldValid.usernameOrEmail && !fieldErrors.usernameOrEmail && (
-                    <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-emerald-400" aria-hidden="true" />
+                    <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primaryBlue" aria-hidden="true" />
                   )}
                 </div>
                 {fieldErrors.usernameOrEmail && (
@@ -152,16 +152,16 @@ export default function Login() {
                     onChange={(e) => setPassword(e.target.value)}
                     onBlur={() => password && validateField('password', password)}
                     placeholder="Enter your password"
-                    className={`pl-11 min-h-[48px] bg-white/[0.06] border-white/[0.12] text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-emerald-500/30 ${
+                    className={`pl-11 min-h-[48px] bg-white/[0.06] border-white/[0.12] text-white placeholder-slate-500 focus:border-primaryBlue focus:ring-primaryBlue/30 ${
                       fieldErrors.password ? 'border-red-500 ring-1 ring-red-500/30' : ''
-                    } ${fieldValid.password ? 'border-emerald-500/40' : ''}`}
+                    } ${fieldValid.password ? 'border-primaryBlue/40' : ''}`}
                     disabled={isLoading}
                     autoComplete="current-password"
                     aria-invalid={!!fieldErrors.password}
                     aria-describedby={fieldErrors.password ? "password-error" : undefined}
                   />
                   {fieldValid.password && !fieldErrors.password && (
-                    <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-emerald-400" aria-hidden="true" />
+                    <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primaryBlue" aria-hidden="true" />
                   )}
                 </div>
                 {fieldErrors.password && (
@@ -176,7 +176,7 @@ export default function Login() {
               <Button
                 type="submit"
                 data-testid="button-login"
-                className="w-full min-h-[48px] bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold shadow-lg shadow-emerald-500/25 text-base"
+                className="w-full min-h-[48px] bg-primaryBlue hover:bg-blue-600 text-white font-bold shadow-lg shadow-primaryBlue/25 text-base"
                 disabled={isLoading}
                 aria-busy={isLoading}
               >
@@ -227,7 +227,7 @@ export default function Login() {
               <p className="text-slate-300" style={{ fontSize: '15px' }}>
                 Don't have an account?{" "}
                 <Link href="/signup">
-                  <span className="text-emerald-400 hover:text-emerald-300 hover:underline font-semibold cursor-pointer">
+                  <span className="text-primaryBlue hover:text-emerald-300 hover:underline font-semibold cursor-pointer">
                     Sign up here
                   </span>
                 </Link>

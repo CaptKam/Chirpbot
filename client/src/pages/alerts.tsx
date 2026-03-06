@@ -6,21 +6,20 @@ import { Button } from '@/components/ui/button';
 import { getSeasonAwareSports } from '@shared/season-manager';
 import { Alert } from '@/types';
 
-// ─── Design System Tokens (Midnight Sports Theme) ─────────────────
-// Background:  #000000 → #0F1A32 gradient
-// Card Surface: #161B22
-// MLB Green:    #22C55E
-// Emerald Glow: #10B981
-// Primary Text: #F8FAFC
-// Muted Text:   #94A3B8
+// ─── V3 Design System Tokens ("Bloomberg meets FanDuel") ──────────
+// Background:   #0F1A32 (solidBackground)
+// Card Surface: #161B22 (surface)
+// Primary Blue: #2489F5
+// Emerald:      #22C55E / #10B981 (glow)
+// Alert Red:    #EF4444
 // Border:       #1E293B
-// Alert Red:    #F02D3A
 
 const DS = {
   cardSurface: '#161B22',
   border: '#1E293B',
-  alertRed: '#F02D3A',
-  mlbGreen: '#22C55E',
+  alertRed: '#EF4444',
+  primaryBlue: '#2489F5',
+  emeraldGreen: '#22C55E',
   emeraldGlow: '#10B981',
 } as const;
 
@@ -219,13 +218,13 @@ function LivePulse() {
       <span
         className="absolute inline-flex h-full w-full rounded-full opacity-60"
         style={{
-          backgroundColor: DS.alertRed,
+          backgroundColor: DS.emeraldGreen,
           animation: 'livePulse 2s ease-out infinite',
         }}
       />
       <span
         className="relative inline-flex h-2.5 w-2.5 rounded-full"
-        style={{ backgroundColor: DS.alertRed }}
+        style={{ backgroundColor: DS.emeraldGreen }}
       />
       <style>{`
         @keyframes livePulse {
@@ -630,7 +629,7 @@ export default function AlertsPage() {
   // ─── Loading State ──────────────────────────────────────────────
   if (isLoading || statsLoading) {
     return (
-      <div className="pb-24 min-h-screen" style={{ background: 'linear-gradient(to bottom, #000000, #0F1A32)' }} data-testid="alerts-loading">
+      <div className="pb-24 min-h-screen" style={{ backgroundColor: '#0F1A32' }} data-testid="alerts-loading">
         <Header />
         <SportPills sports={availableSports} active={filter} onSelect={setFilter} />
         <main className="p-4 space-y-6">
@@ -642,7 +641,7 @@ export default function AlertsPage() {
 
   // ─── Render ─────────────────────────────────────────────────────
   return (
-    <div className="pb-24 min-h-screen" style={{ background: 'linear-gradient(to bottom, #000000, #0F1A32)' }} data-testid="alerts-page">
+    <div className="pb-24 min-h-screen" style={{ backgroundColor: '#0F1A32' }} data-testid="alerts-page">
       <Header alertCount={displayAlerts.length} />
       <SportPills sports={availableSports} active={filter} onSelect={setFilter} />
 
@@ -754,7 +753,7 @@ function Header({ alertCount }: { alertCount?: number }) {
   return (
     <header
       className="sticky top-0 z-20 backdrop-blur-md"
-      style={{ background: 'rgba(0,0,0,0.8)', borderBottom: `1px solid ${DS.border}` }}
+      style={{ background: 'rgba(15,26,50,0.95)', borderBottom: `1px solid ${DS.border}` }}
     >
       <div className="flex items-center justify-between px-4 py-4">
         <div className="flex items-center gap-3">
@@ -782,7 +781,7 @@ function SportPills({ sports, active, onSelect }: { sports: string[]; active: st
   return (
     <div
       className="flex overflow-x-auto px-4 py-3 gap-2 backdrop-blur-sm"
-      style={{ background: 'rgba(0,0,0,0.6)', borderBottom: `1px solid ${DS.border}`, scrollbarWidth: 'none' }}
+      style={{ background: 'rgba(15,26,50,0.9)', borderBottom: `1px solid ${DS.border}`, scrollbarWidth: 'none' }}
     >
       {sports.map((sport) => {
         const isActive = sport === active;

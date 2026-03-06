@@ -709,7 +709,7 @@ export default function Settings() {
   }
 
   return (
-    <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0D1117] to-[#0D0D0D] text-slate-100 antialiased min-h-screen">
+    <div className="pb-24 sm:pb-28 bg-solidBackground text-white antialiased min-h-screen">
       <PageHeader
         title="ChirpBot"
         subtitle="Settings Dashboard"
