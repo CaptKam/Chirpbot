@@ -1004,7 +1004,7 @@ export default function Settings() {
                     disabled={updateTelegramMutation.isPending}
                     size="sm"
                     data-testid="button-save-telegram"
-                    className="bg-primaryBlue hover:bg-blue-600 text-white shadow-lg shadow-primaryBlue/25 hover:scale-[1.02] transition-all duration-300 group font-semibold"
+                    className="bg-primaryBlue hover:bg-blue-600 text-white shadow-sm shadow-primaryBlue/10 hover:scale-[1.02] transition-all duration-300 group font-semibold"
                   >
                     {updateTelegramMutation.isPending ? (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />

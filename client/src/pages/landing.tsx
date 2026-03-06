@@ -513,7 +513,7 @@ function Pricing() {
               key={plan.name}
               className={`rounded-2xl p-8 ${
                 plan.featured
-                  ? "bg-surface ring-2 ring-primaryBlue/40 shadow-lg shadow-primaryBlue/10"
+                  ? "bg-surface ring-1 ring-primaryBlue/20 shadow-sm shadow-primaryBlue/5"
                   : "bg-surface ring-1 ring-white/[0.06]"
               }`}
             >

@@ -135,9 +135,9 @@ export default {
         },
         // V3 Motion: Live Pulse Ring — 2s infinite scale+opacity
         "pulse-ring": {
-          "0%": { transform: "scale(0.8)", opacity: "0.8" },
-          "50%": { transform: "scale(1.1)", opacity: "0.3" },
-          "100%": { transform: "scale(0.8)", opacity: "0.8" },
+          "0%": { transform: "scale(0.85)", opacity: "0.5" },
+          "50%": { transform: "scale(1.05)", opacity: "0.15" },
+          "100%": { transform: "scale(0.85)", opacity: "0.5" },
         },
         // V3 Motion: Diamond Base Pop — 0.3s overshoot bounce
         "diamond-pop": {
