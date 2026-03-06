@@ -142,7 +142,7 @@ export default function GameNarrative() {
   }
 
   return (
-    <div className="pb-24 sm:pb-28 min-h-screen bg-solidBackground text-white antialiased flex flex-col">
+    <div className="pb-24 sm:pb-28 min-h-screen antialiased flex flex-col bg-[#101922] text-[#ffffff]">
       {/* ━━ Header ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <header className="sticky top-0 z-30 bg-solidBackground/80 backdrop-blur-md border-b border-slate-800">
         <div className="flex items-center justify-between px-4 py-3">
