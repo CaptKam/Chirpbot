@@ -356,7 +356,7 @@ export default function Calendar() {
         </div>
       </div>
       {/* Sport pills */}
-      <div className="px-4 pt-4 pb-2">
+      <div className="px-4 pt-4 pb-2 bg-[#101922]">
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
           {SPORTS.map((sport) => {
             const accent = getSportAccent(sport);
