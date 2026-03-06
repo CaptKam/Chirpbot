@@ -1,113 +1,52 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Inter+Tight:wght@700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ==========================================================================
-   CHIRPBOT 2026 DESIGN SYSTEM
-   Sources: Apple HIG, Material Design 3, Nielsen 10 Heuristics, WCAG AA
+   CHIRP.BET V3 DESIGN SYSTEM
+   "Bloomberg meets FanDuel" — Dark, data-rich, tactical sports intelligence
    ========================================================================== */
 
 :root {
-  /* --- Light Mode Colors --- */
-  --background: hsl(0, 0%, 100%);
-  --foreground: hsl(220, 21%, 11%);
-  --card: hsl(220, 13%, 97%);
-  --card-foreground: hsl(220, 21%, 11%);
-  --popover: hsl(0, 0%, 100%);
-  --popover-foreground: hsl(220, 21%, 11%);
-  --primary: hsl(220, 64%, 23%);
-  --primary-foreground: hsl(0, 0%, 100%);
-  --secondary: hsl(220, 21%, 11%);
-  --secondary-foreground: hsl(0, 0%, 100%);
-  --muted: hsl(217, 33%, 95%);
-  --muted-foreground: hsl(220, 21%, 29%);
-  --accent: hsl(217, 33%, 95%);
-  --accent-foreground: hsl(220, 64%, 23%);
-  --destructive: hsl(355, 85%, 56%);
-  --destructive-foreground: hsl(0, 0%, 100%);
-  --border: hsl(217, 33%, 91%);
-  --input: hsl(217, 33%, 97%);
-  --ring: hsl(220, 64%, 53%);
-  --chart-1: hsl(220, 64%, 23%);
-  --chart-2: hsl(162, 100%, 36%);
-  --chart-3: hsl(42, 93%, 56%);
-  --chart-4: hsl(147, 79%, 42%);
-  --chart-5: hsl(341, 75%, 51%);
-  --sidebar: hsl(220, 13%, 97%);
-  --sidebar-foreground: hsl(220, 21%, 11%);
-  --sidebar-primary: hsl(220, 64%, 23%);
-  --sidebar-primary-foreground: hsl(0, 0%, 100%);
-  --sidebar-accent: hsl(217, 33%, 95%);
-  --sidebar-accent-foreground: hsl(220, 64%, 23%);
-  --sidebar-border: hsl(217, 33%, 91%);
-  --sidebar-ring: hsl(220, 64%, 53%);
-
-  /* ChirpBot V2 Color Palette */
-  --chirp-bg: #F2F4F7;
-  --chirp-accent-blue: #1C2B5E;
-  --chirp-cta-blue: #2387F4;
-  --chirp-alert-red: #F02D3A;
-  --chirp-border-gray: #DCE1E7;
-  --chirp-text-dark: #111827;
-  --chirp-text-muted: #6B7280;
-
-  /* Legacy colors for compatibility */
-  --chirp-blue: #1C2B5E;
-  --chirp-red: #F02D3A;
-  --chirp-gray: #F2F4F7;
-  --chirp-dark: #111827;
-  --chirp-light: #DCE1E7;
-  --chirp-navy: #0F172A;
+  /* ── V3 Color Architecture ─────────────────────────────── */
+  --background: #0F1A32;
+  --foreground: #F8FAFC;
+  --card: #161B22;
+  --card-foreground: #F8FAFC;
+  --popover: #161B22;
+  --popover-foreground: #F8FAFC;
+  --primary: #2489F5;
+  --primary-foreground: #FFFFFF;
+  --secondary: #1E293B;
+  --secondary-foreground: #F8FAFC;
+  --muted: #1E293B;
+  --muted-foreground: #94A3B8;
+  --accent: #1E293B;
+  --accent-foreground: #22C55E;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: #1E293B;
+  --input: #1E293B;
+  --ring: #2489F5;
+  --chart-1: #2489F5;
+  --chart-2: #22C55E;
+  --chart-3: #F59E0B;
+  --chart-4: #10B981;
+  --chart-5: #EF4444;
+  --sidebar-background: #0F1A32;
+  --sidebar-foreground: #F8FAFC;
+  --sidebar-primary: #2489F5;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #1E293B;
+  --sidebar-accent-foreground: #22C55E;
+  --sidebar-border: #1E293B;
+  --sidebar-ring: #2489F5;
 
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-display: 'Outfit', 'Inter Tight', 'Inter', system-ui, sans-serif;
-  --font-serif: Georgia, serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', 'Menlo', monospace;
   --radius: 0.75rem;
-}
-
-/* --- Dark Mode: 3-Layer Surface System (verified production standard) ---
-   Background: #0D0D0D (NOT pure black — prevents harsh contrast)
-   Card/Surface: #161B22 (content containers)
-   Elevated: #1E2530 (modals, sheets, dropdowns)
-   Active/Hover: #252D3A (selected states)
-   White opacity text system for natural harmony on dark surfaces
-   ======================================================================= */
-.dark {
-  --background: hsl(0, 0%, 5.1%);          /* #0D0D0D — NO pure black */
-  --foreground: hsl(220, 14%, 92%);         /* #E8EAED */
-  --card: hsl(218, 23%, 11%);              /* #161B22 — card surface */
-  --card-foreground: hsl(217, 14%, 85%);    /* ~#D1D5DB */
-  --popover: hsl(216, 20%, 13%);            /* #1E2530 — elevated surface */
-  --popover-foreground: hsl(220, 14%, 92%);
-  --primary: hsl(160, 84%, 39%);            /* Emerald primary for dark */
-  --primary-foreground: hsl(0, 0%, 5%);
-  --secondary: hsl(217, 14%, 85%);
-  --secondary-foreground: hsl(220, 21%, 11%);
-  --muted: hsl(218, 23%, 11%);
-  --muted-foreground: hsl(220, 14%, 55%);   /* rgba(255,255,255,0.40) equiv */
-  --accent: hsl(216, 20%, 15%);             /* #252D3A — active/hover */
-  --accent-foreground: hsl(160, 84%, 50%);
-  --destructive: hsl(355, 85%, 56%);
-  --destructive-foreground: hsl(0, 0%, 100%);
-  --border: hsl(218, 14%, 14%);             /* rgba(255,255,255,0.08) equiv */
-  --input: hsl(218, 23%, 15%);
-  --ring: hsl(160, 84%, 39%);
-  --chart-1: hsl(160, 84%, 39%);
-  --chart-2: hsl(220, 64%, 53%);
-  --chart-3: hsl(42, 93%, 56%);
-  --chart-4: hsl(147, 79%, 42%);
-  --chart-5: hsl(341, 75%, 51%);
-  --sidebar: hsl(218, 23%, 9%);
-  --sidebar-foreground: hsl(217, 14%, 85%);
-  --sidebar-primary: hsl(160, 84%, 39%);
-  --sidebar-primary-foreground: hsl(0, 0%, 100%);
-  --sidebar-accent: hsl(216, 20%, 15%);
-  --sidebar-accent-foreground: hsl(160, 84%, 50%);
-  --sidebar-border: hsl(218, 14%, 18%);
-  --sidebar-ring: hsl(160, 84%, 39%);
 }
 
 @layer base {
@@ -117,7 +56,6 @@
 
   html {
     overflow-x: hidden;
-    /* Prevent text size adjustment on orientation change (Apple HIG) */
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }
@@ -125,25 +63,19 @@
   body {
     @apply font-sans antialiased;
     font-family: var(--font-sans);
-    background-color: var(--chirp-bg);
-    color: var(--chirp-text-dark);
+    background-color: #0F1A32;
+    color: #FFFFFF;
     overflow-x: hidden;
-    /* Default body text: 17pt / 1rem = 16px, so we use text-base (16px) + line-height 1.5
-       Apple HIG mandates 17pt minimum for body. We set base to 16px and use text-[17px] where needed.
-       Line height 1.5x for body text (WCAG 1.4.12) */
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Focus visible indicators for keyboard navigation (Apple HIG Accessibility) */
   :focus-visible {
-    outline: 2px solid hsl(160, 84%, 39%);
+    outline: 2px solid #2489F5;
     outline-offset: 2px;
   }
 
-  /* Respect Reduce Motion system setting (Apple HIG — MANDATORY)
-     Users with vestibular disorders experience nausea from excessive motion */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -157,7 +89,6 @@
 }
 
 @layer utilities {
-  /* Custom line-clamp utility for consistent text truncation */
   .line-clamp-4 {
     display: -webkit-box;
     -webkit-line-clamp: 4;
@@ -166,103 +97,58 @@
   }
 
   /* =======================================================================
-     ANIMATION SYSTEM — 2026 Standards
-     All animations use proper easing (NEVER linear for UI)
-     Ease-Out: elements entering (start fast, decelerate)
-     Ease-In: elements leaving (start slow, accelerate)
-     Spring: interactive drag/swipe
+     V3 GLASS CARD SYSTEM
+     Surface: #161B22 with 1px #1E293B border, 12px radius
      ======================================================================= */
 
-  /* Subtle pulse for new content indicators */
-  @keyframes pulse-subtle {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.8; }
+  .glass-card {
+    background-color: #161B22;
+    border: 1px solid #1E293B;
+    border-radius: 12px;
   }
 
-  .animate-pulse-subtle {
-    animation: pulse-subtle 2s ease-in-out infinite;
+  .glass-card-hover {
+    background-color: #161B22;
+    border: 1px solid #1E293B;
+    border-radius: 12px;
+    transition: all 200ms ease-out;
   }
-
-  /* Tap feedback: 150ms scale down with ease-in (Apple HIG Feedback) */
-  @keyframes tap-feedback {
-    0% { transform: scale(1); }
-    50% { transform: scale(0.97); }
-    100% { transform: scale(1); }
-  }
-
-  .active\:animate-tap:active {
-    animation: tap-feedback 150ms ease-in;
-  }
-
-  /* Error shake: 3 quick horizontal shakes, 300ms total (Nielsen Heuristic 9) */
-  @keyframes error-shake {
-    0%, 100% { transform: translateX(0); }
-    20% { transform: translateX(-6px); }
-    40% { transform: translateX(6px); }
-    60% { transform: translateX(-4px); }
-    80% { transform: translateX(4px); }
-  }
-
-  .animate-error-shake {
-    animation: error-shake 300ms ease-out;
-  }
-
-  /* Success checkmark scale (Nielsen Heuristic 1 — system status) */
-  @keyframes success-pop {
-    0% { transform: scale(0); opacity: 0; }
-    70% { transform: scale(1.1); }
-    100% { transform: scale(1); opacity: 1; }
-  }
-
-  .animate-success-pop {
-    animation: success-pop 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  /* Slide-in from bottom for sheets/toasts (Material Design) */
-  @keyframes slide-up-enter {
-    0% { transform: translateY(100%); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
-  }
-
-  .animate-slide-up {
-    animation: slide-up-enter 400ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  /* Alert card entrance animation */
-  @keyframes fadeSlideIn {
-    from {
-      opacity: 0;
-      transform: translateY(-8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  /* Skeleton shimmer for loading states */
-  @keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
-
-  .animate-shimmer {
-    background: linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.03) 25%,
-      rgba(255, 255, 255, 0.07) 50%,
-      rgba(255, 255, 255, 0.03) 75%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 1.4s ease infinite;
+  .glass-card-hover:hover {
+    border-color: #2489F5;
+    box-shadow: 0 0 20px rgba(36, 137, 245, 0.1);
   }
 
   /* =======================================================================
-     CHIRP V5 GLASSMORPHISM + ANIMATION SYSTEM
-     Glassmorphism, live pulse, glow, score roll, stagger, odds flash
+     V3 SECTION HEADER — Blue left border accent
      ======================================================================= */
 
-  /* Live pulse — breathing dot for live indicators */
+  .section-header {
+    border-left: 4px solid #2489F5;
+    padding-left: 12px;
+    margin-bottom: 24px;
+  }
+
+  /* =======================================================================
+     V3 ANIMATION SYSTEM
+     ======================================================================= */
+
+  /* Live pulse — emerald ring for active status */
+  @keyframes pulse-emerald {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  }
+  .animate-pulse-live {
+    animation: pulse-emerald 2s infinite;
+  }
+
+  /* Alert slide-in: 0.4s ease-in-out */
+  @keyframes slide-in {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+  }
+
+  /* Live pulse dot */
   @keyframes live-pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.4; }
@@ -280,7 +166,7 @@
     animation: glow-pulse-red 3s ease infinite;
   }
 
-  /* Score roll — numbers scroll like a slot machine */
+  /* Score roll */
   @keyframes roll-up {
     0% { transform: translateY(100%); opacity: 0; }
     100% { transform: translateY(0); opacity: 1; }
@@ -289,7 +175,7 @@
     animation: roll-up 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  /* Stagger entrance — cards fade-slide up on mount */
+  /* Stagger entrance */
   @keyframes fade-slide-up {
     0% { transform: translateY(12px); opacity: 0; }
     100% { transform: translateY(0); opacity: 1; }
@@ -298,7 +184,29 @@
     animation: fade-slide-up 0.35s ease-out both;
   }
 
-  /* Odds flash green — 300ms in, 600ms hold, 400ms out */
+  /* Card entrance */
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Skeleton shimmer */
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.03) 25%,
+      rgba(255, 255, 255, 0.07) 50%,
+      rgba(255, 255, 255, 0.03) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease infinite;
+  }
+
+  /* Odds flash green */
   @keyframes flash-green {
     0% { background: transparent; }
     8% { background: rgba(34, 197, 94, 0.20); }
@@ -320,13 +228,22 @@
     animation: flash-red 1.3s ease-out;
   }
 
-  /* Button press haptic feel — scale 0.96, 150ms */
+  /* Subtle pulse for new content */
+  @keyframes pulse-subtle {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+  }
+  .animate-pulse-subtle {
+    animation: pulse-subtle 2s ease-in-out infinite;
+  }
+
+  /* Tap feedback */
   .btn-haptic:active {
     transform: scale(0.96);
     transition: transform 0.15s ease;
   }
 
-  /* Confirm pop — scale 1.0 -> 1.12 -> 1.0, 400ms */
+  /* Confirm pop */
   @keyframes confirm-pop {
     0% { transform: scale(1); }
     40% { transform: scale(1.12); }
@@ -336,155 +253,89 @@
     animation: confirm-pop 0.4s ease-out;
   }
 
-  /* Glassmorphism card base */
-  .glass-card {
-    background: rgba(255, 255, 255, 0.04);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    transition: transform 0.15s ease, box-shadow 0.2s ease;
+  /* Success pop */
+  @keyframes success-pop {
+    0% { transform: scale(0); opacity: 0; }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
   }
-  .glass-card:hover {
-    background: rgba(255, 255, 255, 0.06);
+  .animate-success-pop {
+    animation: success-pop 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
-  /* Glass surface for inner panels */
-  .glass-surface {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+  /* Error shake */
+  @keyframes error-shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+  .animate-error-shake {
+    animation: error-shake 300ms ease-out;
   }
 
-  /* Score display — condensed monospace */
+  /* Slide up enter */
+  @keyframes slide-up-enter {
+    0% { transform: translateY(100%); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+  .animate-slide-up {
+    animation: slide-up-enter 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* =======================================================================
+     V3 TYPOGRAPHY TOKENS
+     Headers: Inter Black, uppercase, tracking-wider
+     Labels: Inter Bold, uppercase, tracking-widest
+     Data: JetBrains Mono Bold
+     ======================================================================= */
+
   .score-display {
     font-family: 'JetBrains Mono', 'SF Mono', 'Menlo', monospace;
     letter-spacing: -0.04em;
     font-weight: 800;
   }
 
-  /* Display heading font */
-  .font-display-chirp {
-    font-family: 'Outfit', 'SF Pro Display', -apple-system, sans-serif;
-  }
-
-  /* Hide scrollbar utility */
+  /* Hide scrollbar */
   .hide-scroll::-webkit-scrollbar { display: none; }
   .hide-scroll { scrollbar-width: none; }
 
   /* =======================================================================
-     COLOR UTILITIES
-     ======================================================================= */
-  .chirp-blue { color: var(--chirp-blue); }
-  .bg-chirp-blue { background-color: var(--chirp-blue); }
-  .chirp-red { color: var(--chirp-red); }
-  .bg-chirp-red { background-color: var(--chirp-red); }
-  .chirp-gray { color: var(--chirp-gray); }
-  .bg-chirp-gray { background-color: var(--chirp-gray); }
-  .chirp-dark { color: var(--chirp-dark); }
-  .bg-chirp-dark { background-color: var(--chirp-dark); }
-
-  /* =======================================================================
-     TYPOGRAPHY SYSTEM — 2026 Standards
-     Max 3 type levels per screen: heading, body, caption
-     Body min: 17pt (iOS) / 16sp (Android)
-     Caption min: 11pt (Apple absolute floor)
-     Line height: 1.5x body, 1.2x display
-     Font weight bump on dark backgrounds (Regular→Medium, Medium→Semibold)
-     ======================================================================= */
-
-  .heading-primary {
-    @apply font-black uppercase tracking-wider text-chirp-text-dark;
-    line-height: 1.2;
-  }
-
-  .heading-secondary {
-    @apply font-bold uppercase tracking-wide text-chirp-text-dark;
-    line-height: 1.2;
-  }
-
-  .subheading {
-    @apply font-semibold text-chirp-text-dark;
-    line-height: 1.3;
-  }
-
-  .body-text {
-    @apply font-normal text-chirp-text-dark;
-    font-size: 1.0625rem; /* 17px — Apple HIG minimum */
-    line-height: 1.5;
-  }
-
-  .text-muted {
-    @apply text-chirp-text-muted;
-  }
-
-  /* Caption: never below 11pt */
-  .caption-text {
-    font-size: 0.6875rem; /* 11px — Apple absolute minimum */
-    line-height: 1.4;
-    @apply text-chirp-text-muted;
-  }
-
-  /* Dark background font weight bump system */
-  .dark-surface .font-normal,
-  .dark-surface .font-regular {
-    font-weight: 500;
-  }
-  .dark-surface .font-medium {
-    font-weight: 600;
-  }
-  .dark-surface .font-semibold {
-    font-weight: 700;
-  }
-
-  /* =======================================================================
-     BUTTON STYLES — Apple HIG + Material Design
-     Min tap target: 44x44pt (Apple) / 48x48dp (Material)
-     Transition: 200ms ease-out (not linear)
-     ======================================================================= */
-
-  .btn-primary {
-    @apply bg-chirp-cta-blue hover:bg-blue-600 text-white font-bold rounded-lg px-4 py-3 min-h-[44px];
-    transition: all 200ms ease-out;
-  }
-
-  .btn-secondary {
-    @apply bg-white border border-chirp-border-gray hover:bg-gray-50 text-chirp-text-dark font-semibold rounded-lg px-4 py-3 min-h-[44px];
-    transition: all 200ms ease-out;
-  }
-
-  /* =======================================================================
-     CARD STYLES — 8pt Grid System
-     Padding: multiples of 8 (16, 24, 32)
-     Border radius: 12px (1.5 * 8)
-     ======================================================================= */
-
-  .card-game {
-    @apply bg-white border border-chirp-border-gray rounded-xl shadow-sm hover:shadow-lg;
-    border-radius: 12px;
-    transition: all 200ms ease-out;
-  }
-
-  .card-game-active {
-    @apply border-2 border-chirp-cta-blue bg-blue-50 shadow-md;
-  }
-
-  /* =======================================================================
-     BADGE STYLES
+     V3 CONDITION PILLS / BADGES
      ======================================================================= */
 
   .badge-live {
-    @apply bg-chirp-alert-red text-white font-bold uppercase tracking-wider px-3 py-1 rounded-full;
-    font-size: 0.75rem; /* 12px — above 11pt minimum */
+    @apply bg-emeraldGreen/20 text-emeraldGreen px-3 py-1 rounded-full font-black uppercase tracking-tighter border border-emeraldGreen/30;
+    font-size: 0.625rem; /* 10px */
   }
 
-  .badge-sport {
-    @apply bg-purple-100 text-purple-800 font-bold uppercase tracking-wide px-3 py-1 rounded-full;
-    font-size: 0.875rem; /* 14px */
+  .badge-condition {
+    @apply bg-slate-800 text-slate-300 px-3 py-1 rounded-full font-black uppercase tracking-tighter border border-slate-700;
+    font-size: 0.625rem;
+  }
+
+  .badge-stat {
+    @apply bg-primaryBlue/20 text-primaryBlue px-3 py-1 rounded-full font-black uppercase tracking-tighter border border-primaryBlue/30;
+    font-size: 0.625rem;
   }
 
   /* =======================================================================
-     SAFE AREA HANDLING — Apple HIG Navigation
-     Bottom padding for fixed bottom nav bar
-     env(safe-area-inset-bottom) for notched devices
+     V3 BUTTON STYLES
+     ======================================================================= */
+
+  .btn-primary-v3 {
+    @apply bg-primaryBlue hover:bg-blue-600 text-white font-bold rounded-lg px-4 py-3 min-h-[44px];
+    transition: all 200ms ease-out;
+  }
+
+  .btn-secondary-v3 {
+    @apply bg-surface border border-border hover:border-primaryBlue text-white font-semibold rounded-lg px-4 py-3 min-h-[44px];
+    transition: all 200ms ease-out;
+  }
+
+  /* =======================================================================
+     SAFE AREA — Bottom nav padding
      ======================================================================= */
 
   .safe-area-bottom {
@@ -492,28 +343,20 @@
   }
 
   /* =======================================================================
-     FORM SYSTEM — 2026 Standards
-     Min input height: 48px (Material) / 44pt (Apple)
-     Floating label support
-     Inline validation states
+     V3 FORM SYSTEM
      ======================================================================= */
 
-  /* Inline validation: green check for valid, red for invalid */
   .field-valid {
-    @apply border-green-500 ring-1 ring-green-500/30;
+    @apply border-emeraldGreen ring-1 ring-emeraldGreen/30;
   }
 
   .field-invalid {
-    @apply border-red-500 ring-1 ring-red-500/30;
+    @apply border-chirpRed ring-1 ring-chirpRed/30;
   }
 
   .field-error-message {
-    @apply text-red-400 mt-1;
-    font-size: 0.75rem; /* 12px — above 11pt minimum */
+    @apply text-chirpRed mt-1;
+    font-size: 0.75rem;
     line-height: 1.4;
-  }
-
-  .field-success-indicator {
-    @apply text-green-400;
   }
 }

@@ -58,6 +58,18 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       colors: {
+        // ── Chirp.bet V3 Design System ──────────────────────
+        // "Bloomberg meets FanDuel" — dark, data-rich, tactical
+        solidBackground: '#0F1A32',
+        surface: '#161B22',
+        primaryBlue: '#2489F5',
+        emeraldGreen: '#22C55E',
+        emeraldGlow: '#10B981',
+        chirpRed: '#EF4444',
+        chirpAmber: '#F59E0B',
+        chirpSoftBlue: '#3B82F6',
+
+        // shadcn/radix compatibility
         background: "var(--background)",
         foreground: "var(--foreground)",
         card: {
@@ -108,50 +120,35 @@ export default {
           border: "var(--sidebar-border)",
           ring: "var(--sidebar-ring)",
         },
-        // ChirpBot V2 Color Palette
-        "chirp-bg": "#F2F4F7",
-        "chirp-accent-blue": "#1C2B5E",
-        "chirp-cta-blue": "#2387F4",
-        "chirp-alert-red": "#F02D3A",
-        "chirp-border-gray": "#DCE1E7",
-        "chirp-text-dark": "#111827",
-        "chirp-text-muted": "#6B7280",
-
-        // Legacy colors for compatibility
-        "chirp-blue": "#1C2B5E",
-        "chirp-red": "#F02D3A",
-        "chirp-gray": "#F2F4F7",
-        "chirp-dark": "#111827",
-        "chirp-light": "#DCE1E7",
-        "chirp-navy": "#0F172A",
       },
       fontFamily: {
-        sans: ["var(--font-sans)"],
-        display: ["var(--font-display)"],
-        serif: ["var(--font-serif)"],
-        mono: ["var(--font-mono)"],
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['JetBrains Mono', 'SF Mono', 'Menlo', 'monospace'],
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        "pulse-emerald": {
+          "0%": { boxShadow: "0 0 0 0 rgba(16, 185, 129, 0.7)" },
+          "70%": { boxShadow: "0 0 0 10px rgba(16, 185, 129, 0)" },
+          "100%": { boxShadow: "0 0 0 0 rgba(16, 185, 129, 0)" },
+        },
+        "slide-alert": {
+          from: { transform: "translateX(-100%)" },
+          to: { transform: "translateX(100%)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "pulse-live": "pulse-emerald 2s infinite",
+        "slide-alert": "slide-alert 0.4s ease-in-out infinite",
       },
     },
   },

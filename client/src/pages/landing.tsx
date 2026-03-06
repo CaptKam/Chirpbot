@@ -13,7 +13,7 @@ const fadeUp = (delay = 0) => ({
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#0D0D0D] text-slate-100 antialiased selection:bg-emerald-500/30 overflow-x-hidden">
+    <div className="min-h-screen bg-solidBackground text-white antialiased selection:bg-primaryBlue/30 overflow-x-hidden">
       <Nav />
       <Hero />
       <LivePreview />
@@ -42,8 +42,8 @@ function Nav() {
   return (
     <header className={`sticky top-0 z-40 backdrop-blur-xl border-b transition-all duration-300 ${
       scrolled
-        ? "bg-[#0D0D0D]/90 border-white/[0.06] shadow-lg shadow-black/20"
-        : "bg-[#0D0D0D]/80 border-white/[0.04]"
+        ? "bg-solidBackground/90 border-white/[0.06] shadow-lg shadow-black/20"
+        : "bg-solidBackground/80 border-white/[0.04]"
     }`}>
       <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
         <a href="#">
@@ -60,7 +60,7 @@ function Nav() {
           </Link>
           <Link href="/signup">
             <Button
-              className="rounded-full bg-white px-5 py-2 text-[14px] font-medium text-[#0D0D0D] hover:bg-slate-200 transition-colors"
+              className="rounded-full bg-white px-5 py-2 text-[14px] font-medium text-solidBackground hover:bg-slate-200 transition-colors"
               data-testid="button-nav-signup"
             >
               Get started
@@ -88,7 +88,7 @@ function Nav() {
             transition={{ duration: 0.2, ease: "easeOut" }}
             className="md:hidden overflow-hidden"
           >
-            <div className="border-t border-white/[0.06] px-5 pb-6 pt-4 bg-[#0D0D0D]/95 backdrop-blur-xl">
+            <div className="border-t border-white/[0.06] px-5 pb-6 pt-4 bg-solidBackground/95 backdrop-blur-xl">
               <div className="flex flex-col gap-5">
                 <a className="text-[15px] text-slate-300" href="#preview" onClick={() => setOpen(false)}>Preview</a>
                 <a className="text-[15px] text-slate-300" href="#features" onClick={() => setOpen(false)}>Features</a>
@@ -106,7 +106,7 @@ function Nav() {
                   </Link>
                   <Link href="/signup">
                     <Button
-                      className="w-full rounded-full bg-white text-[#0D0D0D] hover:bg-slate-200 font-medium"
+                      className="w-full rounded-full bg-white text-solidBackground hover:bg-slate-200 font-medium"
                       data-testid="button-nav-mobile-signup"
                     >
                       Get started
@@ -131,15 +131,15 @@ function Hero() {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-emerald-500/[0.04] rounded-full blur-[120px] pointer-events-none" />
 
       <div className="relative mx-auto max-w-3xl px-5 text-center">
-        <motion.div {...fadeUp(0)} className="inline-flex items-center gap-2 rounded-full bg-emerald-500/[0.08] px-4 py-2 ring-1 ring-emerald-500/20 mb-8">
-          <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-          <span className="text-[13px] font-medium text-emerald-400">Real-time sports alerts</span>
+        <motion.div {...fadeUp(0)} className="inline-flex items-center gap-2 rounded-full bg-primaryBlue/10 px-4 py-2 ring-1 ring-primaryBlue/20 mb-8">
+          <div className="h-1.5 w-1.5 rounded-full bg-primaryBlue" />
+          <span className="text-[13px] font-medium text-primaryBlue">Real-time sports alerts</span>
         </motion.div>
 
         <motion.h1 {...fadeUp(0.1)} className="text-4xl sm:text-5xl lg:text-6xl font-bold font-display tracking-[-0.03em] leading-[1.1]">
           Know what's happening
           <br />
-          <span className="text-emerald-400">before the odds move</span>
+          <span className="text-primaryBlue">before the odds move</span>
         </motion.h1>
 
         <motion.p {...fadeUp(0.2)} className="mt-6 text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
@@ -184,7 +184,7 @@ function Hero() {
           </div>
           <div className="w-px h-10 bg-white/[0.06] hidden sm:block" />
           <div>
-            <div className="text-2xl sm:text-3xl font-bold text-emerald-400">98.7%</div>
+            <div className="text-2xl sm:text-3xl font-bold text-primaryBlue">98.7%</div>
             <div className="text-[13px] text-slate-500 mt-1">Uptime</div>
           </div>
         </motion.div>
@@ -255,7 +255,7 @@ function LivePreview() {
         </div>
 
         <div className="max-w-2xl mx-auto">
-          <div className="bg-[#161B22] rounded-2xl ring-1 ring-white/[0.06] overflow-hidden shadow-2xl shadow-black/40">
+          <div className="bg-surface rounded-2xl ring-1 ring-white/[0.06] overflow-hidden shadow-2xl shadow-black/40">
             {/* Window chrome */}
             <div className="flex items-center gap-2 px-5 py-3.5 border-b border-white/[0.06]">
               <div className="w-3 h-3 rounded-full bg-white/[0.08]" />
@@ -272,7 +272,7 @@ function LivePreview() {
                   onClick={() => setActiveSport(sport)}
                   className={`text-[12px] font-medium px-3 py-1.5 rounded-full transition-colors duration-200 cursor-pointer ${
                     activeSport === sport
-                      ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/25"
+                      ? "bg-primaryBlue/15 text-primaryBlue ring-1 ring-primaryBlue/25"
                       : "text-slate-500 hover:text-slate-300 hover:bg-white/[0.04]"
                   }`}
                 >
@@ -286,7 +286,7 @@ function LivePreview() {
               {visibleAlerts.length === 0 && (
                 <div className="flex items-center justify-center h-[380px] text-slate-500 text-[15px]">
                   <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <div className="h-2 w-2 rounded-full bg-primaryBlue animate-pulse" />
                     Waiting for alerts...
                   </div>
                 </div>
@@ -304,7 +304,7 @@ function LivePreview() {
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-[12px] font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                          <span className="text-[12px] font-medium text-primaryBlue bg-primaryBlue/10 px-2 py-0.5 rounded-md">
                             {alert.sport}
                           </span>
                           <span className="text-[13px] font-medium text-slate-300">
@@ -322,7 +322,7 @@ function LivePreview() {
                       <div className="flex items-center justify-between mt-3">
                         <div className="flex items-center gap-1.5">
                           <span className="text-[12px] text-slate-500">Confidence</span>
-                          <span className="text-[12px] font-medium text-emerald-400">{alert.confidence}%</span>
+                          <span className="text-[12px] font-medium text-primaryBlue">{alert.confidence}%</span>
                         </div>
                       </div>
                     </div>
@@ -353,8 +353,8 @@ function Features() {
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Speed — hero feature, spans 2 cols */}
-          <div className="sm:col-span-2 group rounded-2xl bg-[#161B22] ring-1 ring-white/[0.06] p-8 hover:ring-emerald-500/20 hover:translate-y-[-2px] transition-all duration-300">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 ring-1 ring-emerald-500/20 flex items-center justify-center mb-5 text-emerald-400 group-hover:bg-emerald-500/15 transition-colors">
+          <div className="sm:col-span-2 group rounded-2xl bg-surface ring-1 ring-white/[0.06] p-8 hover:ring-primaryBlue/20 hover:translate-y-[-2px] transition-all duration-300">
+            <div className="w-12 h-12 rounded-xl bg-primaryBlue/10 ring-1 ring-primaryBlue/20 flex items-center justify-center mb-5 text-primaryBlue group-hover:bg-primaryBlue/15 transition-colors">
               <Zap className="w-6 h-6" />
             </div>
             <h3 className="text-xl font-bold text-white mb-3">Seconds, not minutes</h3>
@@ -363,19 +363,19 @@ function Features() {
             </p>
             <div className="mt-6 flex items-center gap-6">
               <div className="text-center">
-                <div className="text-2xl font-bold text-emerald-400">2s</div>
+                <div className="text-2xl font-bold text-primaryBlue">2s</div>
                 <div className="text-[12px] text-slate-500">Delivery</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-emerald-400">&lt;250ms</div>
+                <div className="text-2xl font-bold text-primaryBlue">&lt;250ms</div>
                 <div className="text-[12px] text-slate-500">Processing</div>
               </div>
             </div>
           </div>
 
           {/* AI context */}
-          <div className="group rounded-2xl bg-[#161B22] ring-1 ring-white/[0.06] p-7 hover:ring-emerald-500/20 hover:translate-y-[-2px] transition-all duration-300">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 ring-1 ring-emerald-500/20 flex items-center justify-center mb-5 text-emerald-400 group-hover:bg-emerald-500/15 transition-colors">
+          <div className="group rounded-2xl bg-surface ring-1 ring-white/[0.06] p-7 hover:ring-primaryBlue/20 hover:translate-y-[-2px] transition-all duration-300">
+            <div className="w-10 h-10 rounded-xl bg-primaryBlue/10 ring-1 ring-primaryBlue/20 flex items-center justify-center mb-5 text-primaryBlue group-hover:bg-primaryBlue/15 transition-colors">
               <Activity className="w-5 h-5" />
             </div>
             <h3 className="text-[17px] font-semibold text-white mb-2">AI-powered context</h3>
@@ -385,8 +385,8 @@ function Features() {
           </div>
 
           {/* Signal not noise */}
-          <div className="group rounded-2xl bg-[#161B22] ring-1 ring-white/[0.06] p-7 hover:ring-emerald-500/20 hover:translate-y-[-2px] transition-all duration-300">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 ring-1 ring-emerald-500/20 flex items-center justify-center mb-5 text-emerald-400 group-hover:bg-emerald-500/15 transition-colors">
+          <div className="group rounded-2xl bg-surface ring-1 ring-white/[0.06] p-7 hover:ring-primaryBlue/20 hover:translate-y-[-2px] transition-all duration-300">
+            <div className="w-10 h-10 rounded-xl bg-primaryBlue/10 ring-1 ring-primaryBlue/20 flex items-center justify-center mb-5 text-primaryBlue group-hover:bg-primaryBlue/15 transition-colors">
               <Bell className="w-5 h-5" />
             </div>
             <h3 className="text-[17px] font-semibold text-white mb-2">Signal, not noise</h3>
@@ -396,8 +396,8 @@ function Features() {
           </div>
 
           {/* Multi-sport coverage — spans 2 cols */}
-          <div className="sm:col-span-2 group rounded-2xl bg-[#161B22] ring-1 ring-white/[0.06] p-7 hover:ring-emerald-500/20 hover:translate-y-[-2px] transition-all duration-300">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 ring-1 ring-emerald-500/20 flex items-center justify-center mb-5 text-emerald-400 group-hover:bg-emerald-500/15 transition-colors">
+          <div className="sm:col-span-2 group rounded-2xl bg-surface ring-1 ring-white/[0.06] p-7 hover:ring-primaryBlue/20 hover:translate-y-[-2px] transition-all duration-300">
+            <div className="w-10 h-10 rounded-xl bg-primaryBlue/10 ring-1 ring-primaryBlue/20 flex items-center justify-center mb-5 text-primaryBlue group-hover:bg-primaryBlue/15 transition-colors">
               <BarChart3 className="w-5 h-5" />
             </div>
             <h3 className="text-[17px] font-semibold text-white mb-2">Multi-sport coverage</h3>
@@ -444,8 +444,8 @@ function HowItWorks() {
         <div className="grid sm:grid-cols-3 gap-10 sm:gap-8">
           {steps.map((step, index) => (
             <div key={index} className="text-center">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 ring-1 ring-emerald-500/20 flex items-center justify-center mx-auto mb-5">
-                <span className="text-lg font-bold text-emerald-400">{step.number}</span>
+              <div className="w-12 h-12 rounded-full bg-primaryBlue/10 ring-1 ring-primaryBlue/20 flex items-center justify-center mx-auto mb-5">
+                <span className="text-lg font-bold text-primaryBlue">{step.number}</span>
               </div>
               <h3 className="text-[17px] font-semibold text-white mb-2">{step.title}</h3>
               <p className="text-[15px] text-slate-400 leading-relaxed max-w-xs mx-auto">{step.description}</p>
@@ -513,15 +513,15 @@ function Pricing() {
               key={plan.name}
               className={`rounded-2xl p-8 ${
                 plan.featured
-                  ? "bg-[#161B22] ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-500/[0.08]"
-                  : "bg-[#161B22] ring-1 ring-white/[0.06]"
+                  ? "bg-surface ring-2 ring-primaryBlue/40 shadow-lg shadow-primaryBlue/10"
+                  : "bg-surface ring-1 ring-white/[0.06]"
               }`}
             >
               <div className="mb-6">
                 <div className="flex items-center gap-3 mb-3">
                   <h3 className="text-xl font-semibold text-white">{plan.name}</h3>
                   {plan.featured && (
-                    <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full ring-1 ring-emerald-500/20">
+                    <span className="text-[11px] font-semibold text-primaryBlue bg-primaryBlue/10 px-2.5 py-1 rounded-full ring-1 ring-primaryBlue/20">
                       Popular
                     </span>
                   )}
@@ -538,8 +538,8 @@ function Pricing() {
               <ul className="space-y-3 mb-8">
                 {plan.features.map((feature, idx) => (
                   <li key={idx} className="flex items-start gap-3">
-                    <div className="w-5 h-5 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none" className="text-emerald-400">
+                    <div className="w-5 h-5 rounded-full bg-primaryBlue/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none" className="text-primaryBlue">
                         <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </div>
@@ -690,12 +690,12 @@ function SocialProof() {
           {testimonials.map((t, i) => (
             <div
               key={i}
-              className="relative rounded-2xl bg-[#161B22] ring-1 ring-white/[0.06] p-7 hover:ring-emerald-500/20 hover:translate-y-[-2px] transition-all duration-300"
+              className="relative rounded-2xl bg-surface ring-1 ring-white/[0.06] p-7 hover:ring-primaryBlue/20 hover:translate-y-[-2px] transition-all duration-300"
             >
-              <div className="text-6xl text-emerald-500/20 absolute top-4 left-5 leading-none font-serif select-none">&ldquo;</div>
+              <div className="text-6xl text-primaryBlue/20 absolute top-4 left-5 leading-none font-serif select-none">&ldquo;</div>
               <div className="flex gap-0.5 mb-4 mt-2">
                 {Array.from({ length: t.rating }).map((_, j) => (
-                  <Star key={j} className="w-4 h-4 text-emerald-400 fill-emerald-400" />
+                  <Star key={j} className="w-4 h-4 text-primaryBlue fill-primaryBlue" />
                 ))}
               </div>
               <p className="text-[15px] text-slate-300 leading-relaxed mb-6">{t.quote}</p>
