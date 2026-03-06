@@ -95,6 +95,22 @@ export const alerts = pgTable("alerts", {
   expiresAt: timestamp("expires_at").notNull().default(sql`NOW() + INTERVAL '5 minutes'`),
 });
 
+// Broadcast alerts table - one row per alert event, NOT per user
+// Users resolve their alerts at read time by joining with their preferences
+export const broadcastAlerts = pgTable("broadcast_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  alertKey: varchar("alert_key").notNull().unique(),
+  sequenceNumber: integer("sequence_number").notNull().generatedAlwaysAsIdentity(),
+  sport: text("sport").notNull(),
+  gameId: text("game_id").notNull(),
+  type: text("type").notNull(),
+  state: text("state").notNull().default("active"),
+  score: integer("score").notNull().default(0),
+  payload: jsonb("payload").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at").notNull().default(sql`NOW() + INTERVAL '5 minutes'`),
+});
+
 
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -180,8 +196,16 @@ export const insertAlertSchema = createInsertSchema(alerts).omit({
   createdAt: true,
 });
 
+export const insertBroadcastAlertSchema = createInsertSchema(broadcastAlerts).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertAlert = z.infer<typeof insertAlertSchema>;
 export type Alert = typeof alerts.$inferSelect;
+
+export type InsertBroadcastAlert = z.infer<typeof insertBroadcastAlertSchema>;
+export type BroadcastAlert = typeof broadcastAlerts.$inferSelect;
 
 
 // Enhanced game states table for storing live game data with player and weather context

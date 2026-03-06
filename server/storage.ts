@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { eq, and, desc, count, sql, gte } from "drizzle-orm";
-import { users, teams, settings, userMonitoredTeams, userAlertPreferences, globalAlertSettings, gameStates, alerts, type InsertUserMonitoredTeam, type InsertUserAlertPreferences, type InsertGameState, type InsertAlert, type Alert } from "../shared/schema";
+import { users, teams, settings, userMonitoredTeams, userAlertPreferences, globalAlertSettings, gameStates, alerts, broadcastAlerts, type InsertUserMonitoredTeam, type InsertUserAlertPreferences, type InsertGameState, type InsertAlert, type InsertBroadcastAlert, type Alert, type BroadcastAlert } from "../shared/schema";
 import { UnifiedSettings } from "./services/unified-settings";
 
 // Complete storage interface for all operations
@@ -963,6 +963,149 @@ export const storage = {
     }
   },
   
+  // === BROADCAST ALERT METHODS (fan-out architecture) ===
+
+  // Store a single broadcast alert (one per game event, not per user)
+  async createBroadcastAlert(alertData: InsertBroadcastAlert): Promise<BroadcastAlert | null> {
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 5);
+
+    try {
+      const result = await db.insert(broadcastAlerts)
+        .values({ ...alertData, expiresAt })
+        .onConflictDoUpdate({
+          target: broadcastAlerts.alertKey,
+          set: {
+            payload: alertData.payload,
+            score: alertData.score,
+            state: alertData.state || 'active',
+            expiresAt,
+          },
+        })
+        .returning();
+      return result[0] || null;
+    } catch (error) {
+      console.error('[BroadcastAlert] Failed to create:', error);
+      return null;
+    }
+  },
+
+  // Get broadcast alerts for a user's monitored games, filtered by their preferences
+  async getBroadcastAlertsForUser(userId: string, limit = 50, offset = 0) {
+    try {
+      // 1. Get user's monitored game IDs
+      const monitored = await db.select({ gameId: userMonitoredTeams.gameId })
+        .from(userMonitoredTeams)
+        .where(eq(userMonitoredTeams.userId, userId));
+
+      if (monitored.length === 0) return [];
+
+      const gameIds = monitored.map(m => m.gameId);
+
+      // 2. Get user's enabled alert preferences (keyed by sport+alertType)
+      const prefs = await db.select()
+        .from(userAlertPreferences)
+        .where(eq(userAlertPreferences.userId, userId));
+
+      const enabledSet = new Set(
+        prefs.filter(p => p.enabled).map(p => `${p.sport.toLowerCase()}:${p.alertType}`)
+      );
+
+      // 3. Get global alert settings for all sports
+      const globalSettings = await db.select()
+        .from(globalAlertSettings)
+        .where(eq(globalAlertSettings.enabled, true));
+
+      const globalEnabledSet = new Set(
+        globalSettings.map(g => `${g.sport.toLowerCase()}:${g.alertType}`)
+      );
+
+      // 4. Fetch non-expired broadcast alerts for monitored games
+      const results = await db.select()
+        .from(broadcastAlerts)
+        .where(and(
+          sql`${broadcastAlerts.gameId} IN (${sql.join(gameIds.map(id => sql`${id}`), sql`, `)})`,
+          gte(broadcastAlerts.expiresAt, new Date())
+        ))
+        .orderBy(desc(broadcastAlerts.createdAt))
+        .limit(limit + 50) // fetch extra to account for preference filtering
+        .offset(offset);
+
+      // 5. Filter by user preferences + global settings in memory
+      const filtered = results.filter(alert => {
+        const sportKey = alert.sport.toLowerCase();
+        const prefKey = `${sportKey}:${alert.type}`;
+        return enabledSet.has(prefKey) && globalEnabledSet.has(prefKey);
+      });
+
+      return filtered.slice(0, limit);
+    } catch (error) {
+      console.error('[BroadcastAlert] getBroadcastAlertsForUser failed:', error);
+      return [];
+    }
+  },
+
+  // Get broadcast alerts snapshot (for polling catch-up)
+  async getBroadcastAlertsSince(gameIds: string[], sinceSeq?: number, sinceTime?: string) {
+    try {
+      if (gameIds.length === 0) return [];
+
+      const conditions = [
+        sql`${broadcastAlerts.gameId} IN (${sql.join(gameIds.map(id => sql`${id}`), sql`, `)})`,
+        gte(broadcastAlerts.expiresAt, new Date()),
+      ];
+
+      if (sinceSeq) {
+        conditions.push(sql`${broadcastAlerts.sequenceNumber} > ${sinceSeq}`);
+      } else if (sinceTime) {
+        conditions.push(sql`${broadcastAlerts.createdAt} > ${sinceTime}`);
+      }
+
+      return await db.select()
+        .from(broadcastAlerts)
+        .where(and(...conditions))
+        .orderBy(broadcastAlerts.sequenceNumber)
+        .limit(200);
+    } catch (error) {
+      console.error('[BroadcastAlert] getBroadcastAlertsSince failed:', error);
+      return [];
+    }
+  },
+
+  // Get users who should receive Telegram for a broadcast alert
+  async getTelegramRecipientsForAlert(gameId: string, sport: string, alertType: string) {
+    try {
+      // Join: users monitoring this game + have telegram enabled + have this alert type enabled
+      const result = await db.select({
+        userId: users.id,
+        botToken: users.telegramBotToken,
+        chatId: users.telegramChatId,
+      })
+        .from(users)
+        .innerJoin(userMonitoredTeams, eq(userMonitoredTeams.userId, users.id))
+        .innerJoin(
+          userAlertPreferences,
+          and(
+            eq(userAlertPreferences.userId, users.id),
+            eq(userAlertPreferences.sport, sport.toLowerCase()),
+            eq(userAlertPreferences.alertType, alertType),
+            eq(userAlertPreferences.enabled, true)
+          )
+        )
+        .where(and(
+          eq(userMonitoredTeams.gameId, gameId),
+          eq(users.telegramEnabled, true),
+          sql`${users.telegramBotToken} IS NOT NULL`,
+          sql`${users.telegramChatId} IS NOT NULL`
+        ));
+
+      return result;
+    } catch (error) {
+      console.error('[BroadcastAlert] getTelegramRecipientsForAlert failed:', error);
+      return [];
+    }
+  },
+
   // Get all users monitoring a specific game
   async getUsersMonitoringGame(gameId: string) {
     try {
