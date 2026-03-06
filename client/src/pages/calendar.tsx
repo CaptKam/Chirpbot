@@ -343,7 +343,7 @@ export default function Calendar() {
     <div className="pb-24 sm:pb-28 bg-solidBackground text-white antialiased min-h-screen">
       <PageHeader title="ChirpBot" subtitle="Smart Alert Setup" />
       {/* Search bar */}
-      <div className="px-4 pt-4">
+      <div className="px-4 pt-4 bg-[#101922]">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
