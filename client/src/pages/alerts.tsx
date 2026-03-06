@@ -525,7 +525,7 @@ export default function AlertsPage() {
 
   // ─── Sport pills ───────────────────────────────────────────────
   const sportPills = (
-    <div className="flex overflow-x-auto no-scrollbar px-4 pb-3 pt-1 gap-2 border-b border-slate-800">
+    <div className="flex overflow-x-auto no-scrollbar px-4 pb-3 pt-1 gap-2 border-b border-slate-800 bg-[#101922] text-[#ffffff]">
       {availableSports.map((sport) => {
         const isActive = sport === filter;
         const accent = getSportAccent(sport === 'all' ? 'MLB' : sport);
