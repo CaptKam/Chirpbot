@@ -3411,6 +3411,185 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Seed demo alerts for testing
+  app.post('/api/admin/seed-demo-alerts', requireAdminAuth, validateCSRF, async (req, res) => {
+    try {
+      const now = new Date();
+      const demoAlerts = [
+        {
+          alertKey: `demo_mlb_hr_${now.getTime()}`,
+          sport: 'MLB',
+          gameId: 'demo_mlb_1',
+          type: 'home_run',
+          state: 'active',
+          score: 95,
+          payload: JSON.stringify({
+            message: "Aaron Judge crushes a 2-run homer to right field! Yankees lead 5-3 in the 7th.",
+            priority: 95,
+            type: 'home_run',
+            gameId: 'demo_mlb_1',
+            context: {
+              homeTeam: 'New York Yankees',
+              awayTeam: 'Boston Red Sox',
+              homeAbbr: 'NYY',
+              awayAbbr: 'BOS',
+              homeScore: 5,
+              awayScore: 3,
+              inning: 7,
+              isTopInning: false,
+              sport: 'MLB'
+            },
+            timestamp: now.toISOString(),
+            gamblingInsights: {
+              liveOdds: 'NYY -220',
+              betAngle: 'Yankees run line now -1.5 at +110 with late HR momentum',
+              edgeRating: 'high'
+            }
+          }),
+        },
+        {
+          alertKey: `demo_nba_run_${now.getTime()}`,
+          sport: 'NBA',
+          gameId: 'demo_nba_1',
+          type: 'scoring_run',
+          state: 'active',
+          score: 88,
+          payload: JSON.stringify({
+            message: "Lakers on a 14-2 run! LeBron with 8 straight points. Lakers pull within 3 late in the 4th.",
+            priority: 88,
+            type: 'scoring_run',
+            gameId: 'demo_nba_1',
+            context: {
+              homeTeam: 'Los Angeles Lakers',
+              awayTeam: 'Golden State Warriors',
+              homeAbbr: 'LAL',
+              awayAbbr: 'GSW',
+              homeScore: 108,
+              awayScore: 111,
+              quarter: 4,
+              timeRemaining: '3:42',
+              sport: 'NBA'
+            },
+            timestamp: new Date(now.getTime() - 120000).toISOString(),
+            gamblingInsights: {
+              liveOdds: 'LAL +130',
+              betAngle: 'Live under 228.5 looking strong with defensive intensity rising',
+              edgeRating: 'medium'
+            }
+          }),
+        },
+        {
+          alertKey: `demo_nfl_td_${now.getTime()}`,
+          sport: 'NFL',
+          gameId: 'demo_nfl_1',
+          type: 'touchdown',
+          state: 'active',
+          score: 92,
+          payload: JSON.stringify({
+            message: "Mahomes finds Kelce on a 34-yard TD strike! Chiefs take a 28-24 lead with 4:12 left in the 4th.",
+            priority: 92,
+            type: 'touchdown',
+            gameId: 'demo_nfl_1',
+            context: {
+              homeTeam: 'Kansas City Chiefs',
+              awayTeam: 'Buffalo Bills',
+              homeAbbr: 'KC',
+              awayAbbr: 'BUF',
+              homeScore: 28,
+              awayScore: 24,
+              quarter: 4,
+              timeRemaining: '4:12',
+              sport: 'NFL'
+            },
+            timestamp: new Date(now.getTime() - 300000).toISOString(),
+            gamblingInsights: {
+              liveOdds: 'KC -180',
+              betAngle: 'Chiefs ML shifted from +110 pre-TD. Over 51.5 now in play.',
+              edgeRating: 'high'
+            }
+          }),
+        },
+        {
+          alertKey: `demo_mlb_pitching_${now.getTime()}`,
+          sport: 'MLB',
+          gameId: 'demo_mlb_2',
+          type: 'pitching_change',
+          state: 'active',
+          score: 75,
+          payload: JSON.stringify({
+            message: "Dodgers bring in closer Evan Phillips for the 9th. He's converted 28 of 30 save opportunities this season.",
+            priority: 75,
+            type: 'pitching_change',
+            gameId: 'demo_mlb_2',
+            context: {
+              homeTeam: 'Los Angeles Dodgers',
+              awayTeam: 'San Diego Padres',
+              homeAbbr: 'LAD',
+              awayAbbr: 'SD',
+              homeScore: 4,
+              awayScore: 2,
+              inning: 9,
+              isTopInning: true,
+              sport: 'MLB'
+            },
+            timestamp: new Date(now.getTime() - 60000).toISOString(),
+            gamblingInsights: {
+              liveOdds: 'LAD -350',
+              betAngle: 'Phillips elite save rate makes LAD -1.5 run line at +135 attractive',
+              edgeRating: 'medium'
+            }
+          }),
+        },
+        {
+          alertKey: `demo_nba_injury_${now.getTime()}`,
+          sport: 'NBA',
+          gameId: 'demo_nba_2',
+          type: 'injury',
+          state: 'active',
+          score: 90,
+          payload: JSON.stringify({
+            message: "Jayson Tatum heading to the locker room with an apparent ankle injury. Celtics up 12 in the 3rd quarter.",
+            priority: 90,
+            type: 'injury',
+            gameId: 'demo_nba_2',
+            context: {
+              homeTeam: 'Boston Celtics',
+              awayTeam: 'Miami Heat',
+              homeAbbr: 'BOS',
+              awayAbbr: 'MIA',
+              homeScore: 82,
+              awayScore: 70,
+              quarter: 3,
+              timeRemaining: '5:18',
+              sport: 'NBA'
+            },
+            timestamp: new Date(now.getTime() - 180000).toISOString(),
+            gamblingInsights: {
+              liveOdds: 'BOS -8.5',
+              betAngle: 'Line may shift if Tatum is ruled out. Watch for live spread adjustment.',
+              edgeRating: 'high'
+            }
+          }),
+        },
+      ];
+
+      let created = 0;
+      for (const alert of demoAlerts) {
+        try {
+          await storage.createBroadcastAlert(alert);
+          created++;
+        } catch (e) {
+          // Ignore duplicate key errors
+        }
+      }
+
+      res.json({ message: `Seeded ${created} demo alerts`, total: demoAlerts.length });
+    } catch (error) {
+      console.error('Error seeding demo alerts:', error);
+      res.status(500).json({ message: 'Failed to seed demo alerts' });
+    }
+  });
+
   // Debug endpoint to diagnose cookie/session issues
   app.get('/api/admin-auth/debug', async (req, res) => {
     const cookieHeader = req.headers.cookie || 'none';

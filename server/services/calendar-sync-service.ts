@@ -113,7 +113,7 @@ export class CalendarSyncService implements ICalendarSyncService {
       preStartPollInterval: RUNTIME.calendarPoll.preStartPollMs,
       maxGamesPerSport: 50,
       cacheTtlMs: 300_000, // 5 minutes
-      cleanupIntervalMs: 600_000, // 10 minutes
+      cleanupIntervalMs: 180_000, // 3 minutes (must be <= cacheTtlMs to avoid stale final games)
       enableMetrics: true,
       ...config
     };
@@ -247,18 +247,25 @@ export class CalendarSyncService implements ICalendarSyncService {
   // Get calendar data for UI
   getCalendarData(sport?: string): CalendarGameData[] {
     const allGames: CalendarGameData[] = [];
-    
+    const cutoffTime = Date.now() - this.config.cacheTtlMs;
+
     const sportsToFetch = sport ? [sport] : this.config.sports;
-    
+
     for (const sportName of sportsToFetch) {
       const sportState = this.sportStates.get(sportName);
       if (sportState) {
-        allGames.push(...Array.from(sportState.games.values()));
+        for (const game of sportState.games.values()) {
+          // Skip expired final games at read time (don't wait for cleanup cycle)
+          if (game.status === 'final' && game.lastUpdated.getTime() < cutoffTime) {
+            continue;
+          }
+          allGames.push(game);
+        }
       }
     }
 
     // Sort by start time
-    return allGames.sort((a, b) => 
+    return allGames.sort((a, b) =>
       new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
     );
   }

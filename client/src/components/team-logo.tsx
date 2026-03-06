@@ -511,6 +511,42 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string, teamName?: string): st
       'WAS': 'https://a.espncdn.com/i/teamlogos/wnba/500/wsh.png',
       'GS': 'https://a.espncdn.com/i/teamlogos/wnba/500/gsw.png',
     },
+    NHL: {
+      'ANA': 'https://a.espncdn.com/i/teamlogos/nhl/500/ana.png',
+      'ARI': 'https://a.espncdn.com/i/teamlogos/nhl/500/ari.png',
+      'BOS': 'https://a.espncdn.com/i/teamlogos/nhl/500/bos.png',
+      'BUF': 'https://a.espncdn.com/i/teamlogos/nhl/500/buf.png',
+      'CGY': 'https://a.espncdn.com/i/teamlogos/nhl/500/cgy.png',
+      'CAR': 'https://a.espncdn.com/i/teamlogos/nhl/500/car.png',
+      'CHI': 'https://a.espncdn.com/i/teamlogos/nhl/500/chi.png',
+      'COL': 'https://a.espncdn.com/i/teamlogos/nhl/500/col.png',
+      'CBJ': 'https://a.espncdn.com/i/teamlogos/nhl/500/cbj.png',
+      'DAL': 'https://a.espncdn.com/i/teamlogos/nhl/500/dal.png',
+      'DET': 'https://a.espncdn.com/i/teamlogos/nhl/500/det.png',
+      'EDM': 'https://a.espncdn.com/i/teamlogos/nhl/500/edm.png',
+      'FLA': 'https://a.espncdn.com/i/teamlogos/nhl/500/fla.png',
+      'LAK': 'https://a.espncdn.com/i/teamlogos/nhl/500/la.png',
+      'MIN': 'https://a.espncdn.com/i/teamlogos/nhl/500/min.png',
+      'MTL': 'https://a.espncdn.com/i/teamlogos/nhl/500/mtl.png',
+      'NSH': 'https://a.espncdn.com/i/teamlogos/nhl/500/nsh.png',
+      'NJD': 'https://a.espncdn.com/i/teamlogos/nhl/500/njd.png',
+      'NYI': 'https://a.espncdn.com/i/teamlogos/nhl/500/nyi.png',
+      'NYR': 'https://a.espncdn.com/i/teamlogos/nhl/500/nyr.png',
+      'OTT': 'https://a.espncdn.com/i/teamlogos/nhl/500/ott.png',
+      'PHI': 'https://a.espncdn.com/i/teamlogos/nhl/500/phi.png',
+      'PIT': 'https://a.espncdn.com/i/teamlogos/nhl/500/pit.png',
+      'SJS': 'https://a.espncdn.com/i/teamlogos/nhl/500/sj.png',
+      'SEA': 'https://a.espncdn.com/i/teamlogos/nhl/500/sea.png',
+      'STL': 'https://a.espncdn.com/i/teamlogos/nhl/500/stl.png',
+      'TBL': 'https://a.espncdn.com/i/teamlogos/nhl/500/tb.png',
+      'TOR': 'https://a.espncdn.com/i/teamlogos/nhl/500/tor.png',
+      'UTA': 'https://a.espncdn.com/i/teamlogos/nhl/500/uta.png',
+      'VAN': 'https://a.espncdn.com/i/teamlogos/nhl/500/van.png',
+      'VGK': 'https://a.espncdn.com/i/teamlogos/nhl/500/vgk.png',
+      'WAS': 'https://a.espncdn.com/i/teamlogos/nhl/500/wsh.png',
+      'WSH': 'https://a.espncdn.com/i/teamlogos/nhl/500/wsh.png',
+      'WPG': 'https://a.espncdn.com/i/teamlogos/nhl/500/wpg.png',
+    },
     NCAAF: {
       'ALA': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/22.png',
       'LSU': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/115.png',
@@ -622,6 +658,22 @@ const getTeamLogoUrl = (teamAbbr: string, sport?: string, teamName?: string): st
       'VT': 'https://a.espncdn.com/i/teamlogos/ncaaf/500/277.png',
     }
   };
+
+  // CFL teams - use ESPN's CFL logos
+  if (sport === 'CFL') {
+    const cflLogos: Record<string, string> = {
+      'BC': 'https://a.espncdn.com/i/teamlogos/cfl/500/bc.png',
+      'CGY': 'https://a.espncdn.com/i/teamlogos/cfl/500/cgy.png',
+      'EDM': 'https://a.espncdn.com/i/teamlogos/cfl/500/edm.png',
+      'SSK': 'https://a.espncdn.com/i/teamlogos/cfl/500/ssk.png',
+      'WPG': 'https://a.espncdn.com/i/teamlogos/cfl/500/wpg.png',
+      'HAM': 'https://a.espncdn.com/i/teamlogos/cfl/500/ham.png',
+      'TOR': 'https://a.espncdn.com/i/teamlogos/cfl/500/tor.png',
+      'OTT': 'https://a.espncdn.com/i/teamlogos/cfl/500/ott.png',
+      'MTL': 'https://a.espncdn.com/i/teamlogos/cfl/500/mtl.png',
+    };
+    return cflLogos[teamAbbr] || null;
+  }
 
   // If sport is specified, ONLY look in that sport (prevent cross-sport contamination)
   if (sport) {
@@ -818,8 +870,8 @@ export function TeamLogo({ teamName, abbreviation, sport, size = 'md', className
 
 
 
-  // Try to get the official team logo URL first (but skip WNBA images)
-  const logoUrl = teamAbbr && sport !== 'WNBA' ? getTeamLogoUrl(teamAbbr, sport, teamName) : null;
+  // Try to get the official team logo URL
+  const logoUrl = teamAbbr ? getTeamLogoUrl(teamAbbr, sport, teamName) : null;
 
   // Use provided teamColor or look up by abbreviation/sport
   const resolvedColor = teamColor || getTeamColor(teamAbbr, sport, teamName);

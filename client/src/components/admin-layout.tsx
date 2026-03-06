@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link, useLocation } from "wouter";
+import { ChirpBotLogo } from "@/components/ChirpBotLogo";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -60,12 +61,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center shadow-lg">
-                  <Shield className="w-6 h-6 text-white" />
-                </div>
+                <ChirpBotLogo size="md" showText={false} />
                 <div>
-                  <h1 className="text-xl font-bold text-white">ChirpBot Admin Panel</h1>
-                  <p className="text-sm text-slate-300">User & System Management</p>
+                  <h1 className="text-xl font-bold text-white tracking-tight">ChirpBot</h1>
+                  <p className="text-sm text-slate-300">Admin Panel</p>
                 </div>
               </div>
             </div>

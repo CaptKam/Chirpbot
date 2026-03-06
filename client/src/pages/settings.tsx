@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Zap, LogOut, SettingsIcon, Bell, Target, Trophy, Clock, TrendingUp, Users, AlertTriangle, Send, CheckCircle, XCircle, Monitor, BarChart3, ArrowRight, DollarSign, Star } from "lucide-react";
+import { ChirpBotLogo } from "@/components/ChirpBotLogo";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -713,12 +714,10 @@ export default function Settings() {
       <header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-[#0D1117]/70 border-b border-white/[0.08] text-slate-100 px-4 py-6">
         <div className="mx-auto max-w-7xl flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className={`h-10 w-10 rounded-lg ${sportColors.bg} ring-1 ${getRingClass()} flex items-center justify-center`}>
-              <Zap className={`w-5 h-5 ${sportColors.text}`} />
-            </div>
+            <ChirpBotLogo size="md" showText={false} />
             <div>
-              <h1 className="text-xl font-black uppercase tracking-wide text-slate-100">ChirpBot</h1>
-              <p className={`${sportColors.text} opacity-80 text-xs font-medium`}>Settings Dashboard</p>
+              <h1 className="text-xl font-bold text-white tracking-tight">ChirpBot</h1>
+              <p className="text-emerald-400/80 text-xs font-semibold">Settings Dashboard</p>
             </div>
           </div>
           {isAuthenticated && (
