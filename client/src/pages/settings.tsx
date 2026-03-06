@@ -722,7 +722,7 @@ export default function Settings() {
                           <div key={alertType.key} className={`flex items-center justify-between p-4 rounded-lg border transition-all duration-300 group ${
                             isGloballyDisabled 
                               ? 'bg-red-500/5 border-red-500/20 opacity-60' 
-                              : `${sportClasses.cardBg} border-white/10 ${sportClasses.hoverBg} hover:ring-1 ring-white/20`
+                              : `${sc.cardBg} border-white/10 ${sc.hoverBg} hover:ring-1 ring-white/20`
                           }`}>
                             <div className="flex-1">
                               <div className="flex items-center space-x-2">
@@ -756,7 +756,7 @@ export default function Settings() {
                               }}
                               disabled={isPending || isGloballyDisabled || updateAlertPreferenceMutation.isPending}
                               data-testid={`toggle-${alertType.key.toLowerCase()}`}
-                              className={`${isGloballyDisabled ? 'opacity-50' : sportClasses.checkedBg} transition-all duration-200 ${isPending ? 'pointer-events-none' : ''}`}
+                              className={`${isGloballyDisabled ? 'opacity-50' : sc.checkedBg} transition-all duration-200 ${isPending ? 'pointer-events-none' : ''}`}
                             />
                           </div>
                         );
