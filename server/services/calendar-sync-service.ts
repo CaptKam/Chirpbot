@@ -63,17 +63,6 @@ export interface CalendarSyncConfig {
   enableMetrics: boolean;
 }
 
-// Calendar update event for WebSocket broadcasting
-export interface CalendarUpdateEvent {
-  type: 'calendar_update';
-  sport: string;
-  gameId: string;
-  previousStatus: string;
-  newStatus: string;
-  gameData: CalendarGameData;
-  timestamp: string;
-}
-
 // Performance metrics for monitoring
 export interface CalendarSyncMetrics {
   pollCount: number;
@@ -560,16 +549,6 @@ export class CalendarSyncService implements ICalendarSyncService {
           }
         }
 
-        // Broadcast update via WebSocket
-        this.broadcastCalendarUpdate({
-          type: 'calendar_update',
-          sport,
-          gameId,
-          previousStatus: existingGame.status,
-          newStatus: newCalendarGame.status,
-          gameData: newCalendarGame,
-          timestamp: new Date().toISOString()
-        });
 
         console.log(`📅 Calendar Sync: ${sport} game ${gameId} status changed: ${existingGame.status} → ${newCalendarGame.status}`);
       }
@@ -684,12 +663,6 @@ export class CalendarSyncService implements ICalendarSyncService {
     const minutesToStart = timeToStart / (1000 * 60);
     
     return minutesToStart <= RUNTIME.calendarPoll.criticalWindowMin && minutesToStart > -5;
-  }
-
-  private broadcastCalendarUpdate(update: CalendarUpdateEvent): void {
-    // WebSocket broadcasting removed - using HTTP polling architecture
-    // This method is kept as no-op to maintain API compatibility
-    return;
   }
 
   private cleanupOldGames(): void {
