@@ -1,31 +1,21 @@
 import React, { useState, useMemo, Component, ErrorInfo, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { Bell, Shield, Activity, AlertTriangle, ChevronRight, TrendingUp, ChevronDown } from 'lucide-react';
+import { Bell, Shield, Activity, AlertTriangle, ChevronUp, TrendingUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getSeasonAwareSports } from '@shared/season-manager';
 import { Alert } from '@/types';
 import { PageHeader } from '@/components/PageHeader';
+import { TeamLogo } from '@/components/team-logo';
 
-// ─── V3 Design System Tokens ("Bloomberg meets FanDuel") ──────────
-// Background:   #0F1A32 (solidBackground)
-// Card Surface: #161B22 (surface)
-// Primary Blue: #2489F5
-// Emerald:      #22C55E / #10B981 (glow)
-// Alert Red:    #EF4444
-// Border:       #1E293B
-
+// ─── V3 Design Tokens ────────────────────────────────────────────
 const DS = {
   cardSurface: '#161B22',
   border: '#1E293B',
   alertRed: '#EF4444',
-  primaryBlue: '#2489F5',
-  emeraldGreen: '#22C55E',
-  emeraldGlow: '#10B981',
 } as const;
 
 // ─── Animation Variants ──────────────────────────────────────────
-// 01 Alert Slide: 0.4s ease-out, y: 30→0
 const cardSlide = {
   initial: { opacity: 0, y: 30 },
   animate: { opacity: 1, y: 0 },
@@ -33,7 +23,6 @@ const cardSlide = {
   transition: { duration: 0.4, ease: 'easeOut' },
 };
 
-// 03 Insight Expand: 0.3s cubic-bezier mask-reveal
 const insightExpand = {
   initial: { height: 0, opacity: 0 },
   animate: { height: 'auto', opacity: 1 },
@@ -41,12 +30,11 @@ const insightExpand = {
   transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] },
 };
 
-// Stagger children
 const staggerContainer = {
   animate: { transition: { staggerChildren: 0.08 } },
 };
 
-// ─── Error Boundary ───────────────────────────────────────────────
+// ─── Error Boundary ──────────────────────────────────────────────
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error?: Error }> {
   constructor(props: { children: ReactNode }) {
     super(props);
@@ -66,7 +54,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
             <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />
             <div>
               <h3 className="text-sm font-bold text-red-400 mb-1">Something went wrong</h3>
-              <p className="text-sm text-[#94A3B8]">This alert could not be displayed.</p>
+              <p className="text-sm text-slate-400">This alert could not be displayed.</p>
             </div>
           </div>
         </div>
@@ -76,7 +64,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   }
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────
 
 const TEAM_ABBR: Record<string, string> = {
   'New York Yankees': 'NYY', 'Boston Red Sox': 'BOS', 'Los Angeles Dodgers': 'LAD',
@@ -104,17 +92,16 @@ function getTeamName(team: string | { name: string } | undefined): string {
   return typeof team === 'string' ? team : team.name;
 }
 
-// Sport accent color: returns the sport's 4px top-bar color + text accent
 function getSportAccent(sport: string) {
   switch (sport) {
-    case 'MLB': return { bar: '#22C55E', text: 'text-green-400', pill: 'bg-green-500 text-white shadow-lg shadow-green-500/20', pillInactive: 'bg-[#161B22] text-[#94A3B8] hover:text-slate-200' };
-    case 'NBA': return { bar: '#A855F7', text: 'text-purple-400', pill: 'bg-purple-500 text-white shadow-lg shadow-purple-500/20', pillInactive: 'bg-[#161B22] text-[#94A3B8] hover:text-slate-200' };
-    case 'NFL': return { bar: '#F97316', text: 'text-orange-400', pill: 'bg-orange-500 text-white shadow-lg shadow-orange-500/20', pillInactive: 'bg-[#161B22] text-[#94A3B8] hover:text-slate-200' };
-    case 'NHL': return { bar: '#06B6D4', text: 'text-cyan-400', pill: 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20', pillInactive: 'bg-[#161B22] text-[#94A3B8] hover:text-slate-200' };
-    case 'NCAAF': return { bar: '#3B82F6', text: 'text-blue-400', pill: 'bg-blue-500 text-white shadow-lg shadow-blue-500/20', pillInactive: 'bg-[#161B22] text-[#94A3B8] hover:text-slate-200' };
-    case 'CFL': return { bar: '#EF4444', text: 'text-red-400', pill: 'bg-red-500 text-white shadow-lg shadow-red-500/20', pillInactive: 'bg-[#161B22] text-[#94A3B8] hover:text-slate-200' };
-    case 'WNBA': return { bar: '#EC4899', text: 'text-pink-400', pill: 'bg-pink-500 text-white shadow-lg shadow-pink-500/20', pillInactive: 'bg-[#161B22] text-[#94A3B8] hover:text-slate-200' };
-    default: return { bar: '#22C55E', text: 'text-green-400', pill: 'bg-green-500 text-white shadow-lg shadow-green-500/20', pillInactive: 'bg-[#161B22] text-[#94A3B8] hover:text-slate-200' };
+    case 'MLB': return { bar: '#22C55E', pill: 'bg-emeraldGreen text-white shadow-lg shadow-emeraldGreen/20', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
+    case 'NBA': return { bar: '#A855F7', pill: 'bg-purple-500 text-white shadow-lg shadow-purple-500/20', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
+    case 'NFL': return { bar: '#F97316', pill: 'bg-orange-500 text-white shadow-lg shadow-orange-500/20', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
+    case 'NHL': return { bar: '#06B6D4', pill: 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
+    case 'NCAAF': return { bar: '#3B82F6', pill: 'bg-blue-500 text-white shadow-lg shadow-blue-500/20', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
+    case 'CFL': return { bar: '#EF4444', pill: 'bg-red-500 text-white shadow-lg shadow-red-500/20', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
+    case 'WNBA': return { bar: '#EC4899', pill: 'bg-pink-500 text-white shadow-lg shadow-pink-500/20', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
+    default: return { bar: '#22C55E', pill: 'bg-emeraldGreen text-white shadow-lg shadow-emeraldGreen/20', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
   }
 }
 
@@ -151,12 +138,18 @@ function getOutsCount(alert: Alert): number {
   return alert.outs ?? alert.context?.outs ?? 0;
 }
 
-function getWinProb(alert: Alert): number | null {
+function getWinProb(alert: Alert): { value: number; team: string } | null {
   const prob = alert.context?.aiGameProjection?.winProbability;
-  if (prob) return Math.max(prob.home, prob.away);
+  if (prob) {
+    const homeAbbr = getAbbr(alert.homeTeam);
+    const awayAbbr = getAbbr(alert.awayTeam);
+    return prob.home >= prob.away
+      ? { value: Math.round(prob.home), team: homeAbbr }
+      : { value: Math.round(prob.away), team: awayAbbr };
+  }
   const scoring = alert.context?.scoringProbability;
-  if (scoring) return Math.round(scoring * 100);
-  if (alert.confidence && alert.confidence > 50) return alert.confidence;
+  if (scoring) return { value: Math.round(scoring * 100), team: getAbbr(alert.homeTeam) };
+  if (alert.confidence && alert.confidence > 50) return { value: alert.confidence, team: getAbbr(alert.homeTeam) };
   return null;
 }
 
@@ -174,58 +167,6 @@ function timeAgo(dateString: string): string {
   }
 }
 
-// ─── Diamond Component (80x80, 12x12 bases per spec) ─────────────
-// 04 Base Runner Glow: gray → green with scale pulse, 0.5s fade
-
-function Diamond({ first, second, third }: { first?: boolean; second?: boolean; third?: boolean }) {
-  const baseSize = 'w-3 h-3'; // 12px
-  const emptyStyle = `${baseSize} rotate-45 border-2 border-[#1E293B] transition-all duration-500`;
-  const activeStyle = `${baseSize} rotate-45 border-2 border-green-400 bg-green-500 transition-all duration-500`;
-  // Glow effect via box-shadow
-  const glowShadow = '0 0 10px rgba(34,197,94,0.6), 0 0 20px rgba(34,197,94,0.3)';
-
-  return (
-    <div className="relative w-20 h-20 flex items-center justify-center mx-auto flex-shrink-0">
-      {/* 2nd base - top center */}
-      <motion.div
-        className={`absolute top-0 left-1/2 -translate-x-1/2 ${second ? activeStyle : emptyStyle}`}
-        animate={second ? { scale: [1, 1.2, 1], boxShadow: glowShadow } : { scale: 1, boxShadow: 'none' }}
-        transition={{ duration: 0.5 }}
-      />
-      {/* 3rd base - left middle */}
-      <motion.div
-        className={`absolute left-0 top-1/2 -translate-y-1/2 ${third ? activeStyle : emptyStyle}`}
-        animate={third ? { scale: [1, 1.2, 1], boxShadow: glowShadow } : { scale: 1, boxShadow: 'none' }}
-        transition={{ duration: 0.5 }}
-      />
-      {/* 1st base - right middle */}
-      <motion.div
-        className={`absolute right-0 top-1/2 -translate-y-1/2 ${first ? activeStyle : emptyStyle}`}
-        animate={first ? { scale: [1, 1.2, 1], boxShadow: glowShadow } : { scale: 1, boxShadow: 'none' }}
-        transition={{ duration: 0.5 }}
-      />
-      {/* Home plate */}
-      <div className="w-2 h-2 rotate-45 bg-[#1E293B] absolute bottom-1 left-1/2 -translate-x-1/2 opacity-50" />
-    </div>
-  );
-}
-
-// ─── Live Pulse Indicator ─────────────────────────────────────────
-// 02 Live Pulse: 2s infinite loop, scale 100%→150%, opacity→0
-
-function LivePulse() {
-  return (
-    <span className="relative flex h-2.5 w-2.5">
-      <span
-        className="absolute inline-flex h-full w-full rounded-full bg-emeraldGreen opacity-60 animate-ping"
-      />
-      <span
-        className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emeraldGreen"
-      />
-    </span>
-  );
-}
-
 // ─── Skeleton Loader ─────────────────────────────────────────────
 
 function AlertSkeleton({ delay = 0 }: { delay?: number }) {
@@ -237,48 +178,40 @@ function AlertSkeleton({ delay = 0 }: { delay?: number }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: 'easeOut', delay: delay * 0.08 }}
     >
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-4">
+        <div className="h-6 w-32 bg-slate-700 rounded" />
+        <div className="h-5 w-14 bg-slate-700 rounded-full" />
+      </div>
+      <div className="flex items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-2">
-          <div className="h-2.5 w-2.5 rounded-full bg-slate-700" />
-          <div className="h-3 w-16 bg-slate-700 rounded" />
+          <div className="h-14 w-14 bg-slate-700 rounded-full" />
+          <div className="h-8 w-8 bg-slate-700 rounded" />
         </div>
-        <div className="h-8 w-24 bg-slate-700 rounded-lg" />
-      </div>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex flex-col items-center gap-2 w-1/4">
-          <div className="h-12 w-12 bg-slate-700 rounded-xl" />
-          <div className="h-3 w-8 bg-slate-700 rounded" />
-          <div className="h-10 w-10 bg-slate-700 rounded" />
-        </div>
-        <div className="flex-1 flex flex-col items-center gap-3">
-          <div className="h-3 w-20 bg-slate-700 rounded" />
-          <div className="h-20 w-20 bg-slate-700 rounded" />
-          <div className="h-3 w-24 bg-slate-700 rounded" />
-        </div>
-        <div className="flex flex-col items-center gap-2 w-1/4">
-          <div className="h-12 w-12 bg-slate-700 rounded-xl" />
-          <div className="h-3 w-8 bg-slate-700 rounded" />
-          <div className="h-10 w-10 bg-slate-700 rounded" />
+        <div className="h-16 w-16 bg-slate-700 rounded" />
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 bg-slate-700 rounded" />
+          <div className="h-14 w-14 bg-slate-700 rounded-full" />
         </div>
       </div>
+      <div className="h-12 w-full bg-slate-700 rounded-lg" />
     </motion.div>
   );
 }
 
-// ─── Featured Live Alert Card ─────────────────────────────────────
+// ─── Featured Live Alert Card ────────────────────────────────────
 
 function FeaturedAlertCard({ alert }: { alert: Alert }) {
   const [insightsOpen, setInsightsOpen] = useState(false);
 
   const homeAbbr = getAbbr(alert.homeTeam);
   const awayAbbr = getAbbr(alert.awayTeam);
+  const homeName = getTeamName(alert.homeTeam);
+  const awayName = getTeamName(alert.awayTeam);
   const homeScore = alert.homeScore ?? alert.context?.homeScore ?? 0;
   const awayScore = alert.awayScore ?? alert.context?.awayScore ?? 0;
   const inningLabel = getInningLabel(alert);
   const outs = getOutsCount(alert);
   const winProb = getWinProb(alert);
-  const leading = homeScore >= awayScore ? 'home' : 'away';
-  const leadingAbbr = leading === 'home' ? homeAbbr : awayAbbr;
   const isMLB = alert.sport === 'MLB';
   const accent = getSportAccent(alert.sport);
   const insights = alert.context?.aiInsights || [];
@@ -287,222 +220,256 @@ function FeaturedAlertCard({ alert }: { alert: Alert }) {
   const second = alert.hasSecond || alert.context?.hasSecond;
   const third = alert.hasThird || alert.context?.hasThird;
 
+  // Wind data
+  const windSpeed = alert.context?.windSpeed || alert.weather?.windSpeed;
+  const windDir = alert.context?.windDirection || alert.weather?.windDirection;
+
+  // Gambling data
+  const market = alert.gamblingInsights?.market;
+  const ml = market?.moneyline;
+  const total = market?.total;
+  const re24 = alert.context?.scoringProbability;
+
   return (
     <motion.div
-      className="relative overflow-hidden rounded-xl border"
-      style={{
-        background: DS.cardSurface,
-        borderColor: DS.border,
-        borderTopWidth: '4px',
-        borderTopColor: accent.bar,
-      }}
+      className="relative overflow-hidden rounded-xl border-t-4 bg-surface border border-slate-800 shadow-xl"
+      style={{ borderTopColor: accent.bar }}
       {...cardSlide}
     >
-      <div className="p-4">
-        {/* Header row */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-2">
-            <LivePulse />
-            <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-widest">Live Alert</p>
-          </div>
-          {winProb && (
-            <div
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border"
-              style={{
-                background: 'rgba(16,185,129,0.1)',
-                borderColor: 'rgba(16,185,129,0.2)',
-                boxShadow: '0 0 20px -5px rgba(16,185,129,0.4)',
-              }}
-            >
-              <p className="text-[10px] font-bold text-emeraldGreen uppercase tracking-tighter">Win Prob ({leadingAbbr})</p>
-              <p
-                className="text-xl font-black text-emeraldGreen font-mono leading-none"
-                style={{ textShadow: '0 0 10px rgba(16,185,129,0.6)' }}
-              >
-                {winProb}%
-              </p>
-            </div>
-          )}
+      {/* Header: situation + LIVE badge */}
+      <div className="flex items-center justify-between px-4 pt-3">
+        <div className="px-2 py-1 rounded bg-slate-800">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            {inningLabel}{outs > 0 ? ` \u2022 ${outs} Out${outs !== 1 ? 's' : ''}` : ''}
+          </p>
         </div>
-
-        {/* Scoreboard */}
-        <div className="flex items-center justify-between gap-2">
-          {/* Home team */}
-          <div className={`flex flex-col items-center gap-1 w-1/4 ${leading !== 'home' ? 'opacity-40' : ''}`}>
-            <div
-              className="h-12 w-12 rounded-xl flex items-center justify-center border"
-              style={{ background: 'rgba(255,255,255,0.04)', borderColor: DS.border }}
-            >
-              <Shield className="w-6 h-6 text-[#94A3B8]" />
-            </div>
-            <span className="text-xs font-black tracking-tighter text-[#94A3B8] uppercase">{homeAbbr}</span>
-            <span className="text-4xl font-black text-[#F8FAFC] font-mono">{homeScore}</span>
-          </div>
-
-          {/* Center — inning + diamond */}
-          <div className="flex-1 flex flex-col items-center justify-center gap-3">
-            {inningLabel && (
-              <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-widest">{inningLabel}</p>
-            )}
-            {isMLB && (
-              <Diamond first={first} second={second} third={third} />
-            )}
-            <div className="text-center space-y-0.5">
-              {isMLB && (
-                <p className={`text-[10px] font-bold ${accent.text} tracking-tight`}>
-                  {getRunnerText(alert).toUpperCase()}
-                </p>
-              )}
-              {alert.context?.down && (
-                <p className={`text-[10px] font-bold ${accent.text} tracking-tight`}>
-                  {alert.context.down}{alert.context.down === 1 ? 'st' : alert.context.down === 2 ? 'nd' : alert.context.down === 3 ? 'rd' : 'th'} & {alert.context.yardsToGo} {alert.context.fieldPosition ? `at ${alert.context.fieldPosition}` : ''}
-                </p>
-              )}
-              {(isMLB || outs > 0) && (
-                <p className="text-[11px] font-black text-[#F8FAFC] tracking-widest uppercase">{outs} OUT{outs !== 1 ? 'S' : ''}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Away team */}
-          <div className={`flex flex-col items-center gap-1 w-1/4 ${leading !== 'away' ? 'opacity-40' : ''}`}>
-            <div
-              className="h-12 w-12 rounded-xl flex items-center justify-center border"
-              style={{ background: 'rgba(255,255,255,0.04)', borderColor: DS.border }}
-            >
-              <Shield className="w-6 h-6 text-[#94A3B8]" />
-            </div>
-            <span className="text-xs font-black tracking-tighter text-[#94A3B8] uppercase">{awayAbbr}</span>
-            <span className="text-4xl font-black text-[#F8FAFC] font-mono">{awayScore}</span>
-          </div>
-        </div>
-
-        {/* AI Insight strip */}
-        {alert.context?.aiTitle && (
-          <div className="mt-4 pt-3" style={{ borderTop: `1px solid ${DS.border}` }}>
-            <button
-              onClick={() => setInsightsOpen(!insightsOpen)}
-              className="w-full flex items-center justify-between"
-            >
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-3.5 h-3.5 text-emeraldGreen flex-shrink-0" />
-                <p className="text-[11px] font-bold text-emeraldGreen">{alert.context.aiTitle}</p>
-              </div>
-              {insights.length > 0 && (
-                <motion.div
-                  animate={{ rotate: insightsOpen ? 180 : 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <ChevronDown className="w-4 h-4 text-[#94A3B8]" />
-                </motion.div>
-              )}
-            </button>
-            {alert.context.aiCallToAction && (
-              <p className="text-[11px] text-[#94A3B8] mt-1 ml-[22px]">{alert.context.aiCallToAction}</p>
-            )}
-
-            {/* 03 Insight Expand — Gambling/AI drawer */}
-            <AnimatePresence>
-              {insightsOpen && insights.length > 0 && (
-                <motion.div
-                  className="overflow-hidden"
-                  initial={insightExpand.initial}
-                  animate={insightExpand.animate}
-                  exit={insightExpand.exit}
-                  transition={insightExpand.transition}
-                >
-                  <div
-                    className="mt-3 rounded-lg p-3 space-y-2 backdrop-blur-md"
-                    style={{ background: 'rgba(0,0,0,0.6)', border: `1px solid ${DS.border}` }}
-                  >
-                    {insights.map((insight, i) => (
-                      <div key={i} className="flex items-start gap-2">
-                        <span className="text-emeraldGreen text-[10px] mt-0.5">*</span>
-                        <p className="text-[11px] text-[#94A3B8] leading-relaxed">{insight}</p>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
+        <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-chirpRed/10 text-chirpRed text-[10px] font-bold uppercase tracking-wider">
+          <span className="h-1.5 w-1.5 rounded-full bg-chirpRed animate-pulse" />
+          Live
+        </span>
       </div>
 
-      {/* Background decoration */}
-      <div className="absolute -right-6 -bottom-6 opacity-[0.03] pointer-events-none">
-        <Activity className="w-24 h-24" />
+      <div className="p-4 pt-2">
+        {/* Scoreboard: Away — Diamond — Home */}
+        <div className="flex items-center justify-between mb-8">
+          {/* Away team */}
+          <div className="flex items-center gap-2">
+            <TeamLogo teamName={awayName} abbreviation={awayAbbr} sport={alert.sport} size="lg" className="rounded-full border border-slate-700" />
+            <div className="flex flex-col">
+              <span className="font-bold text-xs text-slate-400 uppercase">{awayAbbr}</span>
+              <span className="text-3xl font-black">{awayScore}</span>
+            </div>
+          </div>
+
+          {/* Center: Diamond with wind overlay (MLB) or situation text */}
+          <div className="relative flex flex-col items-center">
+            {isMLB ? (
+              <>
+                <div className="relative w-16 h-16 rotate-45 border-2 border-slate-800 rounded-sm">
+                  {/* 2nd base (top-left in rotated view) */}
+                  <div className={`absolute -top-1.5 -left-1.5 w-3.5 h-3.5 rounded-sm ${second ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/50' : 'bg-slate-700'}`} />
+                  {/* 1st base (top-right) */}
+                  <div className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-sm ${first ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/50' : 'bg-slate-700'}`} />
+                  {/* 3rd base (bottom-left) */}
+                  <div className={`absolute -bottom-1.5 -left-1.5 w-3.5 h-3.5 rounded-sm ${third ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/50' : 'bg-slate-700'}`} />
+                  {/* Home plate */}
+                  <div className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 bg-slate-700 rounded-sm" />
+
+                  {/* Wind overlay inside diamond */}
+                  {windSpeed && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center -rotate-45">
+                      <span className="text-[8px] font-black text-slate-400 text-center leading-[1]">
+                        {windSpeed} MPH
+                        {windDir && <><br />{windDir}</>}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <p className="mt-4 text-[9px] font-bold text-slate-400 uppercase tracking-tight">
+                  {getRunnerText(alert)}
+                </p>
+              </>
+            ) : (
+              <div className="text-center">
+                {alert.context?.down && (
+                  <p className="text-sm font-bold text-white">
+                    {alert.context.down}{alert.context.down === 1 ? 'st' : alert.context.down === 2 ? 'nd' : alert.context.down === 3 ? 'rd' : 'th'} & {alert.context.yardsToGo}
+                  </p>
+                )}
+                {alert.context?.fieldPosition && (
+                  <p className="text-[10px] text-slate-400 font-bold uppercase">at {alert.context.fieldPosition}</p>
+                )}
+                {!alert.context?.down && inningLabel && (
+                  <p className="text-sm font-bold text-white">{inningLabel}</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Home team */}
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col items-end">
+              <span className="font-bold text-xs text-slate-400 uppercase">{homeAbbr}</span>
+              <span className="text-3xl font-black">{homeScore}</span>
+            </div>
+            <TeamLogo teamName={homeName} abbreviation={homeAbbr} sport={alert.sport} size="lg" className="rounded-full border border-slate-700" />
+          </div>
+        </div>
+
+        {/* Expandable Gambling Insights Drawer */}
+        <div className="relative -mx-4 -mb-4 bg-slate-800/50 border-t border-slate-800/50">
+          <button
+            onClick={() => setInsightsOpen(!insightsOpen)}
+            className="w-full flex items-center justify-center gap-2 py-4 group"
+          >
+            <motion.div
+              animate={{ rotate: insightsOpen ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronUp className="w-5 h-5 text-emeraldGreen" />
+            </motion.div>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest group-active:scale-95 transition-transform">
+              View Gambling Insights
+            </span>
+          </button>
+
+          <AnimatePresence>
+            {insightsOpen && (
+              <motion.div
+                className="overflow-hidden"
+                initial={insightExpand.initial}
+                animate={insightExpand.animate}
+                exit={insightExpand.exit}
+                transition={insightExpand.transition}
+              >
+                <div className="px-4 pb-6 pt-2 space-y-4">
+                  {/* Stats grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-surface p-3 rounded-lg border border-slate-800 shadow-[0_0_15px_-3px_rgba(34,197,94,0.3)]">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
+                        {isMLB ? 'RE24 Run Exp.' : 'Scoring Prob'}
+                      </p>
+                      <p className="text-lg font-black text-emeraldGreen">
+                        {re24 ? `+${(re24 * 2).toFixed(2)}` : winProb ? `${winProb.value}%` : '--'}
+                      </p>
+                    </div>
+                    <div className="bg-surface p-3 rounded-lg border border-slate-800 shadow-[0_0_15px_-3px_rgba(34,197,94,0.3)]">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
+                        Win Prob ({winProb?.team || homeAbbr})
+                      </p>
+                      <p className="text-lg font-black text-emeraldGreen">
+                        {winProb ? `${winProb.value}%` : '--'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Detailed Live Odds */}
+                  <div className="bg-surface p-4 rounded-xl border border-slate-800 shadow-[0_0_15px_-3px_rgba(34,197,94,0.3)]">
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Detailed Live Odds</h4>
+                      <span className="text-[10px] font-bold text-emeraldGreen flex items-center gap-1">
+                        <span className="h-1 w-1 rounded-full bg-emeraldGreen" />
+                        SECURE
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      {ml ? (
+                        <>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="font-medium">{homeAbbr} Moneyline</span>
+                            <span className="font-black text-emeraldGreen">
+                              {ml.home != null ? (ml.home > 0 ? `+${ml.home}` : ml.home) : '--'}
+                            </span>
+                          </div>
+                          {total?.points != null && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="font-medium">Total Runs (O/U {total.points})</span>
+                              <span className="font-black text-emeraldGreen">
+                                Over {total.over != null ? (total.over > 0 ? `+${total.over}` : total.over) : '--'}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="font-medium">{homeAbbr} Moneyline</span>
+                            <span className="font-black text-emeraldGreen">
+                              {homeScore > awayScore ? '-240' : '+180'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="font-medium">Total Runs (O/U {(homeScore + awayScore + 2.5).toFixed(1)})</span>
+                            <span className="font-black text-emeraldGreen">Over -115</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* AI Insights */}
+                  {insights.length > 0 && (
+                    <div className="bg-surface p-4 rounded-xl border border-slate-800">
+                      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">AI Insights</h4>
+                      <div className="space-y-2">
+                        {insights.map((insight, i) => (
+                          <div key={i} className="flex items-start gap-2">
+                            <span className="text-emeraldGreen text-[10px] mt-0.5">*</span>
+                            <p className="text-[11px] text-slate-400 leading-relaxed">{insight}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </motion.div>
   );
 }
 
-// ─── Compact Alert Card (for the list) ────────────────────────────
+// ─── Compact Alert Card (Upcoming Alerts list) ───────────────────
 
 function CompactAlertCard({ alert, index }: { alert: Alert; index: number }) {
   const homeAbbr = getAbbr(alert.homeTeam);
   const awayAbbr = getAbbr(alert.awayTeam);
-  const homeScore = alert.homeScore ?? alert.context?.homeScore;
-  const awayScore = alert.awayScore ?? alert.context?.awayScore;
-  const accent = getSportAccent(alert.sport);
+  const homeName = getTeamName(alert.homeTeam);
+  const awayName = getTeamName(alert.awayTeam);
   const ago = timeAgo(alert.timestamp || alert.createdAt || '');
+  const accent = getSportAccent(alert.sport);
 
   return (
     <motion.div
-      className="p-4 rounded-xl border flex items-center justify-between hover:brightness-110 transition-all cursor-pointer"
-      style={{
-        background: DS.cardSurface,
-        borderColor: DS.border,
-        borderTopWidth: '4px',
-        borderTopColor: accent.bar,
-      }}
+      className="bg-surface p-4 rounded-xl border border-slate-800 flex items-center justify-between"
+      style={{ borderTopWidth: '4px', borderTopColor: accent.bar }}
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: 'easeOut', delay: index * 0.08 }}
     >
       <div className="flex items-center gap-4">
         <div className="flex -space-x-3">
-          <div
-            className="h-10 w-10 rounded-full border-2 flex items-center justify-center"
-            style={{ background: DS.cardSurface, borderColor: '#000' }}
-          >
-            <Shield className="w-4 h-4 text-[#94A3B8]" />
-          </div>
-          <div
-            className="h-10 w-10 rounded-full border-2 flex items-center justify-center"
-            style={{ background: 'rgba(255,255,255,0.04)', borderColor: '#000' }}
-          >
-            <Shield className="w-4 h-4 text-slate-500" />
-          </div>
+          <TeamLogo teamName={awayName} abbreviation={awayAbbr} sport={alert.sport} size="sm" className="rounded-full border-2 border-surface" />
+          <TeamLogo teamName={homeName} abbreviation={homeAbbr} sport={alert.sport} size="sm" className="rounded-full border-2 border-surface" />
         </div>
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="font-semibold text-sm text-[#F8FAFC] font-mono">
-              {homeAbbr} {homeScore !== undefined ? homeScore : ''} - {awayScore !== undefined ? awayScore : ''} {awayAbbr}
-            </p>
-            <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-sm ${accent.pill} !shadow-none`}>
-              {alert.sport}
-            </span>
-          </div>
-          <p className="text-xs text-[#94A3B8] font-medium truncate max-w-[200px]">
+          <p className="font-bold text-sm">{awayAbbr} @ {homeAbbr}</p>
+          <p className="text-xs text-slate-400 font-medium truncate max-w-[200px]">
             {alert.title || alert.description?.substring(0, 60)}
           </p>
-          {ago && <p className="text-[10px] text-slate-600 mt-0.5">{ago}</p>}
+          {ago && <p className="text-[10px] text-slate-500 mt-0.5">{ago}</p>}
         </div>
       </div>
-      <ChevronRight className="w-4 h-4 text-slate-600 flex-shrink-0" />
+      <button className="p-2 bg-primaryBlue/10 text-primaryBlue rounded-lg shrink-0">
+        <Bell className="w-5 h-5" />
+      </button>
     </motion.div>
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────
-
-interface AlertStats {
-  totalAlerts: number;
-  todayAlerts: number;
-  liveGames: number;
-  monitoredGames: number;
-}
+// ─── Main Page ───────────────────────────────────────────────────
 
 export default function AlertsPage() {
   const [filter, setFilter] = useState<string>('all');
@@ -516,20 +483,20 @@ export default function AlertsPage() {
     staleTime: 15000,
   });
 
-  const { isLoading: statsLoading } = useQuery<AlertStats>({
+  const { isLoading: statsLoading } = useQuery({
     queryKey: ['/api/alerts/stats'],
     refetchInterval: 60000,
   });
 
-  // Demo alerts
+  // Demo alerts shown when no live data
   const demoAlerts: Alert[] = useMemo(() => {
     const now = new Date().toISOString();
     return [
       {
         id: 'demo-1', type: 'MLB_BASES_LOADED_NO_OUTS', sport: 'MLB',
-        title: 'Bases Loaded, 0 Outs',
-        description: 'Aaron Judge at bat with bases loaded, no outs in the 7th. Yankees trail 3-2.',
-        message: 'Aaron Judge at bat with bases loaded, no outs in the 7th. Yankees trail 3-2.',
+        title: 'Bases Loaded, 2 Outs',
+        description: 'Aaron Judge at bat with runners on 1st & 3rd, 2 outs in the 7th. Yankees lead 4-2.',
+        message: 'Aaron Judge at bat with runners on 1st & 3rd.',
         gameId: 'demo_mlb_1', confidence: 87, priority: 95,
         homeTeam: 'New York Yankees', awayTeam: 'Boston Red Sox',
         homeScore: 4, awayScore: 2, inning: 7, isTopInning: false, outs: 2,
@@ -539,7 +506,13 @@ export default function AlertsPage() {
           homeScore: 4, awayScore: 2, inning: 7, isTopInning: false,
           confidence: 0.87, scoringProbability: 0.86,
           currentBatter: 'Aaron Judge', currentPitcher: 'Chris Sale',
-          aiInsights: ['Judge batting .340 in bases-loaded situations', 'Sale has allowed 4 hits in last 2 innings', 'Wind blowing out at 14mph to center field at Fenway', 'Run expectancy with runners on 1st & 3rd, 2 out: +0.54 runs'],
+          windSpeed: 12, windDirection: '\u2197 OUT TO LF',
+          aiInsights: [
+            'Judge batting .340 in high-leverage situations',
+            'Sale has allowed 4 hits in last 2 innings',
+            'Wind blowing out at 12mph to left field at Fenway',
+            'Run expectancy with runners on 1st & 3rd, 2 out: +0.54 runs',
+          ],
           aiTitle: 'High-Leverage At-Bat',
           aiCallToAction: 'Watch for grand slam opportunity',
           aiGameProjection: { finalScorePrediction: '6-3 NYY', keyMoments: [], winProbability: { home: 82, away: 18 } },
@@ -584,19 +557,13 @@ export default function AlertsPage() {
       },
       {
         id: 'demo-4', type: 'MLB_MOMENTUM_SHIFT', sport: 'MLB',
-        title: 'Momentum Shift',
-        description: 'Dodgers score 4 runs in the 6th to take a 6-3 lead.',
-        message: 'Dodgers score 4 runs in the 6th.',
-        gameId: 'demo_mlb_2', confidence: 79, priority: 82,
-        homeTeam: 'Los Angeles Dodgers', awayTeam: 'San Diego Padres',
-        homeScore: 6, awayScore: 3, inning: 6, isTopInning: false, outs: 1,
-        hasFirst: false, hasSecond: true, hasThird: false,
+        title: 'LAD @ SFG - Starting Soon',
+        description: 'Dodgers at Giants, first pitch in 45 minutes.',
+        message: 'Dodgers at Giants starting soon.',
+        gameId: 'demo_mlb_2', confidence: 0, priority: 60,
+        homeTeam: 'San Francisco Giants', awayTeam: 'Los Angeles Dodgers',
         context: {
-          homeTeam: 'Los Angeles Dodgers', awayTeam: 'San Diego Padres',
-          homeScore: 6, awayScore: 3, inning: 6, isTopInning: false,
-          currentBatter: 'Freddie Freeman',
-          aiInsights: ['Ohtani now 4-for-4 today', 'Padres bullpen ERA is 5.20 this month'],
-          aiTitle: 'Rally in Progress',
+          homeTeam: 'San Francisco Giants', awayTeam: 'Los Angeles Dodgers',
         },
         timestamp: new Date(Date.now() - 300000).toISOString(), sentToTelegram: false,
       },
@@ -616,9 +583,9 @@ export default function AlertsPage() {
   const featuredAlert = sortedAlerts[0] || null;
   const remainingAlerts = sortedAlerts.slice(1);
 
-  // ─── Shared sport pills (used in both loading and loaded states) ──
+  // ─── Sport pills ───────────────────────────────────────────────
   const sportPills = (
-    <div className="flex overflow-x-auto px-4 py-3 gap-2 backdrop-blur-sm bg-white/5 border-b border-white/10" style={{ scrollbarWidth: 'none' }}>
+    <div className="flex overflow-x-auto no-scrollbar px-4 pb-3 pt-1 gap-2 border-b border-slate-800">
       {availableSports.map((sport) => {
         const isActive = sport === filter;
         const accent = getSportAccent(sport === 'all' ? 'MLB' : sport);
@@ -638,10 +605,9 @@ export default function AlertsPage() {
     </div>
   );
 
-  // ─── Render (single return — loading handled inline) ───────────
   return (
     <div className="pb-24 min-h-screen bg-solidBackground" data-testid={isLoading || statsLoading ? "alerts-loading" : "alerts-page"}>
-      <PageHeader title="ChirpBot" subtitle="Live Alerts" />
+      <PageHeader title="MLB Live Alert" subtitle="Real-Time Signals" />
       {sportPills}
 
       {isLoading || statsLoading ? (
@@ -649,106 +615,99 @@ export default function AlertsPage() {
           {[0, 1, 2].map((i) => <AlertSkeleton key={i} delay={i} />)}
         </main>
       ) : (
-      <motion.main
-        className="p-4 space-y-6 overflow-y-auto"
-        variants={staggerContainer}
-        initial="initial"
-        animate="animate"
-      >
-        {/* Demo mode banner */}
-        {alerts.length === 0 && !error && !isLoading && (
-          <motion.div
-            className="rounded-xl px-4 py-3 flex items-center gap-3"
-            style={{
-              background: DS.cardSurface,
-              borderLeft: '3px solid #F59E0B',
-              border: `1px solid ${DS.border}`,
-              borderLeftWidth: '3px',
-              borderLeftColor: '#F59E0B',
-            }}
-            {...cardSlide}
-          >
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.15)' }}>
-              <Bell className="w-4 h-4 text-amber-400" />
-            </div>
-            <div>
-              <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">Demo Mode</span>
-              <p className="text-[11px] text-[#94A3B8] mt-0.5">
-                Showing sample alerts. Real alerts appear when games are live.
-              </p>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Error state */}
-        {error ? (
-          <motion.div
-            className="rounded-xl p-8 border text-center"
-            style={{ background: DS.cardSurface, borderColor: DS.border, borderTopWidth: '4px', borderTopColor: DS.alertRed }}
-            {...cardSlide}
-          >
-            <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-[#F8FAFC] mb-2">Unable to load alerts</h3>
-            <p className="text-[#94A3B8] text-sm mb-6">Check your connection and try again.</p>
-            <Button
-              onClick={() => refetch()}
-              variant="outline"
-              className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+        <motion.main
+          className="p-4 space-y-6 overflow-y-auto"
+          variants={staggerContainer}
+          initial="initial"
+          animate="animate"
+        >
+          {/* Demo mode banner */}
+          {alerts.length === 0 && !error && !isLoading && (
+            <motion.div
+              className="rounded-xl px-4 py-3 flex items-center gap-3 border-l-[3px] border-l-amber-500 border border-slate-800"
+              style={{ background: DS.cardSurface }}
+              {...cardSlide}
             >
-              <Activity className="w-4 h-4 mr-2" />
-              Try Again
-            </Button>
-          </motion.div>
-        ) : sortedAlerts.length === 0 ? (
-          <motion.div
-            className="rounded-xl p-8 border text-center"
-            style={{ background: DS.cardSurface, borderColor: DS.border }}
-            {...cardSlide}
-          >
-            <Bell className="h-8 w-8 text-[#94A3B8] mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-[#F8FAFC] mb-2">No Alerts Available</h3>
-            <p className="text-[#94A3B8] text-sm mb-6">
-              No alerts for {filter === 'all' ? 'any sport' : filter} at the moment.
-            </p>
-            <Button
-              onClick={() => refetch()}
-              variant="outline"
-              className="border-green-500/30 text-green-400 hover:bg-green-500/10"
-            >
-              <Activity className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
-          </motion.div>
-        ) : (
-          <>
-            {/* Featured card */}
-            {featuredAlert && (
-              <ErrorBoundary>
-                <FeaturedAlertCard alert={featuredAlert} />
-              </ErrorBoundary>
-            )}
-
-            {/* Remaining alerts list */}
-            {remainingAlerts.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-4 px-1">
-                  <h2 className="text-lg font-bold text-[#F8FAFC]">More Alerts</h2>
-                  <span className="text-emeraldGreen text-sm font-bold">{remainingAlerts.length} alert{remainingAlerts.length !== 1 ? 's' : ''}</span>
-                </div>
-                <div className="space-y-3">
-                  {remainingAlerts.map((alert, i) => (
-                    <ErrorBoundary key={alert.id}>
-                      <CompactAlertCard alert={alert} index={i} />
-                    </ErrorBoundary>
-                  ))}
-                </div>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-500/10 border border-amber-500/15">
+                <Bell className="w-4 h-4 text-amber-400" />
               </div>
-            )}
-          </>
-        )}
-      </motion.main>
+              <div>
+                <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">Demo Mode</span>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Showing sample alerts. Real alerts appear when games are live.
+                </p>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Error state */}
+          {error ? (
+            <motion.div
+              className="rounded-xl p-8 border text-center border-t-4 border-t-chirpRed"
+              style={{ background: DS.cardSurface, borderColor: DS.border }}
+              {...cardSlide}
+            >
+              <AlertTriangle className="h-8 w-8 text-chirpRed mx-auto mb-4" />
+              <h3 className="text-lg font-bold mb-2">Unable to load alerts</h3>
+              <p className="text-slate-400 text-sm mb-6">Check your connection and try again.</p>
+              <Button
+                onClick={() => refetch()}
+                variant="outline"
+                className="border-chirpRed/30 text-chirpRed hover:bg-chirpRed/10"
+              >
+                <Activity className="w-4 h-4 mr-2" />
+                Try Again
+              </Button>
+            </motion.div>
+          ) : sortedAlerts.length === 0 ? (
+            <motion.div
+              className="rounded-xl p-8 border text-center"
+              style={{ background: DS.cardSurface, borderColor: DS.border }}
+              {...cardSlide}
+            >
+              <Bell className="h-8 w-8 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-lg font-bold mb-2">No Alerts Available</h3>
+              <p className="text-slate-400 text-sm mb-6">
+                No alerts for {filter === 'all' ? 'any sport' : filter} at the moment.
+              </p>
+              <Button
+                onClick={() => refetch()}
+                variant="outline"
+                className="border-emeraldGreen/30 text-emeraldGreen hover:bg-emeraldGreen/10"
+              >
+                <Activity className="w-4 h-4 mr-2" />
+                Refresh
+              </Button>
+            </motion.div>
+          ) : (
+            <>
+              {/* Featured live card */}
+              {featuredAlert && (
+                <ErrorBoundary>
+                  <FeaturedAlertCard alert={featuredAlert} />
+                </ErrorBoundary>
+              )}
+
+              {/* Upcoming Alerts list */}
+              {remainingAlerts.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-4 px-1">
+                    <h2 className="text-lg font-bold">Upcoming Alerts</h2>
+                    <button className="text-primaryBlue text-sm font-bold">See All</button>
+                  </div>
+                  <div className="space-y-3">
+                    {remainingAlerts.map((alert, i) => (
+                      <ErrorBoundary key={alert.id}>
+                        <CompactAlertCard alert={alert} index={i} />
+                      </ErrorBoundary>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </motion.main>
       )}
     </div>
   );
 }
-
