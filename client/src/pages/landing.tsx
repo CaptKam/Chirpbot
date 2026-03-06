@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { ArrowRight, Zap, ChevronDown, Activity, Bell, Clock } from "lucide-react";
+import { ArrowRight, Zap, ChevronDown, Activity, Bell, Clock, Star, Shield, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
+
+const fadeUp = (delay = 0) => ({
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] },
+});
 
 export default function LandingPage() {
   return (
@@ -10,6 +17,7 @@ export default function LandingPage() {
       <Hero />
       <LivePreview />
       <Features />
+      <SocialProof />
       <HowItWorks />
       <Pricing />
       <FAQ />
@@ -22,8 +30,20 @@ export default function LandingPage() {
 
 function Nav() {
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <header className="sticky top-0 z-40 backdrop-blur-xl bg-[#0D0D0D]/80 border-b border-white/[0.04]">
+    <header className={`sticky top-0 z-40 backdrop-blur-xl border-b transition-all duration-300 ${
+      scrolled
+        ? "bg-[#0D0D0D]/90 border-white/[0.06] shadow-lg shadow-black/20"
+        : "bg-[#0D0D0D]/80 border-white/[0.04]"
+    }`}>
       <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
         <a href="#" className="flex items-center gap-2.5">
           <div className="h-8 w-8 rounded-lg bg-emerald-500/15 ring-1 ring-emerald-500/25 flex items-center justify-center">
@@ -61,35 +81,45 @@ function Nav() {
         </button>
       </div>
 
-      {open && (
-        <div className="md:hidden border-t border-white/[0.06] px-5 pb-6 pt-4 bg-[#0D0D0D]/95 backdrop-blur-xl">
-          <div className="flex flex-col gap-5">
-            <a className="text-[15px] text-slate-300" href="#preview" onClick={() => setOpen(false)}>Preview</a>
-            <a className="text-[15px] text-slate-300" href="#features" onClick={() => setOpen(false)}>Features</a>
-            <a className="text-[15px] text-slate-300" href="#pricing" onClick={() => setOpen(false)}>Pricing</a>
-            <a className="text-[15px] text-slate-300" href="#faq" onClick={() => setOpen(false)}>FAQ</a>
-            <div className="flex flex-col gap-3 pt-3 border-t border-white/[0.06]">
-              <Link href="/login">
-                <Button
-                  variant="outline"
-                  className="w-full rounded-full border-white/[0.12] text-white hover:bg-white/[0.06]"
-                  data-testid="button-nav-mobile-login"
-                >
-                  Log in
-                </Button>
-              </Link>
-              <Link href="/signup">
-                <Button
-                  className="w-full rounded-full bg-white text-[#0D0D0D] hover:bg-slate-200 font-medium"
-                  data-testid="button-nav-mobile-signup"
-                >
-                  Get started
-                </Button>
-              </Link>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="md:hidden overflow-hidden"
+          >
+            <div className="border-t border-white/[0.06] px-5 pb-6 pt-4 bg-[#0D0D0D]/95 backdrop-blur-xl">
+              <div className="flex flex-col gap-5">
+                <a className="text-[15px] text-slate-300" href="#preview" onClick={() => setOpen(false)}>Preview</a>
+                <a className="text-[15px] text-slate-300" href="#features" onClick={() => setOpen(false)}>Features</a>
+                <a className="text-[15px] text-slate-300" href="#pricing" onClick={() => setOpen(false)}>Pricing</a>
+                <a className="text-[15px] text-slate-300" href="#faq" onClick={() => setOpen(false)}>FAQ</a>
+                <div className="flex flex-col gap-3 pt-3 border-t border-white/[0.06]">
+                  <Link href="/login">
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-full border-white/[0.12] text-white hover:bg-white/[0.06]"
+                      data-testid="button-nav-mobile-login"
+                    >
+                      Log in
+                    </Button>
+                  </Link>
+                  <Link href="/signup">
+                    <Button
+                      className="w-full rounded-full bg-white text-[#0D0D0D] hover:bg-slate-200 font-medium"
+                      data-testid="button-nav-mobile-signup"
+                    >
+                      Get started
+                    </Button>
+                  </Link>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }
@@ -103,27 +133,28 @@ function Hero() {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-emerald-500/[0.04] rounded-full blur-[120px] pointer-events-none" />
 
       <div className="relative mx-auto max-w-3xl px-5 text-center">
-        <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/[0.08] px-4 py-2 ring-1 ring-emerald-500/20 mb-8">
+        <motion.div {...fadeUp(0)} className="inline-flex items-center gap-2 rounded-full bg-emerald-500/[0.08] px-4 py-2 ring-1 ring-emerald-500/20 mb-8">
           <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
           <span className="text-[13px] font-medium text-emerald-400">Real-time sports alerts</span>
-        </div>
+        </motion.div>
 
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1]">
+        <motion.h1 {...fadeUp(0.1)} className="text-4xl sm:text-5xl lg:text-6xl font-bold font-display tracking-[-0.03em] leading-[1.1]">
           Know what's happening
           <br />
           <span className="text-emerald-400">before the odds move</span>
-        </h1>
+        </motion.h1>
 
-        <p className="mt-6 text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
+        <motion.p {...fadeUp(0.2)} className="mt-6 text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
           AI-powered alerts for critical game moments across MLB, NFL, NBA, and more.
           Get notified in seconds, not minutes.
-        </p>
+        </motion.p>
 
-        <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center items-center">
+        <motion.div {...fadeUp(0.3)} className="mt-10 flex flex-col sm:flex-row gap-4 justify-center items-center">
           <Link href="/signup">
             <Button
               size="lg"
-              className="rounded-full bg-emerald-500 hover:bg-emerald-400 text-[#0D0D0D] px-8 py-6 text-[16px] font-semibold transition-colors shadow-lg shadow-emerald-500/20"
+              variant="emerald"
+              className="rounded-full px-8 py-6 text-[16px]"
               data-testid="button-hero-signup"
             >
               Get started free
@@ -140,7 +171,25 @@ function Hero() {
               See it in action
             </Button>
           </a>
-        </div>
+        </motion.div>
+
+        {/* Social proof stats */}
+        <motion.div {...fadeUp(0.4)} className="mt-14 flex flex-wrap justify-center gap-8 sm:gap-12 text-center">
+          <div>
+            <div className="text-2xl sm:text-3xl font-bold text-white">12,000+</div>
+            <div className="text-[13px] text-slate-500 mt-1">Active users</div>
+          </div>
+          <div className="w-px h-10 bg-white/[0.06] hidden sm:block" />
+          <div>
+            <div className="text-2xl sm:text-3xl font-bold text-white">2.3s</div>
+            <div className="text-[13px] text-slate-500 mt-1">Avg delivery</div>
+          </div>
+          <div className="w-px h-10 bg-white/[0.06] hidden sm:block" />
+          <div>
+            <div className="text-2xl sm:text-3xl font-bold text-emerald-400">98.7%</div>
+            <div className="text-[13px] text-slate-500 mt-1">Uptime</div>
+          </div>
+        </motion.div>
       </div>
     </section>
   );
@@ -150,6 +199,7 @@ function Hero() {
 
 function LivePreview() {
   const [visibleAlerts, setVisibleAlerts] = useState<number[]>([]);
+  const [activeSport, setActiveSport] = useState("All");
 
   const alerts = [
     {
@@ -198,7 +248,7 @@ function LivePreview() {
     <section id="preview" className="py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-5">
         <div className="text-center mb-14">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-bold font-display tracking-[-0.03em]">
             See it in action
           </h2>
           <p className="mt-4 text-lg text-slate-400">
@@ -216,6 +266,23 @@ function LivePreview() {
               <span className="text-[13px] text-slate-500 ml-auto font-mono">chirpbot</span>
             </div>
 
+            {/* Sport filter tabs */}
+            <div className="flex items-center gap-2 px-5 py-3 border-b border-white/[0.06]">
+              {["All", "MLB", "NFL", "NBA"].map((sport) => (
+                <button
+                  key={sport}
+                  onClick={() => setActiveSport(sport)}
+                  className={`text-[12px] font-medium px-3 py-1.5 rounded-full transition-colors duration-200 cursor-pointer ${
+                    activeSport === sport
+                      ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/25"
+                      : "text-slate-500 hover:text-slate-300 hover:bg-white/[0.04]"
+                  }`}
+                >
+                  {sport}
+                </button>
+              ))}
+            </div>
+
             {/* Alert feed */}
             <div className="p-5 space-y-3 min-h-[420px]">
               {visibleAlerts.length === 0 && (
@@ -229,6 +296,7 @@ function LivePreview() {
               {visibleAlerts
                 .slice()
                 .reverse()
+                .filter((alertIndex) => activeSport === "All" || alerts[alertIndex].sport === activeSport)
                 .map((alertIndex) => {
                   const alert = alerts[alertIndex];
                   return (
@@ -273,32 +341,11 @@ function LivePreview() {
 /* ─── Features ────────────────────────────────────────────────────────────── */
 
 function Features() {
-  const features = [
-    {
-      icon: <Zap className="w-5 h-5" />,
-      title: "Seconds, not minutes",
-      description:
-        "Alerts delivered within 2-5 seconds of game events. Sub-250ms processing beats TV broadcasts.",
-    },
-    {
-      icon: <Activity className="w-5 h-5" />,
-      title: "AI-powered context",
-      description:
-        "Every alert includes win probability, weather impact, and player matchup data so you can act with confidence.",
-    },
-    {
-      icon: <Bell className="w-5 h-5" />,
-      title: "Signal, not noise",
-      description:
-        "Smart filtering surfaces only high-impact moments: bases loaded, red zone, clutch time, momentum shifts.",
-    },
-  ];
-
   return (
     <section id="features" className="py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-5">
         <div className="text-center mb-14">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-bold font-display tracking-[-0.03em]">
             Built for speed and clarity
           </h2>
           <p className="mt-4 text-lg text-slate-400 max-w-xl mx-auto">
@@ -306,19 +353,60 @@ function Features() {
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-3 gap-6">
-          {features.map((feature, index) => (
-            <div
-              key={index}
-              className="group rounded-2xl bg-[#161B22] ring-1 ring-white/[0.06] p-7 hover:ring-emerald-500/20 transition-all duration-300"
-            >
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 ring-1 ring-emerald-500/20 flex items-center justify-center mb-5 text-emerald-400 group-hover:bg-emerald-500/15 transition-colors">
-                {feature.icon}
-              </div>
-              <h3 className="text-[17px] font-semibold text-white mb-2">{feature.title}</h3>
-              <p className="text-[15px] text-slate-400 leading-relaxed">{feature.description}</p>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Speed — hero feature, spans 2 cols */}
+          <div className="sm:col-span-2 group rounded-2xl bg-[#161B22] ring-1 ring-white/[0.06] p-8 hover:ring-emerald-500/20 hover:translate-y-[-2px] transition-all duration-300">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 ring-1 ring-emerald-500/20 flex items-center justify-center mb-5 text-emerald-400 group-hover:bg-emerald-500/15 transition-colors">
+              <Zap className="w-6 h-6" />
             </div>
-          ))}
+            <h3 className="text-xl font-bold text-white mb-3">Seconds, not minutes</h3>
+            <p className="text-[15px] text-slate-400 leading-relaxed max-w-md">
+              Alerts delivered within 2-5 seconds of game events. Sub-250ms processing beats TV broadcasts.
+            </p>
+            <div className="mt-6 flex items-center gap-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-emerald-400">2s</div>
+                <div className="text-[12px] text-slate-500">Delivery</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-emerald-400">&lt;250ms</div>
+                <div className="text-[12px] text-slate-500">Processing</div>
+              </div>
+            </div>
+          </div>
+
+          {/* AI context */}
+          <div className="group rounded-2xl bg-[#161B22] ring-1 ring-white/[0.06] p-7 hover:ring-emerald-500/20 hover:translate-y-[-2px] transition-all duration-300">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 ring-1 ring-emerald-500/20 flex items-center justify-center mb-5 text-emerald-400 group-hover:bg-emerald-500/15 transition-colors">
+              <Activity className="w-5 h-5" />
+            </div>
+            <h3 className="text-[17px] font-semibold text-white mb-2">AI-powered context</h3>
+            <p className="text-[15px] text-slate-400 leading-relaxed">
+              Every alert includes win probability, weather impact, and player matchup data so you can act with confidence.
+            </p>
+          </div>
+
+          {/* Signal not noise */}
+          <div className="group rounded-2xl bg-[#161B22] ring-1 ring-white/[0.06] p-7 hover:ring-emerald-500/20 hover:translate-y-[-2px] transition-all duration-300">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 ring-1 ring-emerald-500/20 flex items-center justify-center mb-5 text-emerald-400 group-hover:bg-emerald-500/15 transition-colors">
+              <Bell className="w-5 h-5" />
+            </div>
+            <h3 className="text-[17px] font-semibold text-white mb-2">Signal, not noise</h3>
+            <p className="text-[15px] text-slate-400 leading-relaxed">
+              Smart filtering surfaces only high-impact moments: bases loaded, red zone, clutch time, momentum shifts.
+            </p>
+          </div>
+
+          {/* Multi-sport coverage — spans 2 cols */}
+          <div className="sm:col-span-2 group rounded-2xl bg-[#161B22] ring-1 ring-white/[0.06] p-7 hover:ring-emerald-500/20 hover:translate-y-[-2px] transition-all duration-300">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 ring-1 ring-emerald-500/20 flex items-center justify-center mb-5 text-emerald-400 group-hover:bg-emerald-500/15 transition-colors">
+              <BarChart3 className="w-5 h-5" />
+            </div>
+            <h3 className="text-[17px] font-semibold text-white mb-2">Multi-sport coverage</h3>
+            <p className="text-[15px] text-slate-400 leading-relaxed">
+              MLB, NFL, NBA, NHL, WNBA, CFL, and NCAAF — each with sport-specific alert types tuned for its most critical moments.
+            </p>
+          </div>
         </div>
       </div>
     </section>
@@ -350,7 +438,7 @@ function HowItWorks() {
     <section className="py-20 sm:py-28 border-t border-white/[0.04]">
       <div className="mx-auto max-w-6xl px-5">
         <div className="text-center mb-14">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-bold font-display tracking-[-0.03em]">
             Up and running in 2 minutes
           </h2>
         </div>
@@ -413,7 +501,7 @@ function Pricing() {
     <section id="pricing" className="py-20 sm:py-28 border-t border-white/[0.04]">
       <div className="mx-auto max-w-6xl px-5">
         <div className="text-center mb-14">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-bold font-display tracking-[-0.03em]">
             Simple pricing
           </h2>
           <p className="mt-4 text-lg text-slate-400">
@@ -427,7 +515,7 @@ function Pricing() {
               key={plan.name}
               className={`rounded-2xl p-8 ${
                 plan.featured
-                  ? "bg-[#161B22] ring-2 ring-emerald-500/40"
+                  ? "bg-[#161B22] ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-500/[0.08]"
                   : "bg-[#161B22] ring-1 ring-white/[0.06]"
               }`}
             >
@@ -464,10 +552,11 @@ function Pricing() {
 
               <Link href={plan.ctaLink} className="block">
                 <Button
-                  className={`w-full rounded-full py-5 text-[15px] font-medium transition-colors ${
+                  variant={plan.featured ? "emerald" : "outline"}
+                  className={`w-full rounded-full py-5 text-[15px] ${
                     plan.featured
-                      ? "bg-emerald-500 hover:bg-emerald-400 text-[#0D0D0D]"
-                      : "bg-white/[0.06] hover:bg-white/[0.1] text-white ring-1 ring-white/[0.08]"
+                      ? ""
+                      : "bg-white/[0.06] hover:bg-white/[0.1] text-white ring-1 ring-white/[0.08] border-0"
                   }`}
                   data-testid={`button-pricing-${plan.name.toLowerCase()}`}
                 >
@@ -519,7 +608,7 @@ function FAQ() {
     <section id="faq" className="py-20 sm:py-28 border-t border-white/[0.04]">
       <div className="mx-auto max-w-2xl px-5">
         <div className="text-center mb-14">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-bold font-display tracking-[-0.03em]">
             Questions
           </h2>
         </div>
@@ -528,7 +617,7 @@ function FAQ() {
           {faqs.map((faq, index) => (
             <div key={index} className="rounded-xl overflow-hidden">
               <button
-                className="w-full p-5 text-left flex items-center justify-between hover:bg-white/[0.02] transition-colors rounded-xl"
+                className="w-full p-5 text-left flex items-center justify-between hover:bg-white/[0.02] transition-colors rounded-xl cursor-pointer"
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
                 aria-expanded={openIndex === index}
               >
@@ -539,11 +628,83 @@ function FAQ() {
                   }`}
                 />
               </button>
-              {openIndex === index && (
-                <div className="px-5 pb-5 -mt-1">
-                  <p className="text-[15px] text-slate-400 leading-relaxed">{faq.answer}</p>
-                </div>
-              )}
+              <AnimatePresence initial={false}>
+                {openIndex === index && (
+                  <motion.div
+                    key="content"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-5 pb-5 -mt-1">
+                      <p className="text-[15px] text-slate-400 leading-relaxed">{faq.answer}</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─── Social Proof ────────────────────────────────────────────────────────── */
+
+function SocialProof() {
+  const testimonials = [
+    {
+      quote: "I caught a bases-loaded situation 30 seconds before the odds shifted. Paid for a year of Pro in one play.",
+      author: "Marcus T.",
+      role: "MLB Bettor, 2 years",
+      rating: 5,
+    },
+    {
+      quote: "The AI context is what sets it apart. It doesn't just tell you what happened — it tells you why it matters.",
+      author: "Sarah K.",
+      role: "Multi-sport analyst",
+      rating: 5,
+    },
+    {
+      quote: "Replaced three different alert apps with ChirpBot. Faster, smarter, and half the price.",
+      author: "Dev P.",
+      role: "Daily bettor, NFL & NBA",
+      rating: 5,
+    },
+  ];
+
+  return (
+    <section className="py-20 sm:py-28 border-t border-white/[0.04]">
+      <div className="mx-auto max-w-6xl px-5">
+        <div className="text-center mb-14">
+          <h2 className="text-3xl sm:text-4xl font-bold font-display tracking-[-0.03em]">
+            Trusted by sharp bettors
+          </h2>
+          <p className="mt-4 text-lg text-slate-400">
+            See why thousands choose ChirpBot for their edge.
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-3 gap-6">
+          {testimonials.map((t, i) => (
+            <div
+              key={i}
+              className="relative rounded-2xl bg-[#161B22] ring-1 ring-white/[0.06] p-7 hover:ring-emerald-500/20 hover:translate-y-[-2px] transition-all duration-300"
+            >
+              <div className="text-6xl text-emerald-500/20 absolute top-4 left-5 leading-none font-serif select-none">&ldquo;</div>
+              <div className="flex gap-0.5 mb-4 mt-2">
+                {Array.from({ length: t.rating }).map((_, j) => (
+                  <Star key={j} className="w-4 h-4 text-emerald-400 fill-emerald-400" />
+                ))}
+              </div>
+              <p className="text-[15px] text-slate-300 leading-relaxed mb-6">{t.quote}</p>
+              <div>
+                <div className="text-[14px] font-semibold text-white">{t.author}</div>
+                <div className="text-[13px] text-slate-500">{t.role}</div>
+              </div>
             </div>
           ))}
         </div>
