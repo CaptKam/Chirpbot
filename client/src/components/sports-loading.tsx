@@ -295,7 +295,7 @@ export function AlertLoading() {
 
 export function AuthLoading() {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#0D1117] to-[#0D0D0D] text-slate-100">
       <div className="text-center space-y-4">
         <div className="relative">
           {/* Spinning shield */}

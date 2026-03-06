@@ -8,7 +8,7 @@ import heroImage from '@/assets/baseball-pitcher.png';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#0B1220] text-slate-100 antialiased selection:bg-emerald-500/30 overflow-x-hidden">
+    <div className="min-h-screen bg-[#0D0D0D] text-slate-100 antialiased selection:bg-emerald-500/30 overflow-x-hidden">
       <Nav />
       <Hero />
       <LogosStrip />
@@ -29,7 +29,7 @@ export default function LandingPage() {
 function Nav() {
   const [open, setOpen] = useState(false);
   return (
-    <header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-[#0B1220]/70">
+    <header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-[#0D0D0D]/70">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-4">
         <a href="#" className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center">
@@ -155,7 +155,7 @@ function Hero() {
       }}
     >
       {/* Background gradient overlay with subtle animation */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0B1220]/70 via-[#0B1220]/80 to-[#0B1220]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0D0D0D]/70 via-[#0D0D0D]/80 to-[#0D0D0D]" />
       <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-emerald-500/5 animate-pulse" />
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 pt-16 pb-24 lg:pb-32">
@@ -525,7 +525,7 @@ function LivePreview() {
           <p className="text-lg text-slate-400">Live preview of real-time sports alerts</p>
         </div>
         <div className="max-w-2xl mx-auto">
-          <div className="bg-[#0B1220] rounded-2xl border border-slate-800 p-6 shadow-2xl">
+          <div className="bg-[#0D0D0D] rounded-2xl border border-slate-800 p-6 shadow-2xl">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-3 h-3 bg-red-500 rounded-full"></div>
               <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
