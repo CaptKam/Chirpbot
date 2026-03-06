@@ -389,28 +389,34 @@ function updateSystemInfo(data) {
         '</div>';
 }
 
-function showTab(tabName) {
+function showTab(tabName, evt) {
     // Hide all tabs
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.style.display = 'none';
         tab.classList.remove('active');
     });
-    
+
     // Remove active class from all nav tabs
     document.querySelectorAll('.nav-tab').forEach(tab => {
         tab.classList.remove('active');
     });
-    
+
     // Show selected tab
     const selectedTab = document.getElementById(tabName + '-tab');
     if (selectedTab) {
         selectedTab.style.display = 'block';
         selectedTab.classList.add('active');
     }
-    
+
     // Add active class to clicked nav tab
-    event.target.classList.add('active');
-    
+    if (evt && evt.target) {
+        evt.target.classList.add('active');
+    } else {
+        // Fallback: find the nav tab by matching onclick attribute
+        var navTab = document.querySelector("[onclick*=\"showTab('" + tabName + "'\"]");
+        if (navTab) navTab.classList.add('active');
+    }
+
     // Load alert settings when alerts tab is shown
     if (tabName === 'alerts' && !isLoadingAlerts) {
         loadAlertSettings();
@@ -536,14 +542,13 @@ async function toggleMasterAlerts(enabled) {
     }
 }
 
-async function enableAllAlerts() {
-    const button = event.target.closest('.quick-action-btn');
+async function enableAllAlerts(evt) {
+    const button = evt && evt.target ? evt.target.closest('.quick-action-btn') : null;
     if (button) button.disabled = true;
-    
+
     try {
-        const response = await fetch('/api/admin/enable-all-alerts', {
-            method: 'POST',
-            credentials: 'include'
+        const response = await adminRequest('/api/admin/enable-all-alerts', {
+            method: 'POST'
         });
         
         if (response.ok) {
@@ -565,18 +570,17 @@ async function enableAllAlerts() {
     }
 }
 
-async function disableAllAlerts() {
+async function disableAllAlerts(evt) {
     if (!confirm('Are you sure you want to disable ALL alerts across the entire system? This will affect all users.')) {
         return;
     }
-    
-    const button = event.target.closest('.quick-action-btn');
+
+    const button = evt && evt.target ? evt.target.closest('.quick-action-btn') : null;
     if (button) button.disabled = true;
-    
+
     try {
-        const response = await fetch('/api/admin/disable-all-alerts', {
-            method: 'POST',
-            credentials: 'include'
+        const response = await adminRequest('/api/admin/disable-all-alerts', {
+            method: 'POST'
         });
         
         if (response.ok) {
@@ -598,14 +602,13 @@ async function disableAllAlerts() {
     }
 }
 
-async function quickEnableMLB() {
-    const button = event.target.closest('.quick-action-btn');
+async function quickEnableMLB(evt) {
+    const button = evt && evt.target ? evt.target.closest('.quick-action-btn') : null;
     if (button) button.disabled = true;
-    
+
     try {
-        const response = await fetch('/api/admin/quick-enable-mlb', {
-            method: 'POST',
-            credentials: 'include'
+        const response = await adminRequest('/api/admin/quick-enable-mlb', {
+            method: 'POST'
         });
         
         if (response.ok) {
@@ -627,17 +630,17 @@ async function quickEnableMLB() {
     }
 }
 
-async function showSportSettings(sport) {
+async function showSportSettings(sport, evt) {
     currentSport = sport;
-    
+
     // Update active sport tab
     document.querySelectorAll('.sport-tab').forEach(tab => {
         tab.classList.remove('active');
     });
-    if (event && event.target && event.target.classList) {
-        event.target.classList.add('active');
+    if (evt && evt.target && evt.target.classList) {
+        evt.target.classList.add('active');
     } else {
-        var sportsButton = document.querySelector("[onclick=\"showSportSettings('" + sport + "')\"]");
+        var sportsButton = document.querySelector("[onclick*=\"showSportSettings('" + sport + "'\"]");
         if (sportsButton) sportsButton.classList.add('active');
     }
     
