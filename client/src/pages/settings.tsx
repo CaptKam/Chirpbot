@@ -298,11 +298,7 @@ export default function Settings() {
         return newSet;
       });
 
-      // Show success toast
-      toast({
-        title: "Setting Updated",
-        description: `${alertType.replace(/[A-Z]+_/g, '').replace(/_/g, ' ')} ${enabled ? 'enabled' : 'disabled'}`,
-      });
+      // Toast notification disabled as requested
     },
     onError: (error: any, { alertType, enabled }) => {
       console.error(`❌ Mutation error: ${alertType} = ${enabled}`, error);
@@ -318,11 +314,7 @@ export default function Settings() {
       const parsedError = parseApiError(error, 'alert-preferences');
       const alertDisplayName = alertType.replace(/[A-Z]+_/g, '').replace(/_/g, ' ');
       
-      toast({
-        title: parsedError.title,
-        description: parsedError.message,
-        variant: "destructive",
-      });
+      // Toast notification disabled as requested
     },
     onSettled: (data, error, { alertType }) => {
       // Mutation completed - no additional actions needed
@@ -344,31 +336,20 @@ export default function Settings() {
       queryClient.invalidateQueries({
         queryKey: [`/api/user/${user?.id}/telegram`]
       });
-      toast({
-        title: "Telegram settings updated",
-        description: "Your Telegram configuration has been saved.",
-      });
+      // Toast notification disabled as requested
     },
     onError: (error: any) => {
       // Parse error to get specific, actionable error message
       const parsedError = parseApiError(error, 'telegram-settings');
       
-      toast({
-        title: parsedError.title,
-        description: parsedError.message,
-        variant: "destructive",
-      });
+      // Toast notification disabled as requested
     },
   });
 
   // Test Telegram connection
   const testTelegramConnection = async () => {
     if (!telegramBotToken || !telegramChatId) {
-      toast({
-        title: "Missing Information",
-        description: "Please enter both bot token and chat ID before testing.",
-        variant: "destructive",
-      });
+      // Toast notification disabled as requested
       return;
     }
 
@@ -384,17 +365,10 @@ export default function Settings() {
 
       if (response.ok && result) {
         setConnectionTestResult('success');
-        toast({
-          title: "Connection Successful",
-          description: "Your Telegram bot is working correctly!",
-        });
+        // Toast notification disabled as requested
       } else {
         setConnectionTestResult('error');
-        toast({
-          title: "Connection Failed",
-          description: "Please check your bot token and chat ID.",
-          variant: "destructive",
-        });
+        // Toast notification disabled as requested
       }
     } catch (error) {
       setConnectionTestResult('error');
@@ -402,11 +376,7 @@ export default function Settings() {
       // Parse Telegram-specific error to get actionable message
       const parsedError = parseTelegramError(error);
       
-      toast({
-        title: parsedError.title,
-        description: parsedError.message,
-        variant: "destructive",
-      });
+      // Toast notification disabled as requested
     } finally {
       setTestingConnection(false);
     }
@@ -446,21 +416,14 @@ export default function Settings() {
       // Parse error to get specific, actionable error message
       const parsedError = parseApiError(error, 'gambling-insights');
       
-      toast({
-        title: parsedError.title,
-        description: parsedError.message,
-        variant: "destructive",
-      });
+      // Toast notification disabled as requested
     },
     onSettled: () => {
       // Always refetch to ensure we have latest server state
       queryClient.invalidateQueries({ queryKey: ['/api/users/me'] });
     },
     onSuccess: (data, { enabled }) => {
-      toast({
-        title: "Gambling insights updated",
-        description: `Gambling insights ${enabled ? 'enabled' : 'disabled'} successfully.`,
-      });
+      // Toast notification disabled as requested
     },
   });
 
@@ -483,21 +446,13 @@ export default function Settings() {
   const handleAlertToggle = useCallback((alertType: string, enabled: boolean) => {
     // Early validation
     if (!user?.id) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to change alert preferences.",
-        variant: "destructive",
-      });
+      // Toast notification disabled as requested
       return;
     }
 
     // Don't allow toggling if globally disabled
     if (isAlertGloballyDisabled(alertType)) {
-      toast({
-        title: "Alert Disabled",
-        description: "This alert has been disabled system-wide by the administrator.",
-        variant: "destructive",
-      });
+      // Toast notification disabled as requested
       return;
     }
 
