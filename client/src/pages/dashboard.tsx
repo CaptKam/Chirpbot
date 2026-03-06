@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Bell, TrendingUp, Wind, Activity, Shield, ChevronRight, Lock, Target, Crosshair } from 'lucide-react';
+import { Bell, TrendingUp, Wind, Activity, Shield, ChevronRight, Lock, Target, Crosshair, LayoutGrid, GripHorizontal, Radar, Wallet, Plus } from 'lucide-react';
 import { Link } from 'wouter';
-import { PageHeader } from '@/components/PageHeader';
 import { TeamLogo } from '@/components/team-logo';
 import { SportsLoading } from '@/components/sports-loading';
 import { getTeamAbbr, getTeamName, timeAgo } from '@/utils/team-utils';
@@ -28,67 +27,44 @@ const MOCK_COMMAND_CENTER = {
   awayName: 'New York Yankees',
   homeName: 'Boston Red Sox',
   sport: 'MLB',
-  situation: 'B9 | 2 OUT | BASES LOADED',
+  situation: 'B9',
   awayScore: 4,
   homeScore: 3,
+  badges: ['2 OUT', '3-2 COUNT'],
   winProb: 64.2,
+  winProbDelta: '+2.4%',
   leverage: 2.15,
+  leverageLabel: 'HIGH',
   hasFirst: true,
   hasSecond: true,
   hasThird: true,
 };
 
-const MOCK_MARKETS = [
-  {
-    id: 'mock-market-1',
-    tag: 'NEXT AT BAT',
-    timer: 'ENDS IN 01:45',
-    title: 'Aaron Judge to Hit HR (B9)',
-    yesOdds: '+320',
-    betOdds: '-110',
-  },
-  {
-    id: 'mock-market-2',
-    tag: 'INNING RESULT',
-    timer: 'LIVE',
-    title: 'Next Score - Boston Red Sox',
-    homeOdds: '+145',
-    betOdds: '+115',
-  },
-  {
-    id: 'mock-market-3',
-    tag: 'GAME TOTAL',
-    timer: 'ENDS IN 04:20',
-    title: 'Over 8.5 Runs - NYY vs BOS',
-    yesOdds: '-115',
-    betOdds: '+105',
-  },
-];
+const MOCK_FLASH_ODDS = {
+  tag: 'NEXT AB',
+  subtitle: 'Next AB: Judge',
+  title: 'Home Run (B9)',
+  odds: '+320',
+};
 
-const MOCK_EDGE_PICKS = [
-  {
-    id: 'mock-edge-1',
-    playerName: 'Shohei Ohtani',
-    propLine: 'Total Bases: O 1.5 (-105)',
-    modelValue: '+18.4%',
-    bookOdds: '-105',
-    edgePct: 94,
-    away: 'Los Angeles Dodgers',
-    home: 'San Francisco Giants',
-    sport: 'MLB',
-  },
-  {
-    id: 'mock-edge-2',
-    playerName: 'Aaron Judge',
-    propLine: 'Home Run: YES (+280)',
-    modelValue: '+12.1%',
-    bookOdds: '+280',
-    edgePct: 87,
-    away: 'New York Yankees',
-    home: 'Boston Red Sox',
-    sport: 'MLB',
-  },
-];
+const MOCK_EDGE_PICK = {
+  playerName: 'S. Ohtani',
+  propLine: 'O 1.5 TB (-105)',
+  edgePct: 94,
+  evPlus: '18.4%',
+};
+
+const MOCK_SIGNAL = {
+  title: 'Wind Shift: +12% HR Prob in BOS',
+  description: 'Gusts 15mph OUT to LF. Advantage hitters.',
+  timestamp: new Date(Date.now() - 2 * 60000).toISOString(),
+};
+
+const MOCK_UMPIRE = {
+  label: 'SKEWED',
+  title: 'H. Gibson: High Strikes +14%',
+  description: 'Tight zone low. Advantage: Power Pitchers.',
+};
 
 const MOCK_SIGNALS = [
   {
@@ -121,6 +97,31 @@ const MOCK_SIGNALS = [
   },
 ];
 
+const MOCK_EDGE_PICKS = [
+  {
+    id: 'mock-edge-1',
+    playerName: 'Shohei Ohtani',
+    propLine: 'Total Bases: O 1.5 (-105)',
+    modelValue: '+18.4%',
+    bookOdds: '-105',
+    edgePct: 94,
+    away: 'Los Angeles Dodgers',
+    home: 'San Francisco Giants',
+    sport: 'MLB',
+  },
+  {
+    id: 'mock-edge-2',
+    playerName: 'Aaron Judge',
+    propLine: 'Home Run: YES (+280)',
+    modelValue: '+12.1%',
+    bookOdds: '+280',
+    edgePct: 87,
+    away: 'New York Yankees',
+    home: 'Boston Red Sox',
+    sport: 'MLB',
+  },
+];
+
 export default function Dashboard() {
   // ─── Data fetching ───────────────────────────────────────────────
   const { data: alerts = [], isLoading: alertsLoading } = useQuery<Alert[]>({
@@ -141,10 +142,22 @@ export default function Dashboard() {
     ) || alerts[0];
   }, [alerts]);
 
-  const marketAlerts = useMemo(() => {
-    return alerts
-      .filter(a => a.gamblingInsights?.market || a.context?.aiBettingAdvice)
-      .slice(0, 6);
+  const signalAlert = useMemo(() => {
+    return alerts.find(a =>
+      a.type?.includes('weather') || a.type?.includes('wind') || a.type?.includes('momentum')
+    );
+  }, [alerts]);
+
+  const umpireAlert = useMemo(() => {
+    return alerts.find(a =>
+      a.type?.includes('umpire') || a.type?.includes('zone') || a.type?.includes('trend')
+    );
+  }, [alerts]);
+
+  const edgeAlert = useMemo(() => {
+    return alerts.find(a =>
+      (a.gamblingInsights?.confidence ?? 0) > 0.6 || (a.aiConfidence ?? 0) > 70
+    );
   }, [alerts]);
 
   const edgePicks = useMemo(() => {
@@ -164,212 +177,281 @@ export default function Dashboard() {
   const fAway = featured ? getTeamAbbr(featured.context?.awayTeam || featured.awayTeam) : MOCK_COMMAND_CENTER.awayAbbr;
   const fSport = featured?.sport || MOCK_COMMAND_CENTER.sport;
 
-  const situationText = featured ? (() => {
+  const situationLabel = featured ? (() => {
     const c = featured.context;
     if (c?.inning) {
       const half = c.isTopInning ? 'T' : 'B';
-      const outs = c.outs != null ? ` | ${c.outs} OUT` : '';
-      const bases = [c.hasFirst && '1B', c.hasSecond && '2B', c.hasThird && '3B'].filter(Boolean);
-      const baseText = bases.length === 3 ? ' | BASES LOADED' : bases.length > 0 ? ` | ${bases.join(', ')}` : '';
-      return `${half}${c.inning}${outs}${baseText}`;
+      return `${half}${c.inning}`;
     }
-    if (c?.quarter) return `Q${c.quarter} ${c.timeRemaining || ''}`.trim();
-    if (c?.period) return `P${c.period} ${c.timeRemaining || ''}`.trim();
-    return featured.type?.replace(/_/g, ' ').toUpperCase() || 'ALERT';
+    if (c?.quarter) return `Q${c.quarter}`;
+    if (c?.period) return `P${c.period}`;
+    return '';
   })() : MOCK_COMMAND_CENTER.situation;
+
+  const situationBadges = featured ? (() => {
+    const c = featured.context;
+    const badges: string[] = [];
+    if (c?.outs != null) badges.push(`${c.outs} OUT`);
+    if (c?.count) badges.push(c.count);
+    if (c?.timeRemaining) badges.push(c.timeRemaining);
+    return badges;
+  })() : MOCK_COMMAND_CENTER.badges;
 
   const homeScore = featured?.context?.homeScore ?? featured?.homeScore ?? (hasLiveData ? undefined : MOCK_COMMAND_CENTER.homeScore);
   const awayScore = featured?.context?.awayScore ?? featured?.awayScore ?? (hasLiveData ? undefined : MOCK_COMMAND_CENTER.awayScore);
+
   const winProbVal = featured?.context?.aiGameProjection?.winProbability?.home
     ? Math.round(featured.context.aiGameProjection.winProbability.home)
     : (hasLiveData ? null : MOCK_COMMAND_CENTER.winProb);
+  const winProbDelta = hasLiveData ? null : MOCK_COMMAND_CENTER.winProbDelta;
+
   const leverageVal = hasLiveData
-    ? (featured?.aiConfidence ? `${featured.aiConfidence}%` : featured?.gamblingInsights?.confidence ? `${Math.round(featured.gamblingInsights.confidence * 100)}%` : null)
+    ? (featured?.aiConfidence ? featured.aiConfidence.toFixed(2) : featured?.gamblingInsights?.confidence ? (featured.gamblingInsights.confidence * 100).toFixed(0) : null)
     : MOCK_COMMAND_CENTER.leverage.toFixed(2);
+  const leverageLabel = hasLiveData ? null : MOCK_COMMAND_CENTER.leverageLabel;
 
   const hasFirst = featured?.context?.hasFirst || (!hasLiveData && MOCK_COMMAND_CENTER.hasFirst);
   const hasSecond = featured?.context?.hasSecond || (!hasLiveData && MOCK_COMMAND_CENTER.hasSecond);
   const hasThird = featured?.context?.hasThird || (!hasLiveData && MOCK_COMMAND_CENTER.hasThird);
 
-  // Use mock signals when no live data
-  const displaySignals = signalLog.length > 0 ? signalLog : MOCK_SIGNALS;
+  // Signal tile data
+  const sigTitle = signalAlert?.title || MOCK_SIGNAL.title;
+  const sigDesc = signalAlert?.description || MOCK_SIGNAL.description;
+  const sigTime = signalAlert?.timestamp || MOCK_SIGNAL.timestamp;
+
+  // Umpire tile data
+  const umpTitle = umpireAlert?.title || MOCK_UMPIRE.title;
+  const umpDesc = umpireAlert?.description || MOCK_UMPIRE.description;
+  const umpLabel = umpireAlert ? 'LIVE' : MOCK_UMPIRE.label;
+
+  // Edge pick tile data
+  const edgeName = edgeAlert?.title?.split(':')[0]?.trim() || MOCK_EDGE_PICK.playerName;
+  const edgeLine = edgeAlert?.gamblingInsights?.bullets?.[0] || MOCK_EDGE_PICK.propLine;
+  const edgePct = edgeAlert
+    ? Math.round((edgeAlert.gamblingInsights?.confidence ?? 0) * 100 || edgeAlert.aiConfidence || 0)
+    : MOCK_EDGE_PICK.edgePct;
+  const edgeEv = edgeAlert?.gamblingInsights?.market?.total?.points
+    ? `${edgeAlert.gamblingInsights.market.total.points}%`
+    : MOCK_EDGE_PICK.evPlus;
 
   return (
     <div className="pb-24 sm:pb-28 bg-solidBackground text-white antialiased min-h-screen">
-      <PageHeader title="ChirpBot" subtitle="System Online">
+      {/* ━━ Header ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <header className="sticky top-0 z-50 flex items-center bg-solidBackground/90 backdrop-blur-xl px-4 py-3 justify-between border-b border-slate-800/60">
+        <div className="flex items-center gap-3">
+          <div className="bg-primaryBlue/20 rounded-lg size-9 flex items-center justify-center text-primaryBlue border border-primaryBlue/30">
+            <LayoutGrid className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-slate-100 text-sm font-black leading-tight tracking-tight uppercase">Dashboard</h2>
+            <p className="text-[10px] text-emeraldGreen font-bold uppercase tracking-widest">Power Mode</p>
+          </div>
+        </div>
         <div className="flex gap-2">
+          <button className="flex size-9 items-center justify-center rounded-lg bg-slate-800/40 text-slate-400 border border-slate-700/50">
+            <GripHorizontal className="w-5 h-5" />
+          </button>
           <Link href="/alerts">
-            <button className="relative flex size-10 items-center justify-center rounded-full bg-slate-800/50 text-slate-100">
+            <button className="relative flex size-9 items-center justify-center rounded-lg bg-slate-800/40 text-slate-100 border border-slate-700/50">
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5 rounded-full bg-primaryBlue" />
+                <span className="absolute top-1.5 right-1.5 flex h-2 w-2 rounded-full bg-primaryBlue border border-solidBackground" />
               )}
             </button>
           </Link>
         </div>
-      </PageHeader>
+      </header>
 
       {alertsLoading ? (
         <div className="p-8">
           <SportsLoading sport="MLB" message="Loading dashboard..." size="lg" />
         </div>
       ) : (
-        <main className="flex-1">
+        <main className="flex-1 pb-4 p-4 space-y-4">
           {/* ━━ 1. Live Command Center ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-          <section className="p-4">
-            <h4 className="text-slate-400 text-[10px] font-black tracking-[0.2em] mb-3 uppercase">
-              Live Command Center
-            </h4>
-            <div className="relative overflow-hidden rounded-xl bg-surface border border-slate-800 shadow-md">
-              {/* LIVE badge */}
-              <div className="absolute top-0 right-0 p-3">
-                <span className="inline-flex items-center gap-1 rounded-full bg-chirpRed/10 px-2 py-1 text-[10px] font-bold text-chirpRed">
-                  <span className="h-1.5 w-1.5 rounded-full bg-chirpRed animate-live-pulse-ring" /> LIVE
-                </span>
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-red-500 animate-live-pulse-ring" />
+                <h4 className="text-slate-400 text-[10px] font-black leading-normal tracking-[0.2em] uppercase">Live Command Center</h4>
+              </div>
+              <span className="text-[10px] font-bold text-slate-500">
+                {fAway} @ {fHome} • {situationLabel}
+              </span>
+            </div>
+
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-black border border-slate-800 shadow-2xl p-4">
+              {/* Score + situation */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col">
+                  <h3 className="text-2xl font-black text-white tracking-tighter">
+                    {fAway} {awayScore ?? '-'} <span className="text-slate-600 px-1">/</span> {fHome} {homeScore ?? '-'}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    {situationBadges.map((badge, i) => (
+                      <span key={i} className="bg-slate-800 text-[10px] px-1.5 py-0.5 rounded font-bold text-slate-300">{badge}</span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Baseball diamond */}
+                {fSport === 'MLB' && (
+                  <div className="relative size-14 border border-slate-700/50 rotate-45 flex items-center justify-center shrink-0">
+                    <div className={`absolute -top-1.5 -left-1.5 size-2.5 rounded-sm transition-all duration-300 ${hasThird ? 'bg-emeraldGreen shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'border border-slate-600'}`} />
+                    <div className={`absolute -top-1.5 -right-1.5 size-2.5 rounded-sm transition-all duration-300 ${hasSecond ? 'bg-emeraldGreen shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'border border-slate-600'}`} />
+                    <div className={`absolute -bottom-1.5 -right-1.5 size-2.5 rounded-sm transition-all duration-300 ${hasFirst ? 'bg-emeraldGreen shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'border border-slate-600'}`} />
+                    <div className="absolute -bottom-1.5 -left-1.5 size-2.5 border border-slate-600 rounded-sm" />
+                  </div>
+                )}
+
+                {/* Team logos (non-MLB) */}
+                {fSport !== 'MLB' && (
+                  <div className="flex -space-x-2 shrink-0">
+                    <TeamLogo teamName={getTeamName(featured?.context?.awayTeam || featured?.awayTeam)} abbreviation={fAway} sport={fSport} size="sm" className="rounded-full border-2 border-slate-800" />
+                    <TeamLogo teamName={getTeamName(featured?.context?.homeTeam || featured?.homeTeam)} abbreviation={fHome} sport={fSport} size="sm" className="rounded-full border-2 border-slate-800" />
+                  </div>
+                )}
               </div>
 
-              <div className="p-5">
-                {/* Situation + matchup */}
-                <div className="flex justify-between items-start mb-6">
-                  <div className="flex flex-col">
-                    <span className="text-slate-400 text-xs font-medium">{situationText}</span>
-                    <h3 className="text-xl font-bold text-white mt-1">
-                      {fAway}
-                      {awayScore != null && <span className="text-slate-400 ml-2">{awayScore}</span>}
-                      <span className="text-slate-500 mx-2">vs</span>
-                      {fHome}
-                      {homeScore != null && <span className="text-slate-400 ml-2">{homeScore}</span>}
-                    </h3>
-                  </div>
-
-                  {/* Baseball diamond */}
-                  {fSport === 'MLB' && (
-                    <div className="flex items-center justify-center h-16 w-16 rotate-45 border-2 border-slate-700/50 relative shrink-0">
-                      <div className={`absolute -top-1.5 -right-1.5 size-3 rounded-sm transition-all duration-300 ${hasSecond ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/20 animate-diamond-pop' : 'border border-slate-600'}`} />
-                      <div className={`absolute -top-1.5 -left-1.5 size-3 rounded-sm transition-all duration-300 ${hasThird ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/20 animate-diamond-pop' : 'border border-slate-600'}`} />
-                      <div className={`absolute -bottom-1.5 -right-1.5 size-3 rounded-sm transition-all duration-300 ${hasFirst ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/20 animate-diamond-pop' : 'border border-slate-600'}`} />
-                      <div className="absolute -bottom-1.5 -left-1.5 size-3 border border-slate-600 rounded-sm" />
-                    </div>
-                  )}
-
-                  {/* Team logos (non-MLB) */}
-                  {fSport !== 'MLB' && (
-                    <div className="flex -space-x-2 shrink-0">
-                      <TeamLogo teamName={getTeamName(featured?.context?.awayTeam || featured?.awayTeam)} abbreviation={fAway} sport={fSport} size="sm" className="rounded-full border-2 border-slate-800" />
-                      <TeamLogo teamName={getTeamName(featured?.context?.homeTeam || featured?.homeTeam)} abbreviation={fHome} sport={fSport} size="sm" className="rounded-full border-2 border-slate-800" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Stats row */}
-                <div className="grid grid-cols-2 gap-4 mb-5">
-                  <div className="bg-slate-800/40 p-3 rounded-lg border border-slate-700/50">
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">Win Prob</p>
-                    <p className="text-2xl font-black text-primaryBlue">
+              {/* Stats row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white/5 backdrop-blur-sm p-3 rounded-xl border border-white/10">
+                  <p className="text-[9px] text-slate-400 uppercase font-black tracking-widest mb-1">Win Prob</p>
+                  <div className="flex items-end gap-2">
+                    <span className="text-2xl font-black text-primaryBlue leading-none">
                       {winProbVal != null ? `${winProbVal}%` : '--'}
-                    </p>
-                  </div>
-                  <div className="bg-slate-800/40 p-3 rounded-lg border border-slate-700/50">
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">
-                      {hasLiveData ? 'Confidence' : 'RE24 Leverage'}
-                    </p>
-                    <p className="text-2xl font-black text-emeraldGreen">
-                      {leverageVal ?? '--'}
-                    </p>
+                    </span>
+                    {winProbDelta && (
+                      <span className="text-[10px] text-emeraldGreen font-bold pb-0.5">{winProbDelta}</span>
+                    )}
                   </div>
                 </div>
+                <div className="bg-white/5 backdrop-blur-sm p-3 rounded-xl border border-white/10">
+                  <p className="text-[9px] text-slate-400 uppercase font-black tracking-widest mb-1">
+                    {hasLiveData ? 'Confidence' : 'RE24 Leverage'}
+                  </p>
+                  <div className="flex items-end gap-2">
+                    <span className="text-2xl font-black text-emeraldGreen leading-none">
+                      {leverageVal ?? '--'}
+                    </span>
+                    {leverageLabel && (
+                      <span className="text-[10px] text-red-400 font-bold pb-0.5">{leverageLabel}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
 
-                <Link href="/alerts">
-                  <button className="w-full bg-primaryBlue hover:bg-primaryBlue/90 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
-                    <span>VIEW FULL ANALYSIS</span>
-                    <TrendingUp className="w-4 h-4" />
-                  </button>
+          {/* ━━ 2. Power Grid (2×2 tiles) ━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* ── Flash Odds Tile ── */}
+            <div className="aspect-square bg-slate-900 rounded-2xl border border-slate-800 p-3 flex flex-col justify-between relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-16 h-16 bg-primaryBlue/5 rounded-full -translate-y-8 translate-x-8 blur-2xl" />
+              <div className="flex items-center justify-between z-10">
+                <Activity className="w-5 h-5 text-primaryBlue" />
+                <span className="text-[9px] font-black text-slate-500 uppercase">Flash Odds</span>
+              </div>
+              <div className="z-10">
+                <p className="text-[10px] text-slate-400 mb-1 uppercase font-bold">{MOCK_FLASH_ODDS.subtitle}</p>
+                <h4 className="text-sm font-bold text-white leading-snug">{MOCK_FLASH_ODDS.title}</h4>
+              </div>
+              <Link href="/alerts">
+                <button className="w-full bg-primaryBlue text-white py-2 rounded-lg text-xs font-black shadow-lg shadow-primaryBlue/20 flex flex-col items-center">
+                  <span className="text-[8px] opacity-80 uppercase tracking-tighter">BET NOW</span>
+                  <span>{MOCK_FLASH_ODDS.odds}</span>
+                </button>
+              </Link>
+            </div>
+
+            {/* ── Edge Pick Tile ── */}
+            <div className="aspect-square bg-slate-900 rounded-2xl border border-slate-800 p-3 flex flex-col justify-between relative overflow-hidden">
+              <div className="absolute top-0 right-0">
+                <span className="bg-emeraldGreen text-[8px] font-black text-black px-2 py-0.5 rounded-bl-lg">{edgePct}% EDGE</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="size-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center">
+                  <Shield className="w-4 h-4 text-emeraldGreen" />
+                </div>
+                <span className="text-[9px] font-black text-slate-500 uppercase">Edge Pick</span>
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-white">{edgeName}</h4>
+                <p className="text-[10px] text-slate-400">{edgeLine}</p>
+              </div>
+              <div className="flex items-center justify-between bg-black/40 rounded-lg p-1.5 border border-slate-800">
+                <div className="text-center flex-1">
+                  <span className="block text-[8px] text-slate-500 font-bold uppercase">EV+</span>
+                  <span className="text-xs font-bold text-emeraldGreen">{edgeEv}</span>
+                </div>
+                <div className="w-px h-4 bg-slate-700" />
+                <Link href="/alerts" className="flex-1 flex justify-center text-primaryBlue">
+                  <Plus className="w-5 h-5" />
                 </Link>
               </div>
             </div>
-          </section>
 
-          {/* ━━ 2. Flash Odds Markets ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-          <section className="py-2">
-            <div className="flex items-center justify-between px-4 mb-3">
-              <h3 className="text-slate-400 text-[10px] font-black tracking-[0.2em] uppercase">Flash Odds Markets</h3>
-              <Link href="/alerts">
-                <span className="text-primaryBlue text-xs font-bold">VIEW ALL</span>
-              </Link>
-            </div>
-            <div className="flex overflow-x-auto gap-3 px-4 no-scrollbar">
-              {/* Live market cards from API */}
-              {marketAlerts.map((alert) => {
-                const market = alert.gamblingInsights?.market;
-                const ml = market?.moneyline;
-                const total = market?.total;
-
-                return (
-                  <div key={alert.id} className="min-w-[280px] bg-surface border border-slate-800 p-4 rounded-xl shrink-0">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-[10px] font-bold text-emeraldGreen bg-emeraldGreen/10 px-2 py-0.5 rounded uppercase">
-                        {alert.type?.replace(/_/g, ' ').slice(0, 20) || 'MARKET'}
-                      </span>
-                      <span className="text-slate-500 text-[10px]">{timeAgo(alert.timestamp)}</span>
-                    </div>
-                    <p className="text-sm font-bold text-white mb-4 line-clamp-2">{alert.title}</p>
-                    <div className="flex gap-2">
-                      {ml?.home != null && (
-                        <div className="flex-1 bg-slate-800 border border-slate-700 text-white py-2 rounded-lg text-sm font-bold flex flex-col items-center">
-                          <span className="text-[10px] text-slate-400 font-normal">HOME</span>
-                          <span>{ml.home > 0 ? '+' : ''}{ml.home}</span>
-                        </div>
-                      )}
-                      {ml?.away != null && (
-                        <div className="flex-1 bg-slate-800 border border-slate-700 text-white py-2 rounded-lg text-sm font-bold flex flex-col items-center">
-                          <span className="text-[10px] text-slate-400 font-normal">AWAY</span>
-                          <span>{ml.away > 0 ? '+' : ''}{ml.away}</span>
-                        </div>
-                      )}
-                      {total?.points != null && (
-                        <div className="flex-1 bg-primaryBlue/20 border border-primaryBlue/30 text-primaryBlue py-2 rounded-lg text-sm font-bold flex flex-col items-center">
-                          <span className="text-[10px] font-normal opacity-70">O/U</span>
-                          <span>{total.points}</span>
-                        </div>
-                      )}
-                      {!ml && !total && (
-                        <div className="flex-1 bg-primaryBlue/10 text-primaryBlue py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-1">
-                          <span>View Details</span>
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Mock market cards (always show when no live markets, or supplement) */}
-              {marketAlerts.length < 3 && MOCK_MARKETS.slice(marketAlerts.length).map((m) => (
-                <div key={m.id} className="min-w-[280px] bg-surface border border-slate-800 p-4 rounded-xl shrink-0">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-[10px] font-bold text-emeraldGreen bg-emeraldGreen/10 px-2 py-0.5 rounded">
-                      {m.tag}
-                    </span>
-                    <span className="text-slate-500 text-[10px]">{m.timer}</span>
-                  </div>
-                  <p className="text-sm font-bold text-white mb-4">{m.title}</p>
-                  <div className="flex gap-2">
-                    <button className="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white py-2 rounded-lg text-sm font-bold flex flex-col items-center">
-                      <span className="text-[10px] text-slate-400 font-normal">{m.homeOdds ? 'HOME' : 'YES'}</span>
-                      <span>{m.homeOdds || m.yesOdds}</span>
-                    </button>
-                    <button className="flex-1 bg-primaryBlue text-white py-2 rounded-lg text-sm font-bold flex flex-col items-center">
-                      <span className="text-[10px] opacity-70 font-normal">BET</span>
-                      <span>{m.betOdds}</span>
-                    </button>
-                  </div>
+            {/* ── Latest Signal Tile ── */}
+            <div className="aspect-square bg-slate-900 rounded-2xl border border-slate-800 p-3 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <Radar className="w-5 h-5 text-emeraldGreen" />
+                <div className="flex gap-0.5">
+                  <div className="size-1 rounded-full bg-emeraldGreen" />
+                  <div className="size-1 rounded-full bg-slate-700" />
+                  <div className="size-1 rounded-full bg-slate-700" />
                 </div>
-              ))}
+              </div>
+              <div className="flex-1 mt-2 overflow-hidden">
+                <p className="text-[9px] font-black text-slate-500 uppercase mb-1">Latest Signal</p>
+                <p className="text-[11px] font-bold text-white line-clamp-2 leading-tight">{sigTitle}</p>
+                <p className="text-[9px] text-slate-400 mt-1 line-clamp-2">{sigDesc}</p>
+              </div>
+              <div className="flex items-center justify-between text-[9px] font-bold">
+                <span className="text-slate-500">{timeAgo(sigTime)}</span>
+                <Link href="/alerts" className="text-primaryBlue uppercase">Details →</Link>
+              </div>
             </div>
-          </section>
+
+            {/* ── Bankroll Tile ── */}
+            <div className="aspect-square bg-slate-900 rounded-2xl border border-slate-800 p-3 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <Wallet className="w-5 h-5 text-slate-400" />
+                <span className="text-[9px] font-black text-slate-500 uppercase">Bankroll</span>
+              </div>
+              <div className="text-center py-1">
+                <span className="block text-[10px] text-slate-500 font-bold uppercase">Active Risk</span>
+                <span className="text-lg font-black text-white">$450.00</span>
+              </div>
+              <div className="space-y-1">
+                <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+                  <div className="bg-emeraldGreen h-full w-[70%]" />
+                </div>
+                <div className="flex justify-between text-[8px] font-black text-slate-500">
+                  <span>LIMIT</span>
+                  <span>$1.2K MAX</span>
+                </div>
+              </div>
+              <button className="w-full border border-slate-700 py-1 rounded text-[10px] font-bold text-slate-300">MANAGE</button>
+            </div>
+
+            {/* ── Umpire Trend (full-width bar) ── */}
+            <div className="col-span-2 bg-slate-900 rounded-2xl border border-slate-800 p-3 flex items-center gap-4">
+              <div className="size-12 shrink-0 bg-slate-800 rounded-lg flex items-center justify-center border border-slate-700">
+                <Target className="w-5 h-5 text-emeraldGreen" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[10px] font-black text-slate-500 uppercase">Umpire Trend</span>
+                  <span className="text-[10px] font-bold text-white bg-red-500/20 px-1.5 py-0.5 rounded text-red-400">{umpLabel}</span>
+                </div>
+                <p className="text-xs font-bold text-white truncate">{umpTitle}</p>
+                <p className="text-[10px] text-slate-500 truncate">{umpDesc}</p>
+              </div>
+            </div>
+          </div>
 
           {/* ━━ 3. Daily Edge Picks ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-          <section className="p-4">
+          <section className="px-4 pt-2">
             <h3 className="text-slate-400 text-[10px] font-black tracking-[0.2em] uppercase mb-3 flex items-center gap-2">
               <Shield className="w-4 h-4 text-emeraldGreen" />
               Daily Edge Picks
@@ -475,7 +557,7 @@ export default function Dashboard() {
           </section>
 
           {/* ━━ 4. Signal Log ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-          <section className="p-4">
+          <section className="px-4 pt-2">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-slate-400 text-[10px] font-black tracking-[0.2em] uppercase">Signal Log</h3>
               <span className="relative flex h-2.5 w-2.5">
@@ -484,7 +566,7 @@ export default function Dashboard() {
               </span>
             </div>
             <div className="space-y-2">
-              {displaySignals.map((signal) => {
+              {(signalLog.length > 0 ? signalLog : MOCK_SIGNALS).map((signal) => {
                 const meta = alertMeta(signal.type);
                 const Icon = meta.icon;
                 return (
