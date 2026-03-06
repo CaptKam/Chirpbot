@@ -342,7 +342,6 @@ export default function Calendar() {
   return (
     <div className="pb-24 sm:pb-28 bg-solidBackground text-white antialiased min-h-screen">
       <PageHeader title="ChirpBot" subtitle="Smart Alert Setup" />
-
       {/* Search bar */}
       <div className="px-4 pt-4">
         <div className="relative">
@@ -356,7 +355,6 @@ export default function Calendar() {
           />
         </div>
       </div>
-
       {/* Sport pills */}
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -380,7 +378,6 @@ export default function Calendar() {
           })}
         </div>
       </div>
-
       {/* Section header */}
       <div className="px-4 py-4 flex items-center justify-between">
         <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
@@ -388,7 +385,6 @@ export default function Calendar() {
         </h2>
         <span className="text-xs font-medium text-primaryBlue">{displayDate}</span>
       </div>
-
       {/* Game cards */}
       <div className="flex flex-col px-4 gap-3 pb-4">
         {!isInitialized ? (
@@ -457,7 +453,7 @@ export default function Calendar() {
                         return (
                           <div
                             key={gameId}
-                            className={`bg-surface rounded-xl p-4 border border-slate-800 ${game.status === 'final' ? 'opacity-60' : ''}`}
+                            className="bg-surface rounded-xl p-4 border border-slate-800 mt-[15px] mb-[15px] pt-[9px] pb-[9px]"
                             data-testid={`game-card-${gameId}`}
                           >
                             <div className="flex items-start justify-between gap-4">
