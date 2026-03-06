@@ -23,7 +23,7 @@ export function BottomNavigation() {
     <nav
       role="navigation"
       aria-label="Main navigation"
-      className="fixed bottom-0 left-0 right-0 z-50 bg-solidBackground border-t border-slate-800"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-800 bg-[#101922]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="max-w-md mx-auto flex justify-between items-center px-6 py-4">
