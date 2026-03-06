@@ -453,7 +453,7 @@ export default function Calendar() {
                         return (
                           <div
                             key={gameId}
-                            className="bg-surface rounded-xl p-4 border border-slate-800 mt-[15px] mb-[15px] pt-[9px] pb-[9px]"
+                            className="bg-surface rounded-xl p-4 border border-slate-800 pt-[9px] pb-[9px] mt-[10px] mb-[10px]"
                             data-testid={`game-card-${gameId}`}
                           >
                             <div className="flex items-start justify-between gap-4">
