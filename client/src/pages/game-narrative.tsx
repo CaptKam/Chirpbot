@@ -145,7 +145,7 @@ export default function GameNarrative() {
     <div className="pb-24 sm:pb-28 min-h-screen antialiased flex flex-col bg-[#101922] text-[#ffffff]">
       {/* ━━ Header ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <header className="sticky top-0 z-30 bg-solidBackground/80 backdrop-blur-md border-b border-slate-800">
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3 bg-[#101922] text-[#ffffff]">
           <div className="flex items-center gap-2">
             <Link href="/dashboard">
               <button className="bg-primaryBlue/20 p-1.5 rounded-lg text-primaryBlue">
