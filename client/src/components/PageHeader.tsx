@@ -1,5 +1,6 @@
 
 import { LucideIcon, Zap } from 'lucide-react';
+import { ChirpBotLogo } from '@/components/ChirpBotLogo';
 
 interface PageHeaderProps {
   title: string;
@@ -11,24 +12,18 @@ interface PageHeaderProps {
   children?: React.ReactNode;
 }
 
-export function PageHeader({ 
-  title, 
-  subtitle, 
-  icon: Icon = Zap,
-  iconColor = "text-[#10B981]",
-  iconBgColor = "bg-emerald-500/20",
-  iconRingColor = "ring-emerald-500/30",
-  children 
+export function PageHeader({
+  title,
+  subtitle,
+  children
 }: PageHeaderProps) {
   return (
     <header className="bg-white/5 backdrop-blur-sm border-b border-white/10 text-slate-100 p-4 flex items-center justify-between">
       <div className="flex items-center space-x-3">
-        <div className={`w-10 h-10 ${iconBgColor} ring-1 ${iconRingColor} rounded-full flex items-center justify-center`}>
-          <Icon className={`w-5 h-5 ${iconColor}`} />
-        </div>
+        <ChirpBotLogo size="md" showText={false} />
         <div>
-          <h1 className="text-xl font-black uppercase tracking-wider text-slate-100">{title}</h1>
-          <p className="text-[#10B981]/80 text-xs font-semibold">{subtitle}</p>
+          <h1 className="text-xl font-bold text-white tracking-tight">{title}</h1>
+          <p className="text-emerald-400/80 text-xs font-semibold">{subtitle}</p>
         </div>
       </div>
       {children}
@@ -36,22 +31,14 @@ export function PageHeader({
   );
 }
 
-export function HeaderOnly({ 
-  title, 
-  subtitle, 
-  icon: Icon = Zap,
-  iconColor = "text-[#10B981]",
-  iconBgColor = "bg-emerald-500/20",
-  iconRingColor = "ring-emerald-500/30"
+export function HeaderOnly({
+  title,
+  subtitle,
 }: Omit<PageHeaderProps, 'children'>) {
   return (
-    <PageHeader 
-      title={title} 
-      subtitle={subtitle} 
-      icon={Icon}
-      iconColor={iconColor}
-      iconBgColor={iconBgColor}
-      iconRingColor={iconRingColor}
+    <PageHeader
+      title={title}
+      subtitle={subtitle}
     />
   );
 }

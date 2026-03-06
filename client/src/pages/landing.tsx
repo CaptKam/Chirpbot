@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { ArrowRight, Zap, ChevronDown, Activity, Bell, Clock, Star, Shield, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import { ChirpBotLogo } from "@/components/ChirpBotLogo";
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 16 },
@@ -45,11 +46,8 @@ function Nav() {
         : "bg-[#0D0D0D]/80 border-white/[0.04]"
     }`}>
       <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
-        <a href="#" className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-emerald-500/15 ring-1 ring-emerald-500/25 flex items-center justify-center">
-            <Zap className="w-4 h-4 text-emerald-400" />
-          </div>
-          <span className="text-[15px] font-semibold text-white tracking-wide">chirpbot</span>
+        <a href="#">
+          <ChirpBotLogo size="sm" />
         </a>
 
         <nav className="hidden items-center gap-8 md:flex">
@@ -263,7 +261,7 @@ function LivePreview() {
               <div className="w-3 h-3 rounded-full bg-white/[0.08]" />
               <div className="w-3 h-3 rounded-full bg-white/[0.08]" />
               <div className="w-3 h-3 rounded-full bg-white/[0.08]" />
-              <span className="text-[13px] text-slate-500 ml-auto font-mono">chirpbot</span>
+              <span className="text-[13px] text-slate-500 ml-auto font-mono">ChirpBot</span>
             </div>
 
             {/* Sport filter tabs */}
@@ -720,12 +718,7 @@ function Footer() {
     <footer className="border-t border-white/[0.04] py-10">
       <div className="mx-auto max-w-6xl px-5">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <div className="h-7 w-7 rounded-md bg-emerald-500/15 ring-1 ring-emerald-500/25 flex items-center justify-center">
-              <Zap className="w-3.5 h-3.5 text-emerald-400" />
-            </div>
-            <span className="text-[14px] font-medium text-slate-400">chirpbot</span>
-          </div>
+          <ChirpBotLogo size="xs" />
           <p className="text-[13px] text-slate-500">
             &copy; {new Date().getFullYear()} ChirpBot. All rights reserved.
           </p>

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Zap, User, Lock, ArrowLeft, CheckCircle, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
+import { ChirpBotLogo } from "@/components/ChirpBotLogo";
 
 export default function Login() {
   const [usernameOrEmail, setUsernameOrEmail] = useState("");
@@ -84,8 +85,8 @@ export default function Login() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-emerald-500/20 ring-1 ring-emerald-500/30 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Zap className="w-8 h-8 text-emerald-400" aria-hidden="true" />
+          <div className="flex justify-center mb-4">
+            <ChirpBotLogo size="lg" />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2" style={{ lineHeight: 1.2 }}>Welcome Back</h1>
           <p className="text-slate-300" style={{ fontSize: '17px', lineHeight: 1.5 }}>Sign in to your ChirpBot account</p>
