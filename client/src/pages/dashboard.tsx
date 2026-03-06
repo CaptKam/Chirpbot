@@ -237,7 +237,7 @@ export default function Dashboard() {
   return (
     <div className="pb-24 sm:pb-28 bg-solidBackground text-white antialiased min-h-screen">
       {/* ━━ Header ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <header className="sticky top-0 z-50 flex items-center bg-solidBackground/90 backdrop-blur-xl px-4 py-3 justify-between border-b border-slate-800/60">
+      <header className="sticky top-0 z-50 flex items-center backdrop-blur-xl px-4 py-3 justify-between border-b border-slate-800/60 bg-[#101922]">
         <div className="flex items-center gap-3">
           <div className="bg-primaryBlue/20 rounded-lg size-9 flex items-center justify-center text-primaryBlue border border-primaryBlue/30">
             <LayoutGrid className="w-5 h-5" />
@@ -261,7 +261,6 @@ export default function Dashboard() {
           </Link>
         </div>
       </header>
-
       {alertsLoading ? (
         <div className="p-8">
           <SportsLoading sport="MLB" message="Loading dashboard..." size="lg" />
