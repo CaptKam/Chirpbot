@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "./pages/not-found";
 import Landing from "./pages/landing";
+import Dashboard from "./pages/dashboard";
 import Calendar from "./pages/calendar";
 import Settings from "./pages/settings";
 import Signup from "./pages/signup";
@@ -58,6 +59,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 function PublicLanding() { return <PublicRoute><Landing /></PublicRoute>; }
 function PublicLogin() { return <PublicRoute><Login /></PublicRoute>; }
 function PublicSignup() { return <PublicRoute><Signup /></PublicRoute>; }
+function ProtectedDashboard() { return <ProtectedRoute><Dashboard /></ProtectedRoute>; }
 function ProtectedCalendar() { return <ProtectedRoute><Calendar /></ProtectedRoute>; }
 function ProtectedAlerts() { return <ProtectedRoute><Alerts /></ProtectedRoute>; }
 function ProtectedSettings() { return <ProtectedRoute><Settings /></ProtectedRoute>; }
@@ -71,7 +73,7 @@ function RegularAppContent() {
         <Route path="/" component={PublicLanding} />
         <Route path="/login" component={PublicLogin} />
         <Route path="/signup" component={PublicSignup} />
-        <Route path="/dashboard" component={ProtectedCalendar} />
+        <Route path="/dashboard" component={ProtectedDashboard} />
         <Route path="/calendar" component={ProtectedCalendar} />
         <Route path="/alerts" component={ProtectedAlerts} />
         <Route path="/settings" component={ProtectedSettings} />

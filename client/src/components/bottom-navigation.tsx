@@ -1,10 +1,10 @@
 import { Link, useLocation } from "wouter";
-import { Calendar, Bell, Settings, TrendingDown } from 'lucide-react';
+import { Bell, Settings, TrendingDown } from 'lucide-react';
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 
-// V3 Bottom Navigation — 5-tab with raised center "Matchup" button
-// Design: solidBackground bg, slate-800 top border, raised primaryBlue center
+// V3 Bottom Navigation — 5-tab with raised center Alerts button
+// Lobby | Schedule | [Alerts] | Settings | Bets
 
 export function BottomNavigation() {
   const [location] = useLocation();
@@ -17,6 +17,8 @@ export function BottomNavigation() {
 
   const badgeCount = (alertStats as any)?.unreadCount || 0;
 
+  const isLobby = location === "/dashboard" || location === "/";
+
   return (
     <nav
       role="navigation"
@@ -25,53 +27,53 @@ export function BottomNavigation() {
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="max-w-md mx-auto flex justify-between items-center px-6 py-4">
-        {/* Scores */}
+        {/* Lobby */}
         <Link
           href="/dashboard"
-          aria-label="View scores"
-          aria-current={location === "/dashboard" || location === "/" ? "page" : undefined}
-          data-testid="nav-calendar"
+          aria-label="Lobby"
+          aria-current={isLobby ? "page" : undefined}
+          data-testid="nav-lobby"
           className="flex flex-col items-center"
         >
-          <svg
-            className={`w-6 h-6 ${location === "/dashboard" || location === "/" ? "text-white" : "text-slate-500"}`}
-            fill="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
-          </svg>
-          <span className={`text-[9px] font-bold tracking-widest uppercase mt-1 ${
-            location === "/dashboard" || location === "/" ? "text-white" : "text-slate-500"
-          }`}>
-            Scores
+          {isLobby ? (
+            <div className="size-10 flex items-center justify-center rounded-full bg-primaryBlue text-white shadow-[0_0_20px_rgba(36,137,245,0.4)]">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+              </svg>
+            </div>
+          ) : (
+            <div className="size-10 flex items-center justify-center rounded-full text-slate-500">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+              </svg>
+            </div>
+          )}
+          <span className={`text-[9px] font-bold tracking-widest uppercase mt-1 ${isLobby ? "text-white" : "text-slate-500"}`}>
+            Lobby
           </span>
         </Link>
 
-        {/* Standings / Calendar */}
+        {/* Schedule */}
         <Link
           href="/calendar"
-          aria-label="View calendar"
-          data-testid="nav-standings"
+          aria-label="View schedule"
+          data-testid="nav-calendar"
           className="flex flex-col items-center"
         >
-          <svg
-            className={`w-6 h-6 ${location === "/calendar" ? "text-white" : "text-slate-500"}`}
-            fill="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
-          </svg>
-          <span className={`text-[9px] font-bold tracking-widest uppercase mt-1 ${
-            location === "/calendar" ? "text-white" : "text-slate-500"
-          }`}>
+          <div className={`size-10 flex items-center justify-center rounded-full ${location === "/calendar" ? "text-white" : "text-slate-500"}`}>
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
+            </svg>
+          </div>
+          <span className={`text-[9px] font-bold tracking-widest uppercase mt-1 ${location === "/calendar" ? "text-white" : "text-slate-500"}`}>
             Schedule
           </span>
         </Link>
 
-        {/* Center: Matchup — raised button */}
+        {/* Center: Alerts — raised button */}
         <Link
           href="/alerts"
-          aria-label="View alerts and matchups"
+          aria-label="View alerts"
           data-testid="nav-alerts"
           className="flex flex-col items-center -mt-8"
         >
@@ -93,31 +95,26 @@ export function BottomNavigation() {
           </span>
         </Link>
 
-        {/* News / Settings */}
+        {/* Settings */}
         <Link
           href="/settings"
           aria-label="Open settings"
           data-testid="nav-settings"
           className="flex flex-col items-center"
         >
-          <svg
-            className={`w-6 h-6 ${location === "/settings" ? "text-white" : "text-slate-500"}`}
-            fill="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z" />
-            <path d="M14 17H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
-          </svg>
-          <span className={`text-[9px] font-bold tracking-widest uppercase mt-1 ${
-            location === "/settings" ? "text-white" : "text-slate-500"
-          }`}>
+          <div className={`size-10 flex items-center justify-center rounded-full ${location === "/settings" ? "text-white" : "text-slate-500"}`}>
+            <Settings className="w-5 h-5" />
+          </div>
+          <span className={`text-[9px] font-bold tracking-widest uppercase mt-1 ${location === "/settings" ? "text-white" : "text-slate-500"}`}>
             Settings
           </span>
         </Link>
 
         {/* Bets (placeholder) */}
         <div className="flex flex-col items-center opacity-50 cursor-not-allowed">
-          <TrendingDown className="w-6 h-6 text-slate-500" />
+          <div className="size-10 flex items-center justify-center rounded-full text-slate-500">
+            <TrendingDown className="w-5 h-5" />
+          </div>
           <span className="text-[9px] font-bold tracking-widest uppercase mt-1 text-slate-500">
             Bets
           </span>
