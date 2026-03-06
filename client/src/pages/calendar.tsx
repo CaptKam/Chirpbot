@@ -379,7 +379,7 @@ export default function Calendar() {
         </div>
       </div>
       {/* Section header */}
-      <div className="px-4 py-4 flex items-center justify-between">
+      <div className="px-4 py-4 flex items-center justify-between bg-[#101922] text-[#ffffff]">
         <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
           {dateLabel} {activeSport} Games
         </h2>
