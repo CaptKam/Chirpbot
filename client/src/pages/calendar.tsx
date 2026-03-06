@@ -156,8 +156,8 @@ function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?
       if (!response.ok) throw new Error('Weather fetch failed');
       return response.json();
     },
-    staleTime: 60 * 1000, // Cache for 1 minute
-    refetchInterval: 60 * 1000, // Refetch every minute
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    refetchInterval: false, // Weather doesn't need constant polling
     retry: 1
   });
 
@@ -226,9 +226,12 @@ export default function Calendar() {
     }
   }, [serverDate?.date, isInitialized]);
 
+  // Memoize sorted dates array to prevent queryKey instability
+  const sortedDates = useMemo(() => Array.from(selectedDates).sort(), [selectedDates]);
+
   // Fetch games for all selected dates - only when initialized
   const { data: allGamesData, isLoading: isLoadingGames } = useQuery({
-    queryKey: ["/api/games/multi-day", { sport: activeSport, dates: Array.from(selectedDates).sort() }],
+    queryKey: ["/api/games/multi-day", { sport: activeSport, dates: sortedDates }],
     enabled: isInitialized && selectedDates.size > 0,
     queryFn: async ({ queryKey }) => {
       const [_, params] = queryKey as [string, { sport: string; dates: string[] }];

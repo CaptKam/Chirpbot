@@ -20,7 +20,7 @@ export function BottomNavigation() {
   // Fetch alert count for badge
   const { data: alertStats } = useQuery({
     queryKey: ['/api/alerts/stats'],
-    refetchInterval: 10000, // Refetch every 10 seconds for timely badge updates
+    refetchInterval: 60000, // Refetch every 60 seconds for badge updates
     enabled: hasGamesWithinTwoDays,
   });
 

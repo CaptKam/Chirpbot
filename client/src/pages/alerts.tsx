@@ -137,11 +137,10 @@ export default function AlertsPage() {
   // Fetch alerts using React Query with HTTP polling every 5 seconds
   const { data: alerts = [], isLoading: alertsLoading, refetch: refetchAlerts, error: alertsError } = useQuery<Alert[]>({
     queryKey: ['/api/alerts', { limit: 120 }],
-    refetchInterval: 5000, // Poll every 5 seconds for real-time updates
-    refetchIntervalInBackground: true, // Keep polling when tab is inactive
-    retry: 3,
-    retryDelay: 1000,
-    staleTime: 3000, // Consider data stale after 3 seconds
+    refetchInterval: 30000, // Poll every 30 seconds
+    refetchIntervalInBackground: false, // Stop polling when tab is inactive
+    retry: 1,
+    staleTime: 15000, // Consider data stale after 15 seconds
   });
 
 
