@@ -546,7 +546,7 @@ export default function AlertsPage() {
   );
 
   return (
-    <div className="pb-24 sm:pb-28 min-h-screen bg-solidBackground" data-testid={isLoading || statsLoading ? "alerts-loading" : "alerts-page"}>
+    <div className="pb-24 sm:pb-28 min-h-screen bg-[#101922] text-[#ffffff]" data-testid={isLoading || statsLoading ? "alerts-loading" : "alerts-page"}>
       <PageHeader title="ChirpBot" subtitle="Live Alerts" />
       {sportPills}
       {isLoading || statsLoading ? (
