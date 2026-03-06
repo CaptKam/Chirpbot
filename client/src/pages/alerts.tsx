@@ -244,7 +244,7 @@ function FeaturedAlertCard({ alert }: { alert: Alert }) {
           </p>
         </div>
         <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-chirpRed/10 text-chirpRed text-[10px] font-bold uppercase tracking-wider">
-          <span className="h-1.5 w-1.5 rounded-full bg-chirpRed animate-pulse" />
+          <span className="h-1.5 w-1.5 rounded-full bg-chirpRed animate-live-pulse-ring" />
           Live
         </span>
       </div>
@@ -267,11 +267,11 @@ function FeaturedAlertCard({ alert }: { alert: Alert }) {
               <>
                 <div className="relative w-16 h-16 rotate-45 border-2 border-slate-800 rounded-sm">
                   {/* 2nd base (top-left in rotated view) */}
-                  <div className={`absolute -top-1.5 -left-1.5 w-3.5 h-3.5 rounded-sm ${second ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/50' : 'bg-slate-700'}`} />
+                  <div className={`absolute -top-1.5 -left-1.5 w-3.5 h-3.5 rounded-sm transition-all duration-300 ${second ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/50 animate-diamond-pop' : 'bg-slate-700'}`} />
                   {/* 1st base (top-right) */}
-                  <div className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-sm ${first ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/50' : 'bg-slate-700'}`} />
+                  <div className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-sm transition-all duration-300 ${first ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/50 animate-diamond-pop' : 'bg-slate-700'}`} />
                   {/* 3rd base (bottom-left) */}
-                  <div className={`absolute -bottom-1.5 -left-1.5 w-3.5 h-3.5 rounded-sm ${third ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/50' : 'bg-slate-700'}`} />
+                  <div className={`absolute -bottom-1.5 -left-1.5 w-3.5 h-3.5 rounded-sm transition-all duration-300 ${third ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/50 animate-diamond-pop' : 'bg-slate-700'}`} />
                   {/* Home plate */}
                   <div className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 bg-slate-700 rounded-sm" />
 
@@ -594,7 +594,7 @@ export default function AlertsPage() {
             key={sport}
             onClick={() => setFilter(sport)}
             data-testid={`sport-tab-${sport.toLowerCase()}`}
-            className={`flex-none px-5 py-2 rounded-full font-bold text-sm transition-all ${
+            className={`flex-none px-5 py-2 rounded-full font-bold text-sm transition-all duration-200 ease-out ${
               isActive ? accent.pill : accent.pillInactive
             }`}
           >

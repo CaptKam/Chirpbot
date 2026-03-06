@@ -447,9 +447,9 @@ export default function Calendar() {
                 queryClient.invalidateQueries({ queryKey: ["/api/games/today"] });
               }}
               data-testid={`sport-tab-${sport.toLowerCase()}`}
-              className={`whitespace-nowrap px-6 py-1.5 rounded-full text-xs font-bold tracking-wider transition-colors ${
+              className={`whitespace-nowrap px-6 py-1.5 rounded-full text-xs font-bold tracking-wider transition-all duration-200 ease-out ${
                 activeSport === sport
-                  ? 'bg-primaryBlue text-white'
+                  ? 'bg-primaryBlue text-white shadow-lg shadow-primaryBlue/20'
                   : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
               }`}
             >
