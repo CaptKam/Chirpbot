@@ -40,15 +40,14 @@ export default {
     'bg-pink-500/20', 'bg-pink-500/15',
     'bg-emerald-500/20', 'bg-emerald-500/15',
 
-    // Button hover classes for alerts page
-    'hover:bg-green-500/10', 'hover:border-green-500',
-    'hover:bg-orange-500/10', 'hover:border-orange-500',
-    'hover:bg-purple-500/10', 'hover:border-purple-500',
-    'hover:bg-cyan-500/10', 'hover:border-cyan-500',
-    'hover:bg-blue-500/10', 'hover:border-blue-500',
-    'hover:bg-red-500/10', 'hover:border-red-500',
-    'hover:bg-pink-500/10', 'hover:border-pink-500',
-    'hover:bg-emerald-500/10', 'hover:border-emerald-500',
+    // Hover/interaction classes for settings sport colors
+    'hover:bg-green-500/10', 'hover:bg-green-500/20', 'hover:border-green-500', 'hover:ring-green-500/30', 'group-hover:text-green-400', 'data-[state=checked]:bg-green-500', 'ring-green-500/30', 'border-green-500', 'text-green-400',
+    'hover:bg-orange-500/10', 'hover:bg-orange-500/20', 'hover:border-orange-500', 'hover:ring-orange-500/30', 'group-hover:text-orange-400', 'data-[state=checked]:bg-orange-500', 'ring-orange-500/30', 'border-orange-500', 'text-orange-400',
+    'hover:bg-purple-500/10', 'hover:bg-purple-500/20', 'hover:border-purple-500', 'hover:ring-purple-500/30', 'group-hover:text-purple-400', 'data-[state=checked]:bg-purple-500', 'ring-purple-500/30', 'border-purple-500', 'text-purple-400',
+    'hover:bg-cyan-500/10', 'hover:bg-cyan-500/20', 'hover:border-cyan-500', 'hover:ring-cyan-500/30', 'group-hover:text-cyan-400', 'data-[state=checked]:bg-cyan-500', 'ring-cyan-500/30', 'border-cyan-500', 'text-cyan-400',
+    'hover:bg-blue-500/10', 'hover:bg-blue-500/20', 'hover:border-blue-500', 'hover:ring-blue-500/30', 'group-hover:text-blue-400', 'data-[state=checked]:bg-blue-500', 'ring-blue-500/30', 'border-blue-500', 'text-blue-400',
+    'hover:bg-red-500/10', 'hover:bg-red-500/20', 'hover:border-red-500', 'hover:ring-red-500/30', 'group-hover:text-red-400', 'data-[state=checked]:bg-red-500', 'ring-red-500/30', 'border-red-500', 'text-red-400',
+    'hover:bg-pink-500/10', 'hover:bg-pink-500/20', 'hover:border-pink-500', 'hover:ring-pink-500/30', 'group-hover:text-pink-400', 'data-[state=checked]:bg-pink-500', 'ring-pink-500/30', 'border-pink-500', 'text-pink-400',
   ],
   theme: {
     extend: {

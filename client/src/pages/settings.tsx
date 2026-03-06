@@ -558,151 +558,46 @@ export default function Settings() {
 
 
 
-  // Helper function to get category icon with dynamic sport colors
-  const getCategoryIcon = (category: string) => {
-    const iconColorClass = activeSport === 'MLB' ? 'text-green-400' :
-                           activeSport === 'NFL' ? 'text-orange-400' :
-                           activeSport === 'NBA' ? 'text-purple-400' :
-                           activeSport === 'NCAAF' ? 'text-blue-400' :
-                           activeSport === 'CFL' ? 'text-red-400' :
-                           activeSport === 'WNBA' ? 'text-pink-400' :
-                           'text-primaryBlue';
+  // Unified sport color class generator — one lookup replaces 13 functions
+  const SPORT_COLOR_MAP: Record<string, string> = {
+    MLB: 'green', NFL: 'orange', NBA: 'purple', NCAAF: 'blue', CFL: 'red', WNBA: 'pink',
+  };
+  const sportColor = SPORT_COLOR_MAP[activeSport] || 'blue';
 
+  const sc = useMemo(() => ({
+    hoverBg: `hover:bg-${sportColor}-500/20`,
+    hoverBorder: `hover:border-${sportColor}-500`,
+    hoverRing: `hover:ring-${sportColor}-500/30`,
+    hoverBgLight: `hover:bg-${sportColor}-500/10`,
+    groupHoverText: `group-hover:text-${sportColor}-400`,
+    checkedBg: `data-[state=checked]:bg-${sportColor}-500`,
+    ring: `ring-${sportColor}-500/30`,
+    border: `border-${sportColor}-500`,
+    borderLight: `border-${sportColor}-500/20`,
+    cardBg: `bg-${sportColor}-500/5`,
+    text: `text-${sportColor}-400`,
+  }), [sportColor]);
+
+  const getCategoryIcon = (category: string) => {
+    const iconClass = `w-4 h-4 ${sc.text}`;
     switch (category) {
-      case "Game Situations":
-        return <Target className={`w-4 h-4 ${iconColorClass}`} />;
-      case "Scoring Events":
-        return <Trophy className={`w-4 h-4 ${iconColorClass}`} />;
-      case "At-Bat Situations":
-        return <Clock className={`w-4 h-4 ${iconColorClass}`} />;
-      default:
-        return <Bell className={`w-4 h-4 ${iconColorClass}`} />;
+      case "Game Situations": return <Target className={iconClass} />;
+      case "Scoring Events": return <Trophy className={iconClass} />;
+      case "At-Bat Situations": return <Clock className={iconClass} />;
+      default: return <Bell className={iconClass} />;
     }
   };
 
-  // Memoized helper functions for sport-specific dynamic classes
-  const sportClasses = useMemo(() => ({
-    hoverBg: activeSport === 'MLB' ? 'hover:bg-green-500/20' :
-             activeSport === 'NFL' ? 'hover:bg-orange-500/20' :
-             activeSport === 'NBA' ? 'hover:bg-purple-500/20' :
-             activeSport === 'NCAAF' ? 'hover:bg-blue-500/20' :
-             activeSport === 'CFL' ? 'hover:bg-red-500/20' :
-             activeSport === 'WNBA' ? 'hover:bg-pink-500/20' :
-             'hover:bg-primaryBlue/20',
-    hoverBorder: activeSport === 'MLB' ? 'hover:border-green-500' :
-                 activeSport === 'NFL' ? 'hover:border-orange-500' :
-                 activeSport === 'NBA' ? 'hover:border-purple-500' :
-                 activeSport === 'NCAAF' ? 'hover:border-blue-500' :
-                 activeSport === 'CFL' ? 'hover:border-red-500' :
-                 activeSport === 'WNBA' ? 'hover:border-pink-500' :
-                 'hover:border-primaryBlue',
-    cardBg: activeSport === 'MLB' ? 'bg-green-500/5' :
-            activeSport === 'NFL' ? 'bg-orange-500/5' :
-            activeSport === 'NBA' ? 'bg-purple-500/5' :
-            activeSport === 'NCAAF' ? 'bg-blue-500/5' :
-            activeSport === 'CFL' ? 'bg-red-500/5' :
-            activeSport === 'WNBA' ? 'bg-pink-500/5' :
-            'bg-primaryBlue/5',
-    checkedBg: activeSport === 'MLB' ? 'data-[state=checked]:bg-green-500' :
-               activeSport === 'NFL' ? 'data-[state=checked]:bg-orange-500' :
-               activeSport === 'NBA' ? 'data-[state=checked]:bg-purple-500' :
-               activeSport === 'NCAAF' ? 'data-[state=checked]:bg-blue-500' :
-               activeSport === 'CFL' ? 'data-[state=checked]:bg-red-500' :
-               activeSport === 'WNBA' ? 'data-[state=checked]:bg-pink-500' :
-               'data-[state=checked]:bg-primaryBlue'
-  }), [activeSport]);
-
-  const getHoverBgClass = () => sportClasses.hoverBg;
-
-  const getHoverBorderClass = () => {
-    return activeSport === 'MLB' ? 'hover:border-green-500' :
-           activeSport === 'NFL' ? 'hover:border-orange-500' :
-           activeSport === 'NBA' ? 'hover:border-purple-500' :
-           activeSport === 'NCAAF' ? 'hover:border-blue-500' :
-           activeSport === 'CFL' ? 'hover:border-red-500' :
-           activeSport === 'WNBA' ? 'hover:border-pink-500' :
-           'hover:border-primaryBlue';
-  };
-
-  const getHoverRingClass = () => {
-    return activeSport === 'MLB' ? 'hover:ring-green-500/30' :
-           activeSport === 'NFL' ? 'hover:ring-orange-500/30' :
-           activeSport === 'NBA' ? 'hover:ring-purple-500/30' :
-           activeSport === 'NCAAF' ? 'hover:ring-blue-500/30' :
-           activeSport === 'CFL' ? 'hover:ring-red-500/30' :
-           activeSport === 'WNBA' ? 'hover:ring-pink-500/30' :
-           'hover:ring-primaryBlue/30';
-  };
-
-  const getGroupHoverTextClass = () => {
-    return activeSport === 'MLB' ? 'group-hover:text-green-400' :
-           activeSport === 'NFL' ? 'group-hover:text-orange-400' :
-           activeSport === 'NBA' ? 'group-hover:text-purple-400' :
-           activeSport === 'NCAAF' ? 'group-hover:text-blue-400' :
-           activeSport === 'CFL' ? 'group-hover:text-red-400' :
-           activeSport === 'WNBA' ? 'group-hover:text-pink-400' :
-           'group-hover:text-primaryBlue';
-  };
-
-  const getCheckedBgClass = () => {
-    return activeSport === 'MLB' ? 'data-[state=checked]:bg-green-500' :
-           activeSport === 'NFL' ? 'data-[state=checked]:bg-orange-500' :
-           activeSport === 'NBA' ? 'data-[state=checked]:bg-purple-500' :
-           activeSport === 'NCAAF' ? 'data-[state=checked]:bg-blue-500' :
-           activeSport === 'CFL' ? 'data-[state=checked]:bg-red-500' :
-           activeSport === 'WNBA' ? 'data-[state=checked]:bg-pink-500' :
-           'data-[state=checked]:bg-primaryBlue';
-  };
-
-  const getRingClass = () => {
-    return activeSport === 'MLB' ? 'ring-green-500/30' :
-           activeSport === 'NFL' ? 'ring-orange-500/30' :
-           activeSport === 'NBA' ? 'ring-purple-500/30' :
-           activeSport === 'NCAAF' ? 'ring-blue-500/30' :
-           activeSport === 'CFL' ? 'ring-red-500/30' :
-           activeSport === 'WNBA' ? 'ring-pink-500/30' :
-           'ring-primaryBlue/30';
-  };
-
-  const getBorderClass = () => {
-    return activeSport === 'MLB' ? 'border-green-500' :
-           activeSport === 'NFL' ? 'border-orange-500' :
-           activeSport === 'NBA' ? 'border-purple-500' :
-           activeSport === 'NCAAF' ? 'border-blue-500' :
-           activeSport === 'CFL' ? 'border-red-500' :
-           activeSport === 'WNBA' ? 'border-pink-500' :
-           'border-primaryBlue';
-  };
-
-  const getCardBgClass = () => {
-    return activeSport === 'MLB' ? 'bg-green-500/5' :
-           activeSport === 'NFL' ? 'bg-orange-500/5' :
-           activeSport === 'NBA' ? 'bg-purple-500/5' :
-           activeSport === 'NCAAF' ? 'bg-blue-500/5' :
-           activeSport === 'CFL' ? 'bg-red-500/5' :
-           activeSport === 'WNBA' ? 'bg-pink-500/5' :
-           'bg-primaryBlue/5';
-  };
-
-  const getCardBorderClass = () => {
-    return activeSport === 'MLB' ? 'border-green-500/20' :
-           activeSport === 'NFL' ? 'border-orange-500/20' :
-           activeSport === 'NBA' ? 'border-purple-500/20' :
-           activeSport === 'NCAAF' ? 'border-blue-500/20' :
-           activeSport === 'CFL' ? 'border-red-500/20' :
-           activeSport === 'WNBA' ? 'border-pink-500/20' :
-           'border-primaryBlue/20';
-  };
-
-  const getCardHoverBgClass = () => {
-    return activeSport === 'MLB' ? 'hover:bg-green-500/10' :
-           activeSport === 'NFL' ? 'hover:bg-orange-500/10' :
-           activeSport === 'NBA' ? 'hover:bg-purple-500/10' :
-           activeSport === 'NCAAF' ? 'hover:bg-blue-500/10' :
-           activeSport === 'CFL' ? 'hover:bg-red-500/10' :
-           activeSport === 'WNBA' ? 'hover:bg-pink-500/10' :
-           'hover:bg-primaryBlue/10';
-  };
+  const getHoverBgClass = () => sc.hoverBg;
+  const getHoverBorderClass = () => sc.hoverBorder;
+  const getHoverRingClass = () => sc.hoverRing;
+  const getGroupHoverTextClass = () => sc.groupHoverText;
+  const getCheckedBgClass = () => sc.checkedBg;
+  const getRingClass = () => sc.ring;
+  const getBorderClass = () => sc.border;
+  const getCardBgClass = () => sc.cardBg;
+  const getCardBorderClass = () => sc.borderLight;
+  const getCardHoverBgClass = () => sc.hoverBgLight;
 
   if (isAuthLoading) {
     return <AuthLoading />;
@@ -1003,7 +898,7 @@ export default function Settings() {
           <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-primaryBlue/5">
             <div className="flex items-center space-x-4 mb-6">
               <div className="h-12 w-12 rounded-lg bg-primaryBlue/20 ring-1 ring-primaryBlue/30 flex items-center justify-center">
-                <Send className="w-6 h-6 text-[#10B981]" />
+                <Send className="w-6 h-6 text-[#2489F5]" />
               </div>
               <div>
                 <h2 className="text-xl font-black uppercase tracking-wide text-slate-100">Telegram Notifications</h2>
@@ -1029,9 +924,9 @@ export default function Settings() {
             >
               <div className="space-y-6">
                 {/* Enable/Disable Toggle */}
-                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 hover:ring-1 hover:ring-[#10B981]/30 transition-all duration-300 group">
+                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 hover:ring-1 hover:ring-[#2489F5]/30 transition-all duration-300 group">
                   <div>
-                    <h4 className="text-sm font-semibold text-slate-100 group-hover:text-[#10B981] transition-colors">Enable Telegram Notifications</h4>
+                    <h4 className="text-sm font-semibold text-slate-100 group-hover:text-[#2489F5] transition-colors">Enable Telegram Notifications</h4>
                     <p className="text-xs text-slate-400 mt-1">
                       Receive real-time alerts via your personal Telegram bot
                     </p>
@@ -1040,7 +935,7 @@ export default function Settings() {
                     checked={telegramEnabled}
                     onCheckedChange={setTelegramEnabled}
                     data-testid="toggle-telegram-enabled"
-                    className="data-[state=checked]:bg-[#10B981]"
+                    className="data-[state=checked]:bg-[#2489F5]"
                   />
                 </div>
 
@@ -1057,7 +952,7 @@ export default function Settings() {
                       value={telegramBotToken}
                       onChange={(e) => setTelegramBotToken(e.target.value)}
                       data-testid="input-telegram-bot-token"
-                      className="mt-2 bg-white/5 border-white/20 text-slate-100 placeholder:text-slate-400 focus:border-[#10B981] focus:ring-1 focus:ring-[#10B981]/30 transition-all duration-300"
+                      className="mt-2 bg-white/5 border-white/20 text-slate-100 placeholder:text-slate-400 focus:border-[#2489F5] focus:ring-1 focus:ring-[#2489F5]/30 transition-all duration-300"
                     />
                     <p className="text-xs text-slate-400 mt-1">
                       Get this from @BotFather on Telegram
@@ -1074,7 +969,7 @@ export default function Settings() {
                       value={telegramChatId}
                       onChange={(e) => setTelegramChatId(e.target.value)}
                       data-testid="input-telegram-chat-id"
-                      className="mt-2 bg-white/5 border-white/20 text-slate-100 placeholder:text-slate-400 focus:border-[#10B981] focus:ring-1 focus:ring-[#10B981]/30 transition-all duration-300"
+                      className="mt-2 bg-white/5 border-white/20 text-slate-100 placeholder:text-slate-400 focus:border-[#2489F5] focus:ring-1 focus:ring-[#2489F5]/30 transition-all duration-300"
                     />
                     <p className="text-xs text-slate-400 mt-1">
                       Send /start to your bot, then message @userinfobot to get your chat ID
@@ -1090,12 +985,12 @@ export default function Settings() {
                     variant="outline"
                     size="sm"
                     data-testid="button-test-telegram"
-                    className="border-primaryBlue/30 text-primaryBlue hover:bg-primaryBlue/10 hover:border-[#10B981] transition-all duration-300 group"
+                    className="border-primaryBlue/30 text-primaryBlue hover:bg-primaryBlue/10 hover:border-[#2489F5] transition-all duration-300 group"
                   >
                     {testingConnection ? (
-                      <div className="w-4 h-4 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin mr-2" />
+                      <div className="w-4 h-4 border-2 border-[#2489F5] border-t-transparent rounded-full animate-spin mr-2" />
                     ) : connectionTestResult === 'success' ? (
-                      <CheckCircle className="w-4 h-4 mr-2 text-[#10B981]" />
+                      <CheckCircle className="w-4 h-4 mr-2 text-[#2489F5]" />
                     ) : connectionTestResult === 'error' ? (
                       <XCircle className="w-4 h-4 mr-2 text-red-400" />
                     ) : (
@@ -1112,7 +1007,7 @@ export default function Settings() {
                     className="bg-primaryBlue hover:bg-blue-600 text-white shadow-lg shadow-primaryBlue/25 hover:scale-[1.02] transition-all duration-300 group font-semibold"
                   >
                     {updateTelegramMutation.isPending ? (
-                      <div className="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin mr-2" />
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                     ) : (
                       <CheckCircle className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
                     )}
@@ -1122,7 +1017,7 @@ export default function Settings() {
 
                 {/* Help Text */}
                 <div className="p-4 bg-primaryBlue/10 rounded-lg border border-primaryBlue/20 ring-1 ring-primaryBlue/20">
-                  <h4 className="text-sm font-semibold text-[#10B981] mb-2">How to Set Up Your Telegram Bot:</h4>
+                  <h4 className="text-sm font-semibold text-[#2489F5] mb-2">How to Set Up Your Telegram Bot:</h4>
                   <ol className="text-xs text-slate-300 space-y-1 list-decimal list-inside">
                     <li>Open Telegram and search for @BotFather</li>
                     <li>Send /newbot and follow the instructions to create your bot</li>

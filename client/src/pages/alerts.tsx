@@ -5,6 +5,8 @@ import { Bell, Shield, Activity, AlertTriangle, ChevronRight, TrendingUp, Chevro
 import { Button } from '@/components/ui/button';
 import { getSeasonAwareSports } from '@shared/season-manager';
 import { Alert } from '@/types';
+import { PageHeader } from '@/components/PageHeader';
+import { SportTabs } from '@/components/SportTabs';
 
 // ─── V3 Design System Tokens ("Bloomberg meets FanDuel") ──────────
 // Background:   #0F1A32 (solidBackground)
@@ -626,12 +628,19 @@ export default function AlertsPage() {
   const featuredAlert = sortedAlerts[0] || null;
   const remainingAlerts = sortedAlerts.slice(1);
 
+  // Sport tabs need to map 'all' to proper format for SportTabs
+  const sportTabList = availableSports.filter(s => s !== 'all');
+
   // ─── Loading State ──────────────────────────────────────────────
   if (isLoading || statsLoading) {
     return (
-      <div className="pb-24 min-h-screen" style={{ backgroundColor: '#0F1A32' }} data-testid="alerts-loading">
-        <Header />
-        <SportPills sports={availableSports} active={filter} onSelect={setFilter} />
+      <div className="pb-24 min-h-screen bg-solidBackground" data-testid="alerts-loading">
+        <PageHeader title="ChirpBot" subtitle="Live Alerts" />
+        <SportTabs
+          sports={sportTabList}
+          activeSport={filter === 'all' ? sportTabList[0] : filter}
+          onSportChange={(s) => setFilter(s)}
+        />
         <main className="p-4 space-y-6">
           {[0, 1, 2].map((i) => <AlertSkeleton key={i} delay={i} />)}
         </main>
@@ -641,9 +650,26 @@ export default function AlertsPage() {
 
   // ─── Render ─────────────────────────────────────────────────────
   return (
-    <div className="pb-24 min-h-screen" style={{ backgroundColor: '#0F1A32' }} data-testid="alerts-page">
-      <Header alertCount={displayAlerts.length} />
-      <SportPills sports={availableSports} active={filter} onSelect={setFilter} />
+    <div className="pb-24 min-h-screen bg-solidBackground" data-testid="alerts-page">
+      <PageHeader title="ChirpBot" subtitle="Live Alerts" />
+      <div className="flex overflow-x-auto px-4 py-3 gap-2 backdrop-blur-sm bg-white/5 border-b border-white/10" style={{ scrollbarWidth: 'none' }}>
+        {availableSports.map((sport) => {
+          const isActive = sport === filter;
+          const accent = getSportAccent(sport === 'all' ? 'MLB' : sport);
+          return (
+            <button
+              key={sport}
+              onClick={() => setFilter(sport)}
+              data-testid={`sport-tab-${sport.toLowerCase()}`}
+              className={`flex-none px-5 py-2 rounded-full font-bold text-sm transition-all ${
+                isActive ? accent.pill : accent.pillInactive
+              }`}
+            >
+              {sport.toUpperCase()}
+            </button>
+          );
+        })}
+      </div>
 
       <motion.main
         className="p-4 space-y-6 overflow-y-auto"
@@ -747,58 +773,3 @@ export default function AlertsPage() {
   );
 }
 
-// ─── Header ───────────────────────────────────────────────────────
-
-function Header({ alertCount }: { alertCount?: number }) {
-  return (
-    <header
-      className="sticky top-0 z-20 backdrop-blur-md"
-      style={{ background: 'rgba(15,26,50,0.95)', borderBottom: `1px solid ${DS.border}` }}
-    >
-      <div className="flex items-center justify-between px-4 py-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg" style={{ background: 'rgba(34,197,94,0.15)' }}>
-            <Activity className="w-6 h-6 text-green-400" />
-          </div>
-          <h1 className="text-xl font-black tracking-tight text-[#F8FAFC]">ChirpBot</h1>
-        </div>
-        <button className="relative p-2 text-[#94A3B8]">
-          <Bell className="w-6 h-6" />
-          {alertCount !== undefined && alertCount > 0 && (
-            <span className="absolute top-2 right-2 flex h-2.5 w-2.5">
-              <LivePulse />
-            </span>
-          )}
-        </button>
-      </div>
-    </header>
-  );
-}
-
-// ─── Sport Filter Pills ──────────────────────────────────────────
-
-function SportPills({ sports, active, onSelect }: { sports: string[]; active: string; onSelect: (s: string) => void }) {
-  return (
-    <div
-      className="flex overflow-x-auto px-4 py-3 gap-2 backdrop-blur-sm"
-      style={{ background: 'rgba(15,26,50,0.9)', borderBottom: `1px solid ${DS.border}`, scrollbarWidth: 'none' }}
-    >
-      {sports.map((sport) => {
-        const isActive = sport === active;
-        const accent = getSportAccent(sport === 'all' ? 'MLB' : sport);
-        return (
-          <button
-            key={sport}
-            onClick={() => onSelect(sport)}
-            data-testid={`sport-tab-${sport.toLowerCase()}`}
-            className={`flex-none px-5 py-2 rounded-full font-bold text-sm transition-all ${
-              isActive ? accent.pill : accent.pillInactive
-            }`}
-          >
-            {sport.toUpperCase()}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
