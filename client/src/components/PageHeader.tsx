@@ -18,7 +18,7 @@ export function PageHeader({
   children
 }: PageHeaderProps) {
   return (
-    <header className="bg-solidBackground/95 backdrop-blur-xl border-b border-[#1E293B] text-white p-4 flex items-center justify-between sticky top-0 z-30">
+    <header className="backdrop-blur-xl border-b border-[#1E293B] p-4 flex items-center justify-between sticky top-0 z-30 bg-[#101922] text-[#ffffff]">
       <div className="flex items-center space-x-3">
         <ChirpBotLogo size="md" showText={false} />
         <div>
