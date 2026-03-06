@@ -671,11 +671,7 @@ export default function Settings() {
                         }
 
                         return (
-                          <div key={alertType.key} className={`flex items-center justify-between p-4 rounded-lg border transition-all duration-300 group ${
-                            isGloballyDisabled 
-                              ? 'bg-red-500/5 border-red-500/20 opacity-60' 
-                              : `${sc.cardBg} border-white/10 ${sc.hoverBg} hover:ring-1 ring-white/20`
-                          }`}>
+                          <div key={alertType.key} className="flex items-center justify-between p-4 rounded-lg border transition-all duration-300 group border-white/10 hover:bg-green-500/20 hover:ring-1 ring-white/20 bg-[#101825] text-[#ffffff]">
                             <div className="flex-1">
                               <div className="flex items-center space-x-2">
                                 <h4 className={`text-sm font-semibold transition-colors ${
