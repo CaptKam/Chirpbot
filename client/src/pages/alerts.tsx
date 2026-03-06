@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { getSeasonAwareSports } from '@shared/season-manager';
 import { Alert } from '@/types';
 import { PageHeader } from '@/components/PageHeader';
-import { SportTabs } from '@/components/SportTabs';
 
 // ─── V3 Design System Tokens ("Bloomberg meets FanDuel") ──────────
 // Background:   #0F1A32 (solidBackground)
@@ -218,22 +217,11 @@ function LivePulse() {
   return (
     <span className="relative flex h-2.5 w-2.5">
       <span
-        className="absolute inline-flex h-full w-full rounded-full opacity-60"
-        style={{
-          backgroundColor: DS.emeraldGreen,
-          animation: 'livePulse 2s ease-out infinite',
-        }}
+        className="absolute inline-flex h-full w-full rounded-full bg-emeraldGreen opacity-60 animate-ping"
       />
       <span
-        className="relative inline-flex h-2.5 w-2.5 rounded-full"
-        style={{ backgroundColor: DS.emeraldGreen }}
+        className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emeraldGreen"
       />
-      <style>{`
-        @keyframes livePulse {
-          0% { transform: scale(1); opacity: 0.6; }
-          100% { transform: scale(1.5); opacity: 0; }
-        }
-      `}</style>
     </span>
   );
 }
@@ -628,49 +616,39 @@ export default function AlertsPage() {
   const featuredAlert = sortedAlerts[0] || null;
   const remainingAlerts = sortedAlerts.slice(1);
 
-  // Sport tabs need to map 'all' to proper format for SportTabs
-  const sportTabList = availableSports.filter(s => s !== 'all');
+  // ─── Shared sport pills (used in both loading and loaded states) ──
+  const sportPills = (
+    <div className="flex overflow-x-auto px-4 py-3 gap-2 backdrop-blur-sm bg-white/5 border-b border-white/10" style={{ scrollbarWidth: 'none' }}>
+      {availableSports.map((sport) => {
+        const isActive = sport === filter;
+        const accent = getSportAccent(sport === 'all' ? 'MLB' : sport);
+        return (
+          <button
+            key={sport}
+            onClick={() => setFilter(sport)}
+            data-testid={`sport-tab-${sport.toLowerCase()}`}
+            className={`flex-none px-5 py-2 rounded-full font-bold text-sm transition-all ${
+              isActive ? accent.pill : accent.pillInactive
+            }`}
+          >
+            {sport.toUpperCase()}
+          </button>
+        );
+      })}
+    </div>
+  );
 
-  // ─── Loading State ──────────────────────────────────────────────
-  if (isLoading || statsLoading) {
-    return (
-      <div className="pb-24 min-h-screen bg-solidBackground" data-testid="alerts-loading">
-        <PageHeader title="ChirpBot" subtitle="Live Alerts" />
-        <SportTabs
-          sports={sportTabList}
-          activeSport={filter === 'all' ? sportTabList[0] : filter}
-          onSportChange={(s) => setFilter(s)}
-        />
+  // ─── Render (single return — loading handled inline) ───────────
+  return (
+    <div className="pb-24 min-h-screen bg-solidBackground" data-testid={isLoading || statsLoading ? "alerts-loading" : "alerts-page"}>
+      <PageHeader title="ChirpBot" subtitle="Live Alerts" />
+      {sportPills}
+
+      {isLoading || statsLoading ? (
         <main className="p-4 space-y-6">
           {[0, 1, 2].map((i) => <AlertSkeleton key={i} delay={i} />)}
         </main>
-      </div>
-    );
-  }
-
-  // ─── Render ─────────────────────────────────────────────────────
-  return (
-    <div className="pb-24 min-h-screen bg-solidBackground" data-testid="alerts-page">
-      <PageHeader title="ChirpBot" subtitle="Live Alerts" />
-      <div className="flex overflow-x-auto px-4 py-3 gap-2 backdrop-blur-sm bg-white/5 border-b border-white/10" style={{ scrollbarWidth: 'none' }}>
-        {availableSports.map((sport) => {
-          const isActive = sport === filter;
-          const accent = getSportAccent(sport === 'all' ? 'MLB' : sport);
-          return (
-            <button
-              key={sport}
-              onClick={() => setFilter(sport)}
-              data-testid={`sport-tab-${sport.toLowerCase()}`}
-              className={`flex-none px-5 py-2 rounded-full font-bold text-sm transition-all ${
-                isActive ? accent.pill : accent.pillInactive
-              }`}
-            >
-              {sport.toUpperCase()}
-            </button>
-          );
-        })}
-      </div>
-
+      ) : (
       <motion.main
         className="p-4 space-y-6 overflow-y-auto"
         variants={staggerContainer}
@@ -769,6 +747,7 @@ export default function AlertsPage() {
           </>
         )}
       </motion.main>
+      )}
     </div>
   );
 }
