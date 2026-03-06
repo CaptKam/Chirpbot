@@ -623,7 +623,7 @@ export default function Settings() {
         )}
       </PageHeader>
       {/* Sport Pills */}
-      <div className="flex overflow-x-auto no-scrollbar px-4 py-3 gap-2 border-b border-slate-800">
+      <div className="flex overflow-x-auto no-scrollbar px-4 py-3 gap-2 border-b border-slate-800 bg-[#101922]">
         {SPORTS.map((sport) => {
           const accent = getSportAccent(sport);
           return (
