@@ -150,20 +150,194 @@ export default function AlertsPage() {
     refetchInterval: 60000, // Refetch every minute
   });
 
+  // Demo alerts shown when no real alerts exist (for UI testing)
+  const demoAlerts: Alert[] = useMemo(() => {
+    const now = new Date().toISOString();
+    return [
+      {
+        id: 'demo-1',
+        type: 'MLB_BASES_LOADED_NO_OUTS',
+        sport: 'MLB',
+        title: 'Bases Loaded, 0 Outs',
+        description: 'Aaron Judge at bat with bases loaded, no outs in the 7th. Yankees trail 3-2.',
+        message: 'Aaron Judge at bat with bases loaded, no outs in the 7th. Yankees trail 3-2.',
+        gameId: 'demo_mlb_1',
+        confidence: 87,
+        priority: 95,
+        homeTeam: 'New York Yankees',
+        awayTeam: 'Boston Red Sox',
+        homeScore: 2,
+        awayScore: 3,
+        inning: 7,
+        isTopInning: false,
+        outs: 0,
+        hasFirst: true,
+        hasSecond: true,
+        hasThird: true,
+        context: {
+          homeTeam: 'New York Yankees',
+          awayTeam: 'Boston Red Sox',
+          homeScore: 2,
+          awayScore: 3,
+          inning: 7,
+          isTopInning: false,
+          confidence: 0.87,
+          scoringProbability: 0.86,
+          currentBatter: 'Aaron Judge',
+          currentPitcher: 'Chris Sale',
+          aiInsights: ['Judge batting .340 in bases-loaded situations this season', 'Sale has allowed 4 hits in last 2 innings'],
+          aiTitle: 'High-Leverage At-Bat',
+          aiCallToAction: 'Watch for grand slam opportunity',
+        },
+        timestamp: now,
+        sentToTelegram: false,
+      },
+      {
+        id: 'demo-2',
+        type: 'NFL_RED_ZONE',
+        sport: 'NFL',
+        title: 'Red Zone - 4th & Goal',
+        description: 'Chiefs at the 3-yard line, 4th & Goal. Mahomes targeting Kelce. 2:15 left in the 4th.',
+        message: 'Chiefs at the 3-yard line, 4th & Goal. Mahomes targeting Kelce. 2:15 left in the 4th.',
+        gameId: 'demo_nfl_1',
+        confidence: 92,
+        priority: 96,
+        homeTeam: 'Kansas City Chiefs',
+        awayTeam: 'Buffalo Bills',
+        homeScore: 24,
+        awayScore: 27,
+        context: {
+          homeTeam: 'Kansas City Chiefs',
+          awayTeam: 'Buffalo Bills',
+          homeScore: 24,
+          awayScore: 27,
+          quarter: 4,
+          timeRemaining: '2:15',
+          down: 4,
+          yardsToGo: 3,
+          fieldPosition: 'BUF 3',
+          confidence: 0.92,
+          aiInsights: ['Chiefs convert 78% of 4th & Goal from the 3', 'Kelce has 3 TDs in red zone this season'],
+          aiTitle: 'Must-Score Situation',
+          aiCallToAction: 'Game-deciding play incoming',
+        },
+        timestamp: new Date(Date.now() - 120000).toISOString(),
+        sentToTelegram: false,
+      },
+      {
+        id: 'demo-3',
+        type: 'NBA_CLUTCH_TIME',
+        sport: 'NBA',
+        title: 'Clutch Time - Tied Game',
+        description: 'Lakers-Warriors tied 108-108 with 1:42 left. LeBron has the ball against Curry.',
+        message: 'Lakers-Warriors tied 108-108 with 1:42 left. LeBron has the ball against Curry.',
+        gameId: 'demo_nba_1',
+        confidence: 85,
+        priority: 90,
+        homeTeam: 'Los Angeles Lakers',
+        awayTeam: 'Golden State Warriors',
+        homeScore: 108,
+        awayScore: 108,
+        context: {
+          homeTeam: 'Los Angeles Lakers',
+          awayTeam: 'Golden State Warriors',
+          homeScore: 108,
+          awayScore: 108,
+          quarter: 4,
+          timeRemaining: '1:42',
+          confidence: 0.85,
+          aiInsights: ['LeBron shoots 48% in final 2 minutes this season', 'Warriors have blown 3 4th-quarter leads this week'],
+          aiTitle: 'Clutch Time Showdown',
+          aiCallToAction: 'Star vs star in crunch time',
+        },
+        timestamp: new Date(Date.now() - 60000).toISOString(),
+        sentToTelegram: false,
+      },
+      {
+        id: 'demo-4',
+        type: 'MLB_MOMENTUM_SHIFT',
+        sport: 'MLB',
+        title: 'Momentum Shift',
+        description: 'Dodgers score 4 runs in the 6th to take a 6-3 lead. Ohtani with a 2-run double.',
+        message: 'Dodgers score 4 runs in the 6th to take a 6-3 lead. Ohtani with a 2-run double.',
+        gameId: 'demo_mlb_2',
+        confidence: 79,
+        priority: 82,
+        homeTeam: 'Los Angeles Dodgers',
+        awayTeam: 'San Diego Padres',
+        homeScore: 6,
+        awayScore: 3,
+        inning: 6,
+        isTopInning: false,
+        outs: 1,
+        hasFirst: false,
+        hasSecond: true,
+        hasThird: false,
+        context: {
+          homeTeam: 'Los Angeles Dodgers',
+          awayTeam: 'San Diego Padres',
+          homeScore: 6,
+          awayScore: 3,
+          inning: 6,
+          isTopInning: false,
+          currentBatter: 'Freddie Freeman',
+          aiInsights: ['Ohtani now 4-for-4 today', 'Padres bullpen ERA is 5.20 this month'],
+          aiTitle: 'Rally in Progress',
+        },
+        timestamp: new Date(Date.now() - 300000).toISOString(),
+        sentToTelegram: false,
+      },
+      {
+        id: 'demo-5',
+        type: 'NFL_FOURTH_DOWN',
+        sport: 'NFL',
+        title: '4th Down Decision',
+        description: 'Eagles go for it on 4th & 1 at midfield. Hurts in shotgun, 3rd quarter.',
+        message: 'Eagles go for it on 4th & 1 at midfield. Hurts in shotgun, 3rd quarter.',
+        gameId: 'demo_nfl_2',
+        confidence: 74,
+        priority: 78,
+        homeTeam: 'Philadelphia Eagles',
+        awayTeam: 'Dallas Cowboys',
+        homeScore: 17,
+        awayScore: 14,
+        context: {
+          homeTeam: 'Philadelphia Eagles',
+          awayTeam: 'Dallas Cowboys',
+          homeScore: 17,
+          awayScore: 14,
+          quarter: 3,
+          timeRemaining: '8:33',
+          down: 4,
+          yardsToGo: 1,
+          fieldPosition: 'DAL 48',
+          confidence: 0.74,
+          aiInsights: ['Eagles convert 82% on 4th & 1 this season', 'Hurts averages 3.2 yards on QB sneaks'],
+          aiTitle: 'Aggressive Play Call',
+        },
+        timestamp: new Date(Date.now() - 180000).toISOString(),
+        sentToTelegram: false,
+      },
+    ];
+  }, []);
+
+  // Use demo alerts when no real alerts are available
+  const displayAlerts = (alerts && alerts.length > 0) ? alerts : demoAlerts;
+
   // Group alerts by sport for better organization
   const alertsBySport = useMemo(() => {
     const grouped: Record<string, Alert[]> = {};
-    (alerts as Alert[]).forEach((alert: Alert) => {
+    (displayAlerts as Alert[]).forEach((alert: Alert) => {
       const sport = alert.sport || 'OTHER';
       if (!grouped[sport]) grouped[sport] = [];
       grouped[sport].push(alert);
     });
     return grouped;
-  }, [alerts]);
+  }, [displayAlerts]);
 
-  const filteredAlerts = filter === 'all' 
-    ? (alerts as Alert[] || [])
-    : (alerts as Alert[] || []).filter((alert: Alert) => alert.sport === filter);
+  const filteredAlerts = filter === 'all'
+    ? (displayAlerts as Alert[] || [])
+    : (displayAlerts as Alert[] || []).filter((alert: Alert) => alert.sport === filter);
 
 
   if (alertsLoading || statsLoading) {
@@ -210,6 +384,15 @@ export default function AlertsPage() {
       />
 
       <div className="max-w-4xl mx-auto space-y-6 px-2 sm:px-4 md:px-6" data-testid="alerts-container">
+        {/* Demo mode banner */}
+        {(!alerts || alerts.length === 0) && !alertsError && !alertsLoading && (
+          <div className="bg-amber-500/10 ring-1 ring-amber-500/30 rounded-xl px-4 py-3 flex items-center gap-3">
+            <Bell className="w-4 h-4 text-amber-400 flex-shrink-0" />
+            <p className="text-sm text-amber-300">
+              <span className="font-bold">Demo Mode</span> — Showing sample alerts. Real alerts appear when games are live and you're monitoring teams.
+            </p>
+          </div>
+        )}
         {/* Alerts Content */}
         <div className="pb-8 space-y-4" data-testid="alerts-list">
         {alertsError ? (
