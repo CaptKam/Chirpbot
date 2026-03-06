@@ -549,14 +549,13 @@ export default function AlertsPage() {
     <div className="pb-24 sm:pb-28 min-h-screen bg-solidBackground" data-testid={isLoading || statsLoading ? "alerts-loading" : "alerts-page"}>
       <PageHeader title="ChirpBot" subtitle="Live Alerts" />
       {sportPills}
-
       {isLoading || statsLoading ? (
         <main className="p-4 space-y-6">
           {[0, 1, 2].map((i) => <AlertSkeleton key={i} delay={i} />)}
         </main>
       ) : (
         <motion.main
-          className="p-4 space-y-6 overflow-y-auto"
+          className="p-4 space-y-6 overflow-y-auto bg-[#101922]"
           variants={staggerContainer}
           initial="initial"
           animate="animate"
