@@ -235,7 +235,7 @@ export default function Dashboard() {
     : MOCK_EDGE_PICK.evPlus;
 
   return (
-    <div className="pb-24 sm:pb-28 bg-solidBackground text-white antialiased min-h-screen">
+    <div className="pb-24 sm:pb-28 text-white antialiased min-h-screen bg-[#101922]">
       {/* ━━ Header ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <header className="sticky top-0 z-50 flex items-center backdrop-blur-xl px-4 py-3 justify-between border-b border-slate-800/60 bg-[#101922]">
         <div className="flex items-center gap-3">
