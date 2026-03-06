@@ -16,7 +16,7 @@ import { unifiedDeduplicator } from "./services/unified-deduplicator";
 import { memoryManager } from "./middleware/memory-manager";
 import { registerHealthRoutes } from "./services/unified-health-monitor";
 import { unifiedSettings } from "./storage";
-import { alerts as alertsTable, alerts, settings } from "../shared/schema";
+import { alerts as alertsTable, alerts, settings, broadcastAlerts } from "../shared/schema";
 import { eq, desc, and, gte, inArray } from "drizzle-orm";
 // Migration Adapter replaces direct CalendarSyncService usage
 // import { getCalendarSyncService } from "./services/calendar-sync-service";
@@ -714,23 +714,19 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Set up callback to save enhanced alerts to database
   unifiedAIProcessor.setOnEnhancedAlert(async (alert, userId, sport, wasActuallyEnhanced) => {
     try {
-      console.log(`💾 Saving enhanced alert to database: ${alert.alertKey}`);
-
       // Extract gameId from alertKey for all sports
       let gameId = 'unknown';
       if (alert.alertKey) {
         const parts = alert.alertKey.split('_');
 
-        // Pattern 1: Direct gameId at start (e.g., "776312_pitching_change_..." or "401772715_turnover_risk_...")
+        // Pattern 1: Direct gameId at start (e.g., "776312_pitching_change_...")
         if (parts[0] && /^\d+$/.test(parts[0])) {
           gameId = parts[0];
         }
         // Pattern 2: Sport prefix with gameId (e.g., "mlb_game_start_776319_1")
         else if (parts.length >= 4) {
-          // Check for pattern: sport_alert_type_gameId_...
           const sportPrefixes = ['mlb', 'nfl', 'ncaaf', 'nba', 'wnba', 'cfl'];
           if (sportPrefixes.includes(parts[0].toLowerCase())) {
-            // Find the first numeric part after the sport prefix
             for (let i = 2; i < parts.length; i++) {
               if (/^\d+$/.test(parts[i])) {
                 gameId = parts[i];
@@ -739,10 +735,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             }
           }
         }
-        // Pattern 3: Check for any numeric segment that looks like a gameId (6-12 digits for NFL)
+        // Pattern 3: Any numeric segment that looks like a gameId
         if (gameId === 'unknown') {
           for (const part of parts) {
-            // Game IDs are typically 6-12 digits (NFL can be longer like 401772715)
             if (/^\d{6,12}$/.test(part)) {
               gameId = part;
               break;
@@ -751,213 +746,78 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         }
       }
 
-      // Pattern 4: Fallback to context.gameId if extraction failed
+      // Pattern 4: Fallback to context.gameId
       if (gameId === 'unknown' && (alert as any).context?.gameId) {
         gameId = (alert as any).context.gameId;
-        console.log(`✅ Using gameId from alert context: ${gameId}`);
       }
 
-      console.log(`📌 Extracted gameId: ${gameId} from alertKey: ${alert.alertKey}`);
+      // === BROADCAST ARCHITECTURE ===
+      // Store ONE broadcast alert per game event (not per user).
+      // Users resolve their alerts at read time via preferences join.
+      const payload = JSON.stringify({
+        message: alert.message,
+        priority: alert.priority,
+        type: alert.type,
+        gameId: gameId,
+        context: (alert as any).context || {},
+        timestamp: new Date().toISOString(),
+        gamblingInsights: alert.gamblingInsights || null,
+        hasComposerEnhancement: alert.hasComposerEnhancement || false
+      });
 
-      // Get all users monitoring this game
-      const usersMonitoring = await storage.getUsersMonitoringGame(gameId);
-      console.log(`👥 Found ${usersMonitoring.length} users monitoring game ${gameId}`);
+      const saved = await storage.createBroadcastAlert({
+        alertKey: alert.alertKey,
+        sport: sport as any,
+        gameId: gameId,
+        type: alert.type,
+        state: 'active',
+        score: (alert as any).confidence || alert.priority || 80,
+        payload,
+      });
 
-      // FIXED: Always save enhanced alerts with gambling insights to database
-      // Only skip user-specific deliveries if no users are monitoring
-      if (usersMonitoring.length === 0) {
-        console.log(`⚠️ No users monitoring game ${gameId}, skipping user deliveries but saving enhanced alert for analytics`);
-
-        // Save the enhanced alert without user association for data completeness
-        try {
-          await storage.createAlert({
-            alertKey: alert.alertKey,
-            userId: null, // No user association for unmonitored alerts
-            sport: sport as any,
-            gameId: gameId,
-            type: alert.type,
-            state: 'active',
-            score: (alert as any).confidence || alert.priority || 80,
-            payload: JSON.stringify({
-              message: alert.message,
-              priority: alert.priority,
-              type: alert.type,
-              gameId: gameId,
-              context: (alert as any).context || {},
-              timestamp: new Date().toISOString(),
-              gamblingInsights: alert.gamblingInsights || null,
-              hasComposerEnhancement: alert.hasComposerEnhancement || false
-            })
-          });
-          console.log(`✅ Enhanced alert saved to database for analytics: ${alert.alertKey}`);
-        } catch (saveError) {
-          console.error(`❌ Failed to save enhanced alert:`, saveError);
-        }
-        return;
+      // Also write to legacy alerts table (null userId) for backward compat
+      try {
+        await storage.createAlert({
+          alertKey: alert.alertKey,
+          userId: null,
+          sport: sport as any,
+          gameId: gameId,
+          type: alert.type,
+          state: 'active',
+          score: (alert as any).confidence || alert.priority || 80,
+          payload,
+        });
+      } catch (legacyError) {
+        // Non-critical: broadcast_alerts is the source of truth now
       }
 
-      // Create an alert for each user monitoring the game
-      let savedCount = 0;
-      let skippedCount = 0;
-
-      for (const userGame of usersMonitoring) {
-        try {
-          // 🔎 CRITICAL FIX: Check user preferences FIRST before ANY other checks (including deduplication)
-          const sportKey = (sport || '').toString().toLowerCase();
-          console.log(`🔎 PrefCheck start for user ${userGame.userId} type=${alert.type} sport=${sportKey}`);
-
-          if (!sportKey) {
-            console.log(`⚠️ No sport key found for alert ${alert.type}, skipping user ${userGame.userId}`);
-            continue;
-          }
-
-          const userPrefs = await storage.getUserAlertPreferencesBySport(userGame.userId, sportKey);
-          const alertPref = userPrefs.find(p => p.alertType === alert.type);
-          // CRITICAL FIX: Change default from true to false - opt-in instead of opt-out
-          const isEnabled = alertPref ? !!alertPref.enabled : false;
-
-          // Enhanced logging to track preference behavior
-          if (!alertPref) {
-            console.log(`🔍 NO_PREFERENCE_SET for user ${userGame.userId} alert ${alert.type} - defaulting to DISABLED (opt-in behavior)`);
-          } else {
-            console.log(`🔧 EXPLICIT_PREFERENCE for user ${userGame.userId} alert ${alert.type} = ${alertPref.enabled}`);
-          }
-
-          if (!isEnabled) {
-            skippedCount++;
-            console.log(`🚫 Alert ${alert.type} disabled for user ${userGame.userId}, skipping`);
-            continue;
-          }
-
-          // Check global admin settings as final filter before sending alerts
-          // This allows users to set preferences, but enforces admin settings at delivery time
-          const isGloballyEnabled = await storage.isAlertGloballyEnabled(sportKey, alert.type);
-          if (!isGloballyEnabled) {
-            skippedCount++;
-            console.log(`🚫 Alert ${alert.type} globally disabled by admin for user ${userGame.userId}, skipping`);
-            continue;
-          }
-
-          console.log(`✅ Alert ${alert.type} enabled for user ${userGame.userId}, proceeding to duplicate check`);
-
-          // FIXED DEDUPLICATION BUG: Check if this specific alert already exists AND is still active (non-expired)
-          const existingAlerts = await db.select()
-            .from(alertsTable)
-            .where(and(
-              eq(alertsTable.alertKey, alert.alertKey),
-              eq(alertsTable.userId, userGame.userId),
-              gte(alertsTable.expiresAt, new Date()) // Only check non-expired alerts
-            ))
-            .limit(1);
-
-          if (existingAlerts.length > 0) {
-            const existingAlert = existingAlerts[0];
-            let existingPayload: any = {};
-            try {
-              // The payload field is jsonb, so it's already parsed JSON - no need to JSON.parse()
-              existingPayload = existingAlert.payload || {};
-            } catch (error) {
-              console.log(`⚠️ Failed to access existing alert payload, using empty object:`, error);
-              existingPayload = {};
-            }
-            const hasExistingGamblingInsights = existingPayload.gamblingInsights &&
-              (existingPayload.gamblingInsights.structuredTemplate || (existingPayload.gamblingInsights.bullets && existingPayload.gamblingInsights.bullets.length > 0));
-            const hasNewGamblingInsights = alert.gamblingInsights &&
-              (alert.gamblingInsights.structuredTemplate || (alert.gamblingInsights.bullets && alert.gamblingInsights.bullets.length > 0));
-
-            // If new alert has gambling insights and existing doesn't, UPDATE the existing alert
-            if (hasNewGamblingInsights && !hasExistingGamblingInsights) {
-              console.log(`🔄 Updating existing alert with AI-enhanced gambling insights for user ${userGame.userId}`);
-
-              const updatedPayload = {
-                ...existingPayload,
-                gamblingInsights: alert.gamblingInsights,
-                hasComposerEnhancement: alert.hasComposerEnhancement || false,
-                aiEnhanced: true,
-                lastUpdated: new Date().toISOString()
-              };
-
-              await db.update(alertsTable)
-                .set({
-                  payload: JSON.stringify(updatedPayload),
-                  score: (alert as any).confidence || alert.priority || existingAlert.score
-                })
-                .where(eq(alertsTable.id, existingAlert.id));
-
-              savedCount++;
-              console.log(`✅ Alert updated with gambling insights for user ${userGame.userId}: ${alert.alertKey}`);
-            } else {
-              // Both alerts are the same type (both basic or both enhanced) - skip duplicate
-              skippedCount++;
-              console.log(`⏭️ Active alert already exists for user ${userGame.userId}, skipping`);
-            }
-            continue;
-          }
-
-          await storage.createAlert({
-            alertKey: alert.alertKey,  // Keep original alert key for deduplication
-            userId: userGame.userId,    // CRITICAL: Associate alert with the user!
-            sport: sport as any,
-            gameId: gameId,
-            type: alert.type,
-            state: 'active',
-            score: (alert as any).confidence || alert.priority || 80,
-            payload: JSON.stringify({
-              message: alert.message,
-              priority: alert.priority,
-              type: alert.type,
-              gameId: gameId,
-              context: (alert as any).context || {},
-              timestamp: new Date().toISOString(),
-              gamblingInsights: alert.gamblingInsights || null,
-              hasComposerEnhancement: alert.hasComposerEnhancement || false
-            })
-          });
-
-          savedCount++;
-          console.log(`✅ Alert saved for user ${userGame.userId}: ${alert.alertKey}`);
-
-          // 📱 FIXED: Add Telegram delivery (was missing in UnifiedAIProcessor pipeline)
-          try {
-            const user = await storage.getUserById(userGame.userId);
-            if (user?.telegramEnabled && user?.telegramBotToken && user?.telegramChatId) {
-              const telegramConfig = {
-                botToken: user.telegramBotToken,
-                chatId: user.telegramChatId
-              };
-              console.log(`📱 Sending Telegram alert to ${user.username || user.id}`);
-              const sent = await sendTelegramAlert(telegramConfig, alert);
-              if (sent) {
-                console.log(`📱 ✅ Telegram alert delivered to ${user.username || user.id}`);
-              } else {
-                console.log(`📱 ❌ Telegram delivery failed to ${user.username || user.id}`);
-              }
-            } else {
-              console.log(`📱 ⏭️ Telegram not configured for user ${user?.username || userGame.userId}`);
-            }
-          } catch (telegramError) {
-            console.error(`⚠️ Telegram notification failed for user ${userGame.userId}:`, telegramError);
-          }
-
-        } catch (error: any) {
-          // Handle any other database errors
-          console.error(`❌ Failed to save alert for user ${userGame.userId}:`, error);
-        }
-      }
-
-      console.log(`📊 Alert save summary: ${savedCount} saved, ${skippedCount} skipped (already existed)`);
-
-      // Broadcast to frontend via SSE (once for all users)
-      if (savedCount > 0) {
+      if (saved) {
+        // SSE broadcast to all connected clients (single event, not per-user)
         broadcast({
           type: 'alert',
           data: alert,
           alertKey: alert.alertKey
         });
+
+        // Telegram delivery: single query to find eligible recipients
+        const sportKey = (sport || '').toString().toLowerCase();
+        storage.getTelegramRecipientsForAlert(gameId, sportKey, alert.type)
+          .then(recipients => {
+            for (const r of recipients) {
+              if (r.botToken && r.chatId) {
+                sendTelegramAlert({ botToken: r.botToken, chatId: r.chatId }, alert)
+                  .catch(err => console.error(`[Telegram] delivery failed for ${r.userId}:`, err));
+              }
+            }
+            if (recipients.length > 0) {
+              console.log(`[Telegram] Sent ${alert.type} to ${recipients.length} recipients`);
+            }
+          })
+          .catch(() => {});
       }
 
     } catch (error) {
-      console.error(`❌ Failed to process enhanced alert:`, error);
+      console.error('[BroadcastAlert] Failed to process enhanced alert:', error);
     }
   });
 
@@ -2406,66 +2266,43 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
 
-      // Get current user from session
       const currentUserId = req.session?.userId;
-      console.log(`🔍 ALERTS API: Session user ID: ${currentUserId || 'none'}`);
 
-      // If user is not authenticated, return empty array
       if (!currentUserId) {
-        console.log(`⚠️ ALERTS API: No authenticated user, returning empty array`);
         res.json([]);
         return;
       }
 
-      // Get user details
       const user = await storage.getUserById(currentUserId);
       if (!user) {
-        console.log(`⚠️ ALERTS API: User not found for ID: ${currentUserId}`);
         res.json([]);
         return;
       }
 
-      console.log(`🔍 ALERTS API: User ${user.username} requesting alerts`);
-
-      // Get user's monitored games
       const monitoredGames = await storage.getUserMonitoredTeams(currentUserId);
       const monitoredGameIds = monitoredGames.map(game => game.gameId);
-      console.log(`🔍 ALERTS API: User ${currentUserId} has ${monitoredGameIds.length} monitored games`);
 
-      // If user has no monitored games, return empty array
       if (monitoredGameIds.length === 0) {
-        console.log(`⚠️ ALERTS API: User has no monitored games, returning empty array`);
         res.json([]);
         return;
       }
 
-      // Get alerts from database - filter by monitored game IDs AND current user ID
-      const result = await db.select({
-        id: alerts.id,
-        type: alerts.type,
-        game_id: alerts.gameId,
-        sport: alerts.sport,
-        score: alerts.score,
-        payload: alerts.payload,
-        created_at: alerts.createdAt
-      })
-      .from(alerts)
-      .where(and(
-        inArray(alerts.gameId, monitoredGameIds),
-        eq(alerts.userId, currentUserId)
-      ))
-      .orderBy(desc(alerts.createdAt))
-      .limit(limit)
-      .offset(offset);
+      // BROADCAST ARCHITECTURE: Query from broadcast_alerts table (one row per event)
+      // and filter by user preferences in-app. No per-user rows needed.
+      const broadcastResult = await storage.getBroadcastAlertsForUser(currentUserId, limit, offset);
+
+      // Map broadcast alerts to the same shape as the old per-user alerts
+      const result = broadcastResult.map(ba => ({
+        id: ba.id,
+        type: ba.type,
+        game_id: ba.gameId,
+        sport: ba.sport,
+        score: ba.score,
+        payload: ba.payload,
+        created_at: ba.createdAt,
+      }));
 
       const alertsData = [];
-
-      // Environment detection for debugging
-      const environment = process.env.NODE_ENV || 'development';
-      const isReplit = !!process.env.REPL_ID;
-      const hasDatabase = !!process.env.DATABASE_URL;
-
-      console.log(`🔍 ALERTS API: Environment=${environment}, Replit=${isReplit}, DB=${hasDatabase}, User=${currentUserId}`);
 
       for (const row of result) {
         // Process alerts with minimal transformation to preserve backend formatting
@@ -2680,8 +2517,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       console.log(`📸 Snapshot request: userId=${currentUserId}, since=${since}, seq=${sinceSeq}`);
 
-      // Get monitored games and filter alerts
-      const monitoredGames = await storage.getAllMonitoredGames();
+      // BROADCAST ARCHITECTURE: Use broadcast_alerts table with user's monitored games
+      const monitoredGames = await storage.getUserMonitoredTeams(currentUserId);
       if (monitoredGames.length === 0) {
         res.json([]);
         return;
@@ -2689,57 +2526,50 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       const monitoredGameIds = monitoredGames.map((game: any) => game.gameId);
 
-      // Build parameterized query to prevent SQL injection
-      const gameIdsPlaceholder = monitoredGameIds.map(() => '?').join(',');
-      const params = [...monitoredGameIds];
-      let whereClause = `game_id IN (${gameIdsPlaceholder})`;
+      const broadcastResults = await storage.getBroadcastAlertsSince(
+        monitoredGameIds,
+        sinceSeq || undefined,
+        since || undefined
+      );
 
-      if (sinceSeq) {
-        whereClause += ` AND sequence_number > ?`;
-        params.push(sinceSeq);
-      } else if (since) {
-        whereClause += ` AND created_at > ?`;
-        params.push(since);
-      }
+      // Get user preferences for filtering
+      const prefs = await storage.getUserAlertPreferences(currentUserId);
+      const enabledSet = new Set(
+        prefs.filter((p: any) => p.enabled).map((p: any) => `${p.sport.toLowerCase()}:${p.alertType}`)
+      );
 
-      const result = await db.execute(sql.raw(`
-        SELECT id, sequence_number, type, game_id, sport, score, payload, created_at
-        FROM alerts
-        WHERE ${whereClause}
-        ORDER BY sequence_number ASC
-        LIMIT 200
-      `));
+      const alertsList = broadcastResults
+        .filter(row => enabledSet.has(`${row.sport.toLowerCase()}:${row.type}`))
+        .map((row: any) => {
+          let payload: any = {};
+          try {
+            payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload || {};
+          } catch (e) {
+            payload = {};
+          }
 
-      const alerts = result.rows.map((row: any) => {
-        let payload: any = {};
-        try {
-          payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload || {};
-        } catch (e) {
-          payload = {};
-        }
+          return {
+            id: row.id,
+            alertKey: row.alertKey || `${row.gameId}_${row.type}`,
+            sequenceNumber: row.sequenceNumber,
+            type: row.type,
+            message: payload.message || payload.situation || `${row.type} alert for game ${row.gameId}`,
+            gameId: row.gameId,
+            sport: row.sport || 'MLB',
+            homeTeam: payload.context?.homeTeam || payload.homeTeam || `Home Team (${row.gameId})`,
+            awayTeam: payload.context?.awayTeam || payload.awayTeam || `Away Team (${row.gameId})`,
+            homeScore: payload.context?.homeScore ?? payload.homeScore,
+            awayScore: payload.context?.awayScore ?? payload.awayScore,
+            confidence: row.score || 85,
+            priority: row.score || 80,
+            createdAt: row.createdAt,
+            timestamp: row.createdAt,
+            payload: payload
+          };
+        });
 
-        return {
-          id: row.id,
-          alertKey: `${row.game_id}_${row.type}`,
-          sequenceNumber: row.sequence_number,
-          type: row.type,
-          message: payload.message || payload.situation || `${row.type} alert for game ${row.game_id}`,
-          gameId: row.game_id,
-          sport: row.sport || 'MLB',
-          homeTeam: payload.context?.homeTeam || payload.homeTeam || `Home Team (${row.game_id})`,
-          awayTeam: payload.context?.awayTeam || payload.awayTeam || `Away Team (${row.game_id})`,
-          homeScore: payload.context?.homeScore ?? payload.homeScore,
-          awayScore: payload.context?.awayScore ?? payload.awayScore,
-          confidence: row.score || 85,
-          priority: row.score || 80,
-          createdAt: row.created_at,
-          timestamp: row.created_at,
-          payload: payload
-        };
-      });
-
-      console.log(`📸 Snapshot response: ${alerts.length} alerts since ${since || sinceSeq}`);
-      res.json(alerts);
+      console.log(`Snapshot response: ${alertsList.length} broadcast alerts since ${since || sinceSeq}`);
+      res.json(alertsList);
     } catch (error) {
       console.error("Error fetching alert snapshot:", error);
       res.status(500).json({ message: "Failed to fetch alert snapshot" });

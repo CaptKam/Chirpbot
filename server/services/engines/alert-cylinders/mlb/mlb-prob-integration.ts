@@ -8,6 +8,8 @@ export function convertGameStateToMLBState(gameState: GameState, additionalData?
   pitcherHR9?: number;
   pitcherGB?: number;
   pitcherHandedness?: 'L'|'R';
+  pitcherPitchCount?: number;
+  pitcherInningsPitched?: number;
   platoonAdv?: boolean;
   parkHRFactor?: number;
   windMph?: number;
@@ -30,30 +32,30 @@ export function convertGameStateToMLBState(gameState: GameState, additionalData?
       on2B: gameState.hasSecond || false,
       on3B: gameState.hasThird || false
     },
-    batter: additionalData ? {
+    batter: {
       name: gameState.currentBatter,
-      iso: additionalData.batterISO,
-      hardHit: additionalData.batterHardHit,
-      handedness: additionalData.batterHandedness
-    } : {
-      name: gameState.currentBatter
+      iso: additionalData?.batterISO,
+      hardHit: additionalData?.batterHardHit,
+      handedness: additionalData?.batterHandedness,
     },
-    pitcher: additionalData ? {
-      hrPer9: additionalData.pitcherHR9,
-      gbRate: additionalData.pitcherGB,
-      handedness: additionalData.pitcherHandedness
-    } : undefined,
+    pitcher: {
+      hrPer9: additionalData?.pitcherHR9,
+      gbRate: additionalData?.pitcherGB,
+      handedness: additionalData?.pitcherHandedness,
+      pitchCount: additionalData?.pitcherPitchCount ?? (gameState.pitchCount as number) ?? undefined,
+      inningsPitched: additionalData?.pitcherInningsPitched,
+    },
     matchup: additionalData?.platoonAdv !== undefined ? {
       platoonAdv: additionalData.platoonAdv
     } : undefined,
     park: additionalData?.parkHRFactor !== undefined ? {
       hrFactor: additionalData.parkHRFactor
     } : undefined,
-    weather: (additionalData?.windMph !== undefined || additionalData?.tempF !== undefined) ? {
-      windMph: additionalData.windMph,
-      windDir: additionalData.windDir,
-      tempF: additionalData.tempF
-    } : undefined
+    weather: {
+      windMph: additionalData?.windMph ?? (gameState.weatherContext as any)?.windSpeed,
+      windDir: additionalData?.windDir ?? (gameState.weatherContext as any)?.windDirection,
+      tempF: additionalData?.tempF ?? (gameState.weatherContext as any)?.temperature,
+    },
   };
 }
 
@@ -68,7 +70,7 @@ export function enhanceAlertWithProbability(
   if (!probScore) {
     return { enhancedContext: baseContext, probScore: null };
   }
-  
+
   const enhancedContext = {
     ...baseContext,
     mlbProbModel: {
@@ -77,10 +79,12 @@ export function enhanceAlertWithProbability(
       leverage: probScore.leverage,
       confidence: probScore.confidence,
       priority: probScore.priority,
+      chirpLevel: probScore.chirpLevel,
+      edge: probScore.edge,
       aiSummary: probScore.aiText,
       dedupeKey: probScore.dedupeKey
     }
   };
-  
+
   return { enhancedContext, probScore };
 }

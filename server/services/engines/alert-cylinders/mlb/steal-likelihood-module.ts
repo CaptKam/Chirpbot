@@ -383,12 +383,6 @@ export default class StealLikelihoodModule extends BaseAlertModule {
     return { runnerSpeed, catcherArm, pitcherControl };
   }
 
-  // This method is now replaced by getPlayerPerformanceFactors
-  // Keeping stub for any legacy references
-  private getDefensiveResistanceFactor(gameState: GameState): number {
-    return 1.0; // Neutral - logic moved to getPlayerPerformanceFactors
-  }
-
   private getEnvironmentalMultiplier(gameState: GameState): number {
     // Environmental factors affecting steal attempts (multiplicative)
     let multiplier = 1.0;
@@ -407,12 +401,6 @@ export default class StealLikelihoodModule extends BaseAlertModule {
     // For now, keep it simple and realistic
     
     return multiplier;
-  }
-
-  // This method is now incorporated into count leverage
-  // Keeping stub for any legacy references  
-  private getBatterProfileFactor(gameState: GameState): number {
-    return 1.0; // Neutral - logic moved to COUNT_LEVERAGE multipliers
   }
 
   private analyzeStealSituation(gameState: GameState): any {

@@ -11,7 +11,7 @@ export const RUNTIME = {
   calendarPoll: {
     defaultMs: 30_000,              // Faster baseline: poll status every 30s (was 60s)
     preStartWindowMin: 10,          // T-10m to T+5m tighten polling  
-    preStartPollMs: 5_000,          // Faster pre-start: every 5s (was 10s)
+    preStartPollMs: 2_000,          // Fast pre-start: every 2s for quick LIVE detection
     criticalWindowMin: 2,           // Critical detection window (T-2m to T+5m)
     criticalPollMs: 1_000,          // ULTRA-FAST: 1s polling for live games (was 2s)
     liveConfirmMs: 250,             // ULTRA-FAST: 250ms confirmation (was 500ms)
