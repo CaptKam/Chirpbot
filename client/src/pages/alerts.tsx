@@ -7,13 +7,7 @@ import { getSeasonAwareSports } from '@shared/season-manager';
 import { Alert } from '@/types';
 import { PageHeader } from '@/components/PageHeader';
 import { TeamLogo } from '@/components/team-logo';
-
-// ─── V3 Design Tokens ────────────────────────────────────────────
-const DS = {
-  cardSurface: '#161B22',
-  border: '#1E293B',
-  alertRed: '#EF4444',
-} as const;
+import { getTeamAbbr, getTeamName, timeAgo, getSportAccent } from '@/utils/team-utils';
 
 // ─── Animation Variants ──────────────────────────────────────────
 const cardSlide = {
@@ -49,7 +43,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   render() {
     if (this.state.hasError) {
       return (
-        <div className="rounded-xl border p-6" style={{ background: DS.cardSurface, borderColor: DS.border }} role="alert">
+        <div className="rounded-xl border border-slate-800 p-6 bg-surface" role="alert">
           <div className="flex items-center gap-3">
             <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />
             <div>
@@ -65,45 +59,6 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────
-
-const TEAM_ABBR: Record<string, string> = {
-  'New York Yankees': 'NYY', 'Boston Red Sox': 'BOS', 'Los Angeles Dodgers': 'LAD',
-  'San Francisco Giants': 'SFG', 'Houston Astros': 'HOU', 'Texas Rangers': 'TEX',
-  'Chicago Cubs': 'CHC', 'St. Louis Cardinals': 'STL', 'Atlanta Braves': 'ATL',
-  'Philadelphia Phillies': 'PHI', 'San Diego Padres': 'SD', 'Los Angeles Angels': 'LAA',
-  'Seattle Mariners': 'SEA', 'Toronto Blue Jays': 'TOR', 'Tampa Bay Rays': 'TB',
-  'Baltimore Orioles': 'BAL', 'Minnesota Twins': 'MIN', 'Cleveland Guardians': 'CLE',
-  'Detroit Tigers': 'DET', 'Chicago White Sox': 'CWS', 'Kansas City Royals': 'KC',
-  'Milwaukee Brewers': 'MIL', 'Pittsburgh Pirates': 'PIT', 'Cincinnati Reds': 'CIN',
-  'Arizona Diamondbacks': 'ARI', 'Colorado Rockies': 'COL', 'Miami Marlins': 'MIA',
-  'Washington Nationals': 'WSH', 'New York Mets': 'NYM', 'Oakland Athletics': 'OAK',
-  'Kansas City Chiefs': 'KC', 'Buffalo Bills': 'BUF', 'Philadelphia Eagles': 'PHI',
-  'Dallas Cowboys': 'DAL', 'Los Angeles Lakers': 'LAL', 'Golden State Warriors': 'GSW',
-};
-
-function getAbbr(name: string | { name: string } | undefined): string {
-  if (!name) return '???';
-  const n = typeof name === 'string' ? name : name.name;
-  return TEAM_ABBR[n] || n.split(' ').pop()?.substring(0, 3).toUpperCase() || '???';
-}
-
-function getTeamName(team: string | { name: string } | undefined): string {
-  if (!team) return 'Unknown';
-  return typeof team === 'string' ? team : team.name;
-}
-
-function getSportAccent(sport: string) {
-  switch (sport) {
-    case 'MLB': return { bar: '#22C55E', pill: 'bg-emeraldGreen text-white shadow-sm shadow-emeraldGreen/8', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
-    case 'NBA': return { bar: '#A855F7', pill: 'bg-purple-500 text-white shadow-sm shadow-purple-500/8', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
-    case 'NFL': return { bar: '#F97316', pill: 'bg-orange-500 text-white shadow-sm shadow-orange-500/8', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
-    case 'NHL': return { bar: '#06B6D4', pill: 'bg-cyan-500 text-white shadow-sm shadow-cyan-500/8', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
-    case 'NCAAF': return { bar: '#3B82F6', pill: 'bg-blue-500 text-white shadow-sm shadow-blue-500/8', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
-    case 'CFL': return { bar: '#EF4444', pill: 'bg-red-500 text-white shadow-sm shadow-red-500/8', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
-    case 'WNBA': return { bar: '#EC4899', pill: 'bg-pink-500 text-white shadow-sm shadow-pink-500/8', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
-    default: return { bar: '#22C55E', pill: 'bg-emeraldGreen text-white shadow-sm shadow-emeraldGreen/8', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
-  }
-}
 
 function getInningLabel(alert: Alert): string {
   const ctx = alert.context;
@@ -141,30 +96,16 @@ function getOutsCount(alert: Alert): number {
 function getWinProb(alert: Alert): { value: number; team: string } | null {
   const prob = alert.context?.aiGameProjection?.winProbability;
   if (prob) {
-    const homeAbbr = getAbbr(alert.homeTeam);
-    const awayAbbr = getAbbr(alert.awayTeam);
+    const homeAbbr = getTeamAbbr(alert.homeTeam);
+    const awayAbbr = getTeamAbbr(alert.awayTeam);
     return prob.home >= prob.away
       ? { value: Math.round(prob.home), team: homeAbbr }
       : { value: Math.round(prob.away), team: awayAbbr };
   }
   const scoring = alert.context?.scoringProbability;
-  if (scoring) return { value: Math.round(scoring * 100), team: getAbbr(alert.homeTeam) };
-  if (alert.confidence && alert.confidence > 50) return { value: alert.confidence, team: getAbbr(alert.homeTeam) };
+  if (scoring) return { value: Math.round(scoring * 100), team: getTeamAbbr(alert.homeTeam) };
+  if (alert.confidence && alert.confidence > 50) return { value: alert.confidence, team: getTeamAbbr(alert.homeTeam) };
   return null;
-}
-
-function timeAgo(dateString: string): string {
-  try {
-    const sec = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000);
-    if (sec < 60) return `${sec}s ago`;
-    const min = Math.floor(sec / 60);
-    if (min < 60) return `${min}m ago`;
-    const hr = Math.floor(min / 60);
-    if (hr < 24) return `${hr}h ago`;
-    return `${Math.floor(hr / 24)}d ago`;
-  } catch {
-    return '';
-  }
 }
 
 // ─── Skeleton Loader ─────────────────────────────────────────────
@@ -172,8 +113,7 @@ function timeAgo(dateString: string): string {
 function AlertSkeleton({ delay = 0 }: { delay?: number }) {
   return (
     <motion.div
-      className="rounded-xl border p-4 animate-pulse"
-      style={{ background: DS.cardSurface, borderColor: DS.border }}
+      className="rounded-xl border border-slate-800 bg-surface p-4 animate-pulse"
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: 'easeOut', delay: delay * 0.08 }}
@@ -203,8 +143,8 @@ function AlertSkeleton({ delay = 0 }: { delay?: number }) {
 function FeaturedAlertCard({ alert }: { alert: Alert }) {
   const [insightsOpen, setInsightsOpen] = useState(false);
 
-  const homeAbbr = getAbbr(alert.homeTeam);
-  const awayAbbr = getAbbr(alert.awayTeam);
+  const homeAbbr = getTeamAbbr(alert.homeTeam);
+  const awayAbbr = getTeamAbbr(alert.awayTeam);
   const homeName = getTeamName(alert.homeTeam);
   const awayName = getTeamName(alert.awayTeam);
   const homeScore = alert.homeScore ?? alert.context?.homeScore ?? 0;
@@ -434,8 +374,8 @@ function FeaturedAlertCard({ alert }: { alert: Alert }) {
 // ─── Compact Alert Card (Upcoming Alerts list) ───────────────────
 
 function CompactAlertCard({ alert, index }: { alert: Alert; index: number }) {
-  const homeAbbr = getAbbr(alert.homeTeam);
-  const awayAbbr = getAbbr(alert.awayTeam);
+  const homeAbbr = getTeamAbbr(alert.homeTeam);
+  const awayAbbr = getTeamAbbr(alert.awayTeam);
   const homeName = getTeamName(alert.homeTeam);
   const awayName = getTeamName(alert.awayTeam);
   const ago = timeAgo(alert.timestamp || alert.createdAt || '');
@@ -606,8 +546,8 @@ export default function AlertsPage() {
   );
 
   return (
-    <div className="pb-24 min-h-screen bg-solidBackground" data-testid={isLoading || statsLoading ? "alerts-loading" : "alerts-page"}>
-      <PageHeader title="MLB Live Alert" subtitle="Real-Time Signals" />
+    <div className="pb-24 sm:pb-28 min-h-screen bg-solidBackground" data-testid={isLoading || statsLoading ? "alerts-loading" : "alerts-page"}>
+      <PageHeader title="ChirpBot" subtitle="Live Alerts" />
       {sportPills}
 
       {isLoading || statsLoading ? (
@@ -624,8 +564,7 @@ export default function AlertsPage() {
           {/* Demo mode banner */}
           {alerts.length === 0 && !error && !isLoading && (
             <motion.div
-              className="rounded-xl px-4 py-3 flex items-center gap-3 border-l-[3px] border-l-amber-500 border border-slate-800"
-              style={{ background: DS.cardSurface }}
+              className="rounded-xl px-4 py-3 flex items-center gap-3 border-l-[3px] border-l-amber-500 border border-slate-800 bg-surface"
               {...cardSlide}
             >
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-500/10 border border-amber-500/15">
@@ -643,8 +582,7 @@ export default function AlertsPage() {
           {/* Error state */}
           {error ? (
             <motion.div
-              className="rounded-xl p-8 border text-center border-t-4 border-t-chirpRed"
-              style={{ background: DS.cardSurface, borderColor: DS.border }}
+              className="rounded-xl p-8 border border-slate-800 bg-surface text-center border-t-4 border-t-chirpRed"
               {...cardSlide}
             >
               <AlertTriangle className="h-8 w-8 text-chirpRed mx-auto mb-4" />
@@ -661,8 +599,7 @@ export default function AlertsPage() {
             </motion.div>
           ) : sortedAlerts.length === 0 ? (
             <motion.div
-              className="rounded-xl p-8 border text-center"
-              style={{ background: DS.cardSurface, borderColor: DS.border }}
+              className="rounded-xl p-8 border border-slate-800 bg-surface text-center"
               {...cardSlide}
             >
               <Bell className="h-8 w-8 text-slate-400 mx-auto mb-4" />
@@ -692,8 +629,8 @@ export default function AlertsPage() {
               {remainingAlerts.length > 0 && (
                 <div>
                   <div className="flex items-center justify-between mb-4 px-1">
-                    <h2 className="text-lg font-bold">Upcoming Alerts</h2>
-                    <button className="text-primaryBlue text-sm font-bold">See All</button>
+                    <h2 className="text-slate-400 text-[10px] font-black tracking-[0.2em] uppercase">Upcoming Alerts</h2>
+                    <button className="text-primaryBlue text-xs font-bold">See All</button>
                   </div>
                   <div className="space-y-3">
                     {remainingAlerts.map((alert, i) => (
