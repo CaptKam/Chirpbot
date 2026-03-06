@@ -94,14 +94,14 @@ function getTeamName(team: string | { name: string } | undefined): string {
 
 function getSportAccent(sport: string) {
   switch (sport) {
-    case 'MLB': return { bar: '#22C55E', pill: 'bg-emeraldGreen text-white shadow-lg shadow-emeraldGreen/20', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
-    case 'NBA': return { bar: '#A855F7', pill: 'bg-purple-500 text-white shadow-lg shadow-purple-500/20', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
-    case 'NFL': return { bar: '#F97316', pill: 'bg-orange-500 text-white shadow-lg shadow-orange-500/20', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
-    case 'NHL': return { bar: '#06B6D4', pill: 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
-    case 'NCAAF': return { bar: '#3B82F6', pill: 'bg-blue-500 text-white shadow-lg shadow-blue-500/20', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
-    case 'CFL': return { bar: '#EF4444', pill: 'bg-red-500 text-white shadow-lg shadow-red-500/20', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
-    case 'WNBA': return { bar: '#EC4899', pill: 'bg-pink-500 text-white shadow-lg shadow-pink-500/20', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
-    default: return { bar: '#22C55E', pill: 'bg-emeraldGreen text-white shadow-lg shadow-emeraldGreen/20', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
+    case 'MLB': return { bar: '#22C55E', pill: 'bg-emeraldGreen text-white shadow-sm shadow-emeraldGreen/8', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
+    case 'NBA': return { bar: '#A855F7', pill: 'bg-purple-500 text-white shadow-sm shadow-purple-500/8', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
+    case 'NFL': return { bar: '#F97316', pill: 'bg-orange-500 text-white shadow-sm shadow-orange-500/8', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
+    case 'NHL': return { bar: '#06B6D4', pill: 'bg-cyan-500 text-white shadow-sm shadow-cyan-500/8', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
+    case 'NCAAF': return { bar: '#3B82F6', pill: 'bg-blue-500 text-white shadow-sm shadow-blue-500/8', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
+    case 'CFL': return { bar: '#EF4444', pill: 'bg-red-500 text-white shadow-sm shadow-red-500/8', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
+    case 'WNBA': return { bar: '#EC4899', pill: 'bg-pink-500 text-white shadow-sm shadow-pink-500/8', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
+    default: return { bar: '#22C55E', pill: 'bg-emeraldGreen text-white shadow-sm shadow-emeraldGreen/8', pillInactive: 'bg-slate-800 text-slate-400 hover:text-slate-200' };
   }
 }
 
@@ -232,7 +232,7 @@ function FeaturedAlertCard({ alert }: { alert: Alert }) {
 
   return (
     <motion.div
-      className="relative overflow-hidden rounded-xl border-t-4 bg-surface border border-slate-800 shadow-xl"
+      className="relative overflow-hidden rounded-xl border-t-4 bg-surface border border-slate-800 shadow-md"
       style={{ borderTopColor: accent.bar }}
       {...cardSlide}
     >
@@ -267,11 +267,11 @@ function FeaturedAlertCard({ alert }: { alert: Alert }) {
               <>
                 <div className="relative w-16 h-16 rotate-45 border-2 border-slate-800 rounded-sm">
                   {/* 2nd base (top-left in rotated view) */}
-                  <div className={`absolute -top-1.5 -left-1.5 w-3.5 h-3.5 rounded-sm transition-all duration-300 ${second ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/50 animate-diamond-pop' : 'bg-slate-700'}`} />
+                  <div className={`absolute -top-1.5 -left-1.5 w-3.5 h-3.5 rounded-sm transition-all duration-300 ${second ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/20 animate-diamond-pop' : 'bg-slate-700'}`} />
                   {/* 1st base (top-right) */}
-                  <div className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-sm transition-all duration-300 ${first ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/50 animate-diamond-pop' : 'bg-slate-700'}`} />
+                  <div className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-sm transition-all duration-300 ${first ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/20 animate-diamond-pop' : 'bg-slate-700'}`} />
                   {/* 3rd base (bottom-left) */}
-                  <div className={`absolute -bottom-1.5 -left-1.5 w-3.5 h-3.5 rounded-sm transition-all duration-300 ${third ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/50 animate-diamond-pop' : 'bg-slate-700'}`} />
+                  <div className={`absolute -bottom-1.5 -left-1.5 w-3.5 h-3.5 rounded-sm transition-all duration-300 ${third ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/20 animate-diamond-pop' : 'bg-slate-700'}`} />
                   {/* Home plate */}
                   <div className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 bg-slate-700 rounded-sm" />
 
@@ -345,7 +345,7 @@ function FeaturedAlertCard({ alert }: { alert: Alert }) {
                 <div className="px-4 pb-6 pt-2 space-y-4">
                   {/* Stats grid */}
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-surface p-3 rounded-lg border border-slate-800 shadow-[0_0_15px_-3px_rgba(34,197,94,0.3)]">
+                    <div className="bg-surface p-3 rounded-lg border border-slate-800 shadow-[0_0_8px_-2px_rgba(34,197,94,0.12)]">
                       <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
                         {isMLB ? 'RE24 Run Exp.' : 'Scoring Prob'}
                       </p>
@@ -353,7 +353,7 @@ function FeaturedAlertCard({ alert }: { alert: Alert }) {
                         {re24 ? `+${(re24 * 2).toFixed(2)}` : winProb ? `${winProb.value}%` : '--'}
                       </p>
                     </div>
-                    <div className="bg-surface p-3 rounded-lg border border-slate-800 shadow-[0_0_15px_-3px_rgba(34,197,94,0.3)]">
+                    <div className="bg-surface p-3 rounded-lg border border-slate-800 shadow-[0_0_8px_-2px_rgba(34,197,94,0.12)]">
                       <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
                         Win Prob ({winProb?.team || homeAbbr})
                       </p>
@@ -364,7 +364,7 @@ function FeaturedAlertCard({ alert }: { alert: Alert }) {
                   </div>
 
                   {/* Detailed Live Odds */}
-                  <div className="bg-surface p-4 rounded-xl border border-slate-800 shadow-[0_0_15px_-3px_rgba(34,197,94,0.3)]">
+                  <div className="bg-surface p-4 rounded-xl border border-slate-800 shadow-[0_0_8px_-2px_rgba(34,197,94,0.12)]">
                     <div className="flex justify-between items-center mb-3">
                       <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Detailed Live Odds</h4>
                       <span className="text-[10px] font-bold text-emeraldGreen flex items-center gap-1">

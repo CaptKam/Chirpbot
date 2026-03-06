@@ -172,7 +172,7 @@ export function ROICalculator() {
                 </div>
                 
                 <Link href="/signup?plan=pro">
-                  <Button className="w-full bg-primaryBlue hover:bg-blue-600 text-white py-6 text-lg font-bold rounded-xl shadow-lg shadow-primaryBlue/25 hover:scale-[1.02] transition-all duration-300">
+                  <Button className="w-full bg-primaryBlue hover:bg-blue-600 text-white py-6 text-lg font-bold rounded-xl shadow-sm shadow-primaryBlue/10 hover:scale-[1.02] transition-all duration-300">
                     Start Earning +${Math.round(additionalProfit)}/month
                   </Button>
                 </Link>

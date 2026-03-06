@@ -255,7 +255,7 @@ export default function Signup() {
               <Button
                 type="submit"
                 data-testid="button-signup"
-                className="w-full min-h-[48px] bg-primaryBlue hover:bg-blue-600 text-white font-bold shadow-lg shadow-primaryBlue/25 text-base"
+                className="w-full min-h-[48px] bg-primaryBlue hover:bg-blue-600 text-white font-bold shadow-sm shadow-primaryBlue/10 text-base"
                 disabled={isLoading}
                 aria-busy={isLoading}
               >
