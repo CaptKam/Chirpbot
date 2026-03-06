@@ -590,7 +590,7 @@ export default function Settings() {
 
         {/* Alert Preferences */}
         {isAuthenticated && (
-          <div className={`bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl ${sportColors.bg}`}>
+          <div className="backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl bg-[#101922] text-[#ffffff]">
             <div className="flex items-center space-x-4 mb-6">
               <div className={`h-12 w-12 rounded-lg ${sportColors.bg} ring-1 ${getRingClass()} flex items-center justify-center`}>
                 <Bell className={`w-6 h-6 ${sportColors.text}`} />
