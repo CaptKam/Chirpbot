@@ -58,74 +58,54 @@ interface AlertStats {
   monitoredGames: number;
 }
 
-// AlertSkeleton component defined ABOVE its usage to prevent temporal dead zone error
-const AlertSkeleton = ({ sport }: { sport: string }) => {
-  // Static class mappings to ensure Tailwind includes all classes
-  const getSportSkeletonClasses = (sport: string) => {
-    switch (sport) {
-      case 'MLB':
-        return {
-          shadow: 'shadow-green-500/5',
-          bg1: 'bg-green-500/20',
-          bg2: 'bg-green-500/15'
-        };
-      case 'NFL':
-        return {
-          shadow: 'shadow-orange-500/5',
-          bg1: 'bg-orange-500/20',
-          bg2: 'bg-orange-500/15'
-        };
-      case 'NBA':
-        return {
-          shadow: 'shadow-purple-500/5',
-          bg1: 'bg-purple-500/20',
-          bg2: 'bg-purple-500/15'
-        };
-      case 'NHL':
-        return {
-          shadow: 'shadow-cyan-500/5',
-          bg1: 'bg-cyan-500/20',
-          bg2: 'bg-cyan-500/15'
-        };
-      case 'NCAAF':
-        return {
-          shadow: 'shadow-blue-500/5',
-          bg1: 'bg-blue-500/20',
-          bg2: 'bg-blue-500/15'
-        };
-      case 'CFL':
-        return {
-          shadow: 'shadow-red-500/5',
-          bg1: 'bg-red-500/20',
-          bg2: 'bg-red-500/15'
-        };
-      case 'WNBA':
-        return {
-          shadow: 'shadow-pink-500/5',
-          bg1: 'bg-pink-500/20',
-          bg2: 'bg-pink-500/15'
-        };
-      default:
-        return {
-          shadow: 'shadow-emerald-500/5',
-          bg1: 'bg-emerald-500/20',
-          bg2: 'bg-emerald-500/15'
-        };
-    }
-  };
-  
-  const colors = getSportSkeletonClasses(sport === 'all' ? 'MLB' : sport);
-  
+// Shimmer skeleton with glassmorphism design
+const ShimmerBlock = ({ w = '100%', h = 14, r = 8 }: { w?: string | number; h?: number; r?: number }) => (
+  <div className="animate-shimmer" style={{ width: w, height: h, borderRadius: r, background: 'rgba(255,255,255,0.04)' }} />
+);
+
+const AlertSkeleton = ({ sport, delay = 0 }: { sport: string; delay?: number }) => {
   return (
-    <div className={`bg-[#161B22] ring-1 ring-white/[0.08] border-0 rounded-xl p-6 shadow-xl ${colors.shadow} animate-pulse`}>
-      <div className="flex items-center justify-between mb-4">
-        <div className={`h-6 ${colors.bg1} rounded-lg w-32 animate-pulse`}></div>
-        <div className={`h-4 ${colors.bg2} rounded w-16 animate-pulse`}></div>
+    <div
+      className="glass-card rounded-2xl overflow-hidden animate-stagger-in"
+      style={{
+        animationDelay: `${delay * 80}ms`,
+        borderTop: '2px solid rgba(255,255,255,0.06)',
+      }}
+    >
+      <div className="p-4">
+        {/* Header shimmer */}
+        <div className="flex items-center gap-2.5 mb-3">
+          <ShimmerBlock w={36} h={36} r={12} />
+          <div className="flex-1 space-y-1.5">
+            <ShimmerBlock w={100} h={10} />
+            <ShimmerBlock w={60} h={8} />
+          </div>
+          <ShimmerBlock w={48} h={22} r={8} />
+        </div>
+        {/* Scoreboard shimmer */}
+        <div className="glass-surface rounded-xl p-3 mb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShimmerBlock w={80} h={12} />
+              <ShimmerBlock w={28} h={24} r={4} />
+            </div>
+            <ShimmerBlock w={20} h={8} />
+            <div className="flex items-center gap-2 flex-row-reverse">
+              <ShimmerBlock w={80} h={12} />
+              <ShimmerBlock w={28} h={24} r={4} />
+            </div>
+          </div>
+        </div>
+        {/* Content shimmer */}
+        <div className="space-y-2 mb-3">
+          <ShimmerBlock w="85%" h={12} />
+          <ShimmerBlock w="60%" h={10} />
+        </div>
       </div>
-      <div className={`h-4 ${colors.bg2} rounded w-full mb-4 animate-pulse`}></div>
-      <div className="flex items-center justify-between">
-        <div className={`h-6 ${colors.bg1} rounded-lg w-48 animate-pulse`}></div>
-        <div className={`h-6 ${colors.bg2} rounded w-12 animate-pulse`}></div>
+      {/* Footer shimmer */}
+      <div className="px-4 py-2.5 flex items-center gap-2" style={{ background: 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+        <ShimmerBlock w={40} h={16} r={20} />
+        <ShimmerBlock w={50} h={16} r={20} />
       </div>
     </div>
   );
@@ -342,7 +322,7 @@ export default function AlertsPage() {
 
   if (alertsLoading || statsLoading) {
     return (
-      <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0D1117] to-[#0D0D0D] text-slate-100 antialiased min-h-screen" data-testid="alerts-loading">
+      <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#080C10] to-[#0D0D0D] text-slate-100 antialiased min-h-screen" data-testid="alerts-loading">
         <PageHeader 
           title="ChirpBot" 
           subtitle="Real-Time Alert Dashboard"
@@ -359,7 +339,7 @@ export default function AlertsPage() {
         <div className="max-w-4xl mx-auto space-y-6 px-2 sm:px-4 md:px-6" data-testid="alerts-container">
           <div className="pb-8 space-y-4" data-testid="alerts-skeleton-list">
             {Array.from({ length: 5 }, (_, index) => (
-              <AlertSkeleton key={`skeleton-${index}`} sport={filter} />
+              <AlertSkeleton key={`skeleton-${index}`} sport={filter} delay={index} />
             ))}
           </div>
         </div>
@@ -369,7 +349,7 @@ export default function AlertsPage() {
 
 
   return (
-    <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0D1117] to-[#0D0D0D] text-slate-100 antialiased min-h-screen" data-testid="alerts-page">
+    <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#080C10] to-[#0D0D0D] text-slate-100 antialiased min-h-screen" data-testid="alerts-page">
       <PageHeader 
         title="ChirpBot" 
         subtitle="Real-Time Alert Dashboard"
@@ -384,34 +364,42 @@ export default function AlertsPage() {
       />
 
       <div className="max-w-4xl mx-auto space-y-6 px-2 sm:px-4 md:px-6" data-testid="alerts-container">
-        {/* Demo mode banner */}
+        {/* Demo mode banner — glass design */}
         {(!alerts || alerts.length === 0) && !alertsError && !alertsLoading && (
-          <div className="bg-amber-500/10 ring-1 ring-amber-500/30 rounded-xl px-4 py-3 flex items-center gap-3">
-            <Bell className="w-4 h-4 text-amber-400 flex-shrink-0" />
-            <p className="text-sm text-amber-300">
-              <span className="font-bold">Demo Mode</span> — Showing sample alerts. Real alerts appear when games are live and you're monitoring teams.
-            </p>
+          <div className="glass-card rounded-2xl px-4 py-3 flex items-center gap-3 animate-stagger-in" style={{ borderLeft: '3px solid #F59E0B' }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.15)' }}>
+              <Bell className="w-4 h-4 text-amber-400" />
+            </div>
+            <div>
+              <span className="font-display text-[11px] font-bold text-amber-400 uppercase tracking-wider">Demo Mode</span>
+              <p className="text-[11px] text-slate-400 mt-0.5 font-display">
+                Showing sample alerts. Real alerts appear when games are live.
+              </p>
+            </div>
           </div>
         )}
         {/* Alerts Content */}
         <div className="pb-8 space-y-4" data-testid="alerts-list">
         {alertsError ? (
-          <div className="bg-[#161B22] ring-1 ring-red-500/30 border-0 rounded-xl p-8 shadow-xl shadow-red-500/5" role="alert">
+          <div className="glass-card rounded-2xl p-8 animate-stagger-in" style={{ borderTop: '2px solid #EF4444' }} role="alert">
             <div className="text-center">
-              <div className="h-16 w-16 rounded-xl bg-red-500/20 ring-1 ring-red-500/30 flex items-center justify-center mx-auto mb-6">
+              <div
+                className="h-16 w-16 rounded-2xl flex items-center justify-center mx-auto mb-6"
+                style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)' }}
+              >
                 <AlertTriangle className="h-8 w-8 text-red-500" aria-hidden="true" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">
+              <h3 className="text-lg font-bold text-white mb-2 font-display">
                 Unable to load alerts
               </h3>
-              <p className="text-slate-300 mb-6" style={{ fontSize: '17px', lineHeight: 1.5 }}>
-                We couldn't connect to the server. Check your internet connection and try again.
+              <p className="text-slate-400 text-sm mb-6 font-display">
+                We couldn't connect to the server. Check your connection and try again.
               </p>
               <Button
                 onClick={() => refetchAlerts()}
                 variant="outline"
                 size="lg"
-                className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500 min-h-[48px] px-8 font-bold"
+                className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500 min-h-[48px] px-8 font-bold btn-haptic"
                 aria-label="Retry loading alerts"
               >
                 <Activity className="w-4 h-4 mr-2" aria-hidden="true" />
@@ -509,22 +497,25 @@ export default function AlertsPage() {
           const colors = getSportEmptyStateClasses(filter === 'all' ? 'MLB' : filter);
           
           return (
-            <div className={`bg-[#161B22] ring-1 ring-white/[0.08] border-0 rounded-xl p-8 shadow-xl ${colors.shadow}`}>
+            <div className="glass-card rounded-2xl p-8 animate-stagger-in">
               <div className="text-center">
-                <div className={`h-16 w-16 rounded-lg ${colors.iconBg} ring-1 ${colors.iconRing} flex items-center justify-center mx-auto mb-6`}>
+                <div
+                  className="h-16 w-16 rounded-2xl flex items-center justify-center mx-auto mb-6"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                >
                   <Bell className={`h-8 w-8 ${colors.iconColor}`} />
                 </div>
-                <h3 className="text-xl font-black uppercase tracking-wide text-slate-100 mb-2">
+                <h3 className="text-lg font-bold text-slate-100 mb-2 font-display">
                   No Alerts Available
                 </h3>
-                <p className="text-slate-300 text-base mb-6">
+                <p className="text-slate-400 text-sm mb-6 font-display">
                   {`No alerts for ${filter === 'all' ? 'any sport' : filter} at the moment`}
                 </p>
-                <Button 
-                  onClick={() => refetchAlerts()} 
-                  variant="outline" 
+                <Button
+                  onClick={() => refetchAlerts()}
+                  variant="outline"
                   size="lg"
-                  className={`${colors.buttonBorder} ${colors.buttonText} ${colors.buttonHover} transition-all duration-300 px-8 py-3 font-bold uppercase tracking-wide`}
+                  className={`${colors.buttonBorder} ${colors.buttonText} ${colors.buttonHover} transition-all duration-300 px-8 py-3 font-bold uppercase tracking-wide btn-haptic`}
                   data-testid="button-refresh-alerts"
                 >
                   <Activity className="w-4 h-4 mr-2" />
@@ -537,13 +528,13 @@ export default function AlertsPage() {
           filteredAlerts.map((alert: Alert, index: number) => (
             <div
               key={alert.id}
-              className={`mb-4 ${index === filteredAlerts.length - 1 ? 'mb-8' : ''}`}
+              className="animate-stagger-in"
+              style={{ animationDelay: `${index * 60}ms` }}
               data-testid={`alert-container-${alert.id}`}
             >
               <ErrorBoundary>
-                <UniversalAlertCard 
+                <UniversalAlertCard
                   alert={{
-                    // Use backend-processed data directly with safe defaults
                     id: alert.id,
                     type: alert.type || 'UNKNOWN',
                     message: alert.message || 'Alert content unavailable',
