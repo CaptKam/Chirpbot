@@ -15,6 +15,8 @@ attached_assets/
 .local/
 server/check-preferences.js
 server/disable-weather-ai.js
+server/test-gambling-insights.ts
+server/unified-diagnostics.ts
 ALERT_INTEGRATION_GUIDE.md
 CHIRPBOT_V3_*.md
 DEDUPLICATION_AUDIT_REPORT.md
@@ -27,3 +29,15 @@ SPORTSDATA_SETUP.md
 SYSTEM_AUDIT_REPORT.md
 TIMING_ARCHITECTURE_ANALYSIS.md
 V3_MILESTONE_MARKER.md
+
+# Dead scripts and artifacts
+keep-alive.js
+monitor.sh
+alerts_display*.png
+game-card-*.png
+login_or_dashboard.png
+settings_page_sport_tabs.png
+suite*-results.json
+scripts/clean-html.js
+scripts/guard-new-files.js
+scripts/fix-generateAlert-bug.cjs
