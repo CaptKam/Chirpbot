@@ -98,29 +98,129 @@ const defaultToken: SportToken = { accent: '#94A3B8', accentRgb: '148,163,184', 
 // Computed style helpers using RGB
 const bg = (rgb: string, a: number) => `rgba(${rgb},${a})`;
 
-// ─── Team Logo ───────────────────────────────────────────────
-// Large circle with gradient ring in sport accent color + inner gradient
+// ─── ESPN Logo CDN ───────────────────────────────────────────
+// ESPN hosts team logos at predictable URLs by sport and team ID
 
-function TeamLogo({ name, rgb, size = 64 }: { name: string; rgb: string; size?: number }) {
+const espnLogos: Record<string, Record<string, string>> = {
+  // MLB — https://a.espncdn.com/i/teamlogos/mlb/500/{id}.png
+  MLB: {
+    'New York Yankees': 'nyy', 'Boston Red Sox': 'bos', 'Los Angeles Dodgers': 'lad',
+    'San Francisco Giants': 'sf', 'Houston Astros': 'hou', 'Texas Rangers': 'tex',
+    'Chicago Cubs': 'chc', 'St. Louis Cardinals': 'stl', 'Atlanta Braves': 'atl',
+    'Philadelphia Phillies': 'phi', 'San Diego Padres': 'sd', 'Los Angeles Angels': 'laa',
+    'Seattle Mariners': 'sea', 'Toronto Blue Jays': 'tor', 'Tampa Bay Rays': 'tb',
+    'Baltimore Orioles': 'bal', 'Minnesota Twins': 'min', 'Cleveland Guardians': 'cle',
+    'Detroit Tigers': 'det', 'Chicago White Sox': 'chw', 'Kansas City Royals': 'kc',
+    'Milwaukee Brewers': 'mil', 'Pittsburgh Pirates': 'pit', 'Cincinnati Reds': 'cin',
+    'Arizona Diamondbacks': 'ari', 'Colorado Rockies': 'col', 'Miami Marlins': 'mia',
+    'Washington Nationals': 'wsh', 'New York Mets': 'nym', 'Oakland Athletics': 'oak',
+  },
+  // NFL — https://a.espncdn.com/i/teamlogos/nfl/500/{id}.png
+  NFL: {
+    'Kansas City Chiefs': 'kc', 'Buffalo Bills': 'buf', 'Philadelphia Eagles': 'phi',
+    'Dallas Cowboys': 'dal', 'San Francisco 49ers': 'sf', 'Green Bay Packers': 'gb',
+    'Baltimore Ravens': 'bal', 'Cincinnati Bengals': 'cin', 'Miami Dolphins': 'mia',
+    'New England Patriots': 'ne', 'Los Angeles Rams': 'lar', 'Los Angeles Chargers': 'lac',
+    'Denver Broncos': 'den', 'Pittsburgh Steelers': 'pit', 'Cleveland Browns': 'cle',
+    'Detroit Lions': 'det', 'Minnesota Vikings': 'min', 'Chicago Bears': 'chi',
+    'Jacksonville Jaguars': 'jax', 'Tennessee Titans': 'ten', 'Indianapolis Colts': 'ind',
+    'Houston Texans': 'hou', 'New York Giants': 'nyg', 'New York Jets': 'nyj',
+    'Washington Commanders': 'wsh', 'Carolina Panthers': 'car', 'Tampa Bay Buccaneers': 'tb',
+    'New Orleans Saints': 'no', 'Atlanta Falcons': 'atl', 'Seattle Seahawks': 'sea',
+    'Arizona Cardinals': 'ari', 'Las Vegas Raiders': 'lv',
+  },
+  // NBA — https://a.espncdn.com/i/teamlogos/nba/500/{id}.png
+  NBA: {
+    'Los Angeles Lakers': 'lal', 'Golden State Warriors': 'gs', 'Boston Celtics': 'bos',
+    'Miami Heat': 'mia', 'Milwaukee Bucks': 'mil', 'Denver Nuggets': 'den',
+    'Phoenix Suns': 'phx', 'Philadelphia 76ers': 'phi', 'Brooklyn Nets': 'bkn',
+    'New York Knicks': 'ny', 'Dallas Mavericks': 'dal', 'Memphis Grizzlies': 'mem',
+    'Sacramento Kings': 'sac', 'Cleveland Cavaliers': 'cle', 'Toronto Raptors': 'tor',
+    'Chicago Bulls': 'chi', 'Atlanta Hawks': 'atl', 'Minnesota Timberwolves': 'min',
+    'Oklahoma City Thunder': 'okc', 'New Orleans Pelicans': 'no',
+    'Indiana Pacers': 'ind', 'Portland Trail Blazers': 'por',
+    'San Antonio Spurs': 'sa', 'Utah Jazz': 'uta', 'Orlando Magic': 'orl',
+    'Washington Wizards': 'wsh', 'Charlotte Hornets': 'cha', 'Houston Rockets': 'hou',
+    'Detroit Pistons': 'det', 'Los Angeles Clippers': 'lac',
+  },
+  // NHL — https://a.espncdn.com/i/teamlogos/nhl/500/{id}.png
+  NHL: {
+    'Boston Bruins': 'bos', 'Toronto Maple Leafs': 'tor', 'Tampa Bay Lightning': 'tb',
+    'Florida Panthers': 'fla', 'New York Rangers': 'nyr', 'Carolina Hurricanes': 'car',
+    'New Jersey Devils': 'njd', 'New York Islanders': 'nyi', 'Pittsburgh Penguins': 'pit',
+    'Washington Capitals': 'wsh', 'Detroit Red Wings': 'det', 'Ottawa Senators': 'ott',
+    'Montreal Canadiens': 'mtl', 'Buffalo Sabres': 'buf', 'Philadelphia Flyers': 'phi',
+    'Columbus Blue Jackets': 'cbj', 'Dallas Stars': 'dal', 'Colorado Avalanche': 'col',
+    'Winnipeg Jets': 'wpg', 'Minnesota Wild': 'min', 'Nashville Predators': 'nsh',
+    'St. Louis Blues': 'stl', 'Edmonton Oilers': 'edm', 'Calgary Flames': 'cgy',
+    'Vancouver Canucks': 'van', 'Seattle Kraken': 'sea', 'Vegas Golden Knights': 'vgk',
+    'Los Angeles Kings': 'la', 'San Jose Sharks': 'sj', 'Anaheim Ducks': 'ana',
+    'Arizona Coyotes': 'ari', 'Chicago Blackhawks': 'chi',
+  },
+};
+
+function getLogoUrl(teamName: string, sport: string): string | null {
+  const sportMap = espnLogos[sport];
+  if (!sportMap) return null;
+  const id = sportMap[teamName];
+  if (!id) return null;
+  const sportPath = sport.toLowerCase();
+  return `https://a.espncdn.com/combiner/i?img=/i/teamlogos/${sportPath}/500/${id}.png&h=80&w=80`;
+}
+
+// ─── Team Logo ───────────────────────────────────────────────
+// Real ESPN logo inside a gradient-ring circle, abbreviation fallback
+
+function TeamLogo({ name, rgb, sport, size = 64 }: { name: string; rgb: string; sport: string; size?: number }) {
   const abbr = getTeamAbbr(name);
+  const logoUrl = getLogoUrl(name, sport);
+  const imgSize = Math.round(size * 0.58);
+
   return (
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
       {/* Outer glow ring */}
       <div className="absolute inset-0 rounded-full" style={{
-        background: `conic-gradient(from 180deg, ${bg(rgb,0.4)}, ${bg(rgb,0.1)}, ${bg(rgb,0.4)})`,
+        background: `conic-gradient(from 180deg, ${bg(rgb,0.5)}, ${bg(rgb,0.12)}, ${bg(rgb,0.5)})`,
         padding: 2,
       }}>
-        <div className="w-full h-full rounded-full" style={{
+        <div className="w-full h-full rounded-full overflow-hidden" style={{
           background: 'linear-gradient(145deg, #1A2030, #0F1520)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <span style={{
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: size * 0.22,
-            fontWeight: 700,
-            color: '#CBD5E1',
-            letterSpacing: '0.05em',
-          }}>{abbr}</span>
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt={abbr}
+              width={imgSize}
+              height={imgSize}
+              className="object-contain"
+              style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
+              onError={(e) => {
+                // Fallback to abbreviation on load error
+                const target = e.currentTarget;
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                if (parent) {
+                  const span = document.createElement('span');
+                  span.textContent = abbr;
+                  span.style.fontFamily = "'JetBrains Mono', monospace";
+                  span.style.fontSize = `${size * 0.22}px`;
+                  span.style.fontWeight = '700';
+                  span.style.color = '#CBD5E1';
+                  span.style.letterSpacing = '0.05em';
+                  parent.appendChild(span);
+                }
+              }}
+            />
+          ) : (
+            <span style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: size * 0.22,
+              fontWeight: 700,
+              color: '#CBD5E1',
+              letterSpacing: '0.05em',
+            }}>{abbr}</span>
+          )}
         </div>
       </div>
     </div>
@@ -272,7 +372,7 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps; show
           <div className="flex items-center justify-between">
             {/* Away */}
             <div className="flex flex-col items-center gap-2 w-[90px]">
-              <TeamLogo name={away} rgb={rgb} size={64} />
+              <TeamLogo name={away} rgb={rgb} sport={alert.sport} size={64} />
               <span className="font-display text-[15px] font-extrabold text-white tracking-wide">{awayAbbr}</span>
             </div>
 
@@ -307,7 +407,7 @@ export function UniversalAlertCard({ alert }: { alert: UniversalAlertProps; show
 
             {/* Home */}
             <div className="flex flex-col items-center gap-2 w-[90px]">
-              <TeamLogo name={home} rgb={rgb} size={64} />
+              <TeamLogo name={home} rgb={rgb} sport={alert.sport} size={64} />
               <span className="font-display text-[15px] font-extrabold text-white tracking-wide">{homeAbbr}</span>
             </div>
           </div>
