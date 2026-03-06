@@ -280,7 +280,8 @@ export default function Dashboard() {
               </span>
             </div>
 
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-black border border-slate-800 shadow-2xl p-4">
+            <Link href={featured?.gameId ? `/game/${featured.gameId}` : '/game/live'}>
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-black border border-slate-800 shadow-2xl p-4 cursor-pointer hover:border-slate-700 transition-colors">
               {/* Score + situation */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex flex-col">
@@ -341,6 +342,7 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
+            </Link>
           </section>
 
           {/* ━━ 2. Power Grid (2×2 tiles) ━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
