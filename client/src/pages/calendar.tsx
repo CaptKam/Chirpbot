@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
@@ -318,17 +318,18 @@ export default function Calendar() {
   });
 
   // Filter monitored games by active sport on the frontend (case-insensitive)
-  const monitoredGames = allMonitoredGames?.filter((game: any) =>
-    (game.sport || '').toUpperCase() === activeSport.toUpperCase()
-  ) || [];
+  // Memoize to prevent useEffect from firing on every render
+  const monitoredGameIds = useMemo(() => {
+    if (!allMonitoredGames) return [];
+    return allMonitoredGames
+      .filter((game: any) => (game.sport || '').toUpperCase() === activeSport.toUpperCase())
+      .map((game: any) => game.gameId as string);
+  }, [allMonitoredGames, activeSport]);
 
   // Sync selected games with persisted monitored games
   useEffect(() => {
-    if (monitoredGames && monitoredGames.length >= 0) {
-      const persistedGameIds = new Set<string>(monitoredGames.map((game: any) => game.gameId));
-      setSelectedGames(persistedGameIds);
-    }
-  }, [monitoredGames]);
+    setSelectedGames(new Set(monitoredGameIds));
+  }, [monitoredGameIds]);
 
   // Add game monitoring
   const addMonitoringMutation = useMutation({

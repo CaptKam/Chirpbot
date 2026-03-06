@@ -54,26 +54,27 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Stable page wrapper components — defined outside render to prevent remounts
+function PublicLanding() { return <PublicRoute><Landing /></PublicRoute>; }
+function PublicLogin() { return <PublicRoute><Login /></PublicRoute>; }
+function PublicSignup() { return <PublicRoute><Signup /></PublicRoute>; }
+function ProtectedCalendar() { return <ProtectedRoute><Calendar /></ProtectedRoute>; }
+function ProtectedAlerts() { return <ProtectedRoute><Alerts /></ProtectedRoute>; }
+function ProtectedSettings() { return <ProtectedRoute><Settings /></ProtectedRoute>; }
+
 function RegularAppContent() {
   const { isAuthenticated } = useAuth();
-
-  // Get settings to check if push notifications are enabled
-  const { data: settings } = useQuery({
-    queryKey: ['/api/settings'],
-    enabled: isAuthenticated,
-  });
-
 
   return (
     <div className={isAuthenticated ? "max-w-md mx-auto bg-transparent min-h-screen relative" : "min-h-screen"}>
       <Switch>
-        <Route path="/"><PublicRoute><Landing /></PublicRoute></Route>
-        <Route path="/login"><PublicRoute><Login /></PublicRoute></Route>
-        <Route path="/signup"><PublicRoute><Signup /></PublicRoute></Route>
-        <Route path="/dashboard"><ProtectedRoute><Calendar /></ProtectedRoute></Route>
-        <Route path="/calendar"><ProtectedRoute><Calendar /></ProtectedRoute></Route>
-        <Route path="/alerts"><ProtectedRoute><Alerts /></ProtectedRoute></Route>
-        <Route path="/settings"><ProtectedRoute><Settings /></ProtectedRoute></Route>
+        <Route path="/" component={PublicLanding} />
+        <Route path="/login" component={PublicLogin} />
+        <Route path="/signup" component={PublicSignup} />
+        <Route path="/dashboard" component={ProtectedCalendar} />
+        <Route path="/calendar" component={ProtectedCalendar} />
+        <Route path="/alerts" component={ProtectedAlerts} />
+        <Route path="/settings" component={ProtectedSettings} />
         <Route component={NotFound} />
       </Switch>
       {isAuthenticated && <BottomNavigation />}
