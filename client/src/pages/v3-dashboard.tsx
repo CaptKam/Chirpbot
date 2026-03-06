@@ -306,7 +306,7 @@ export default function V3Dashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased">
+      <div className="min-h-screen bg-gradient-to-b from-[#0D1117] to-[#0D0D0D] text-slate-100 antialiased">
         <PageHeader 
           title="V3 Performance Dashboard" 
           subtitle="Real-time monitoring of multi-sport intelligence platform performance"
@@ -338,7 +338,7 @@ export default function V3Dashboard() {
 
   if (!metricsData) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased">
+      <div className="min-h-screen bg-gradient-to-b from-[#0D1117] to-[#0D0D0D] text-slate-100 antialiased">
         <PageHeader 
           title="V3 Performance Dashboard" 
           subtitle="Real-time monitoring of multi-sport intelligence platform performance"
@@ -362,7 +362,7 @@ export default function V3Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased" data-testid="v3-dashboard">
+    <div className="min-h-screen bg-gradient-to-b from-[#0D1117] to-[#0D0D0D] text-slate-100 antialiased" data-testid="v3-dashboard">
       <PageHeader 
         title="V3 Performance Dashboard" 
         subtitle="Real-time monitoring of multi-sport intelligence platform performance"

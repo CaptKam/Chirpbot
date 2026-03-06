@@ -66,7 +66,7 @@ function RegularAppContent() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <div className={isAuthenticated ? "max-w-md mx-auto bg-transparent min-h-screen relative" : "min-h-screen"}>
+    <div className={isAuthenticated ? "max-w-md mx-auto bg-transparent min-h-screen relative safe-area-bottom" : "min-h-screen"}>
       <Switch>
         <Route path="/" component={PublicLanding} />
         <Route path="/login" component={PublicLogin} />
@@ -90,7 +90,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <div className="bg-gradient-to-b from-[#0B1220] to-[#0F1A32] min-h-screen text-slate-100 antialiased">
+        <div className="bg-gradient-to-b from-[#0D1117] to-[#0D0D0D] min-h-screen text-slate-100 antialiased">
           <Toaster />
           <AppContent />
         </div>

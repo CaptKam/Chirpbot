@@ -708,9 +708,9 @@ export default function Settings() {
   }
 
   return (
-    <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen">
+    <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0D1117] to-[#0D0D0D] text-slate-100 antialiased min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-[#0B1220]/70 border-b border-white/10 text-slate-100 px-4 py-6">
+      <header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-[#0D1117]/70 border-b border-white/[0.08] text-slate-100 px-4 py-6">
         <div className="mx-auto max-w-7xl flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className={`h-10 w-10 rounded-lg ${sportColors.bg} ring-1 ${getRingClass()} flex items-center justify-center`}>

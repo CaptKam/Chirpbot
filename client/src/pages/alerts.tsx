@@ -36,12 +36,12 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
   render() {
     if (this.state.hasError) {
       return (
-        <div className="bg-white/5 backdrop-blur-sm ring-1 ring-red-500/30 border-0 rounded-xl p-6 shadow-xl shadow-red-500/5">
+        <div className="bg-[#161B22] ring-1 ring-red-500/30 border-0 rounded-xl p-6 shadow-xl shadow-red-500/5" role="alert">
           <div className="flex items-center space-x-3">
-            <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />
+            <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" aria-hidden="true" />
             <div>
-              <h3 className="text-sm font-bold text-red-400 mb-1">Alert Display Error</h3>
-              <p className="text-xs text-slate-300">This alert couldn't be displayed properly</p>
+              <h3 className="text-sm font-bold text-red-400 mb-1">Something went wrong</h3>
+              <p className="text-sm text-slate-300" style={{ fontSize: '14px' }}>This alert could not be displayed. Try refreshing the page.</p>
             </div>
           </div>
         </div>
@@ -117,7 +117,7 @@ const AlertSkeleton = ({ sport }: { sport: string }) => {
   const colors = getSportSkeletonClasses(sport === 'all' ? 'MLB' : sport);
   
   return (
-    <div className={`bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl ${colors.shadow} animate-pulse`}>
+    <div className={`bg-[#161B22] ring-1 ring-white/[0.08] border-0 rounded-xl p-6 shadow-xl ${colors.shadow} animate-pulse`}>
       <div className="flex items-center justify-between mb-4">
         <div className={`h-6 ${colors.bg1} rounded-lg w-32 animate-pulse`}></div>
         <div className={`h-4 ${colors.bg2} rounded w-16 animate-pulse`}></div>
@@ -168,7 +168,7 @@ export default function AlertsPage() {
 
   if (alertsLoading || statsLoading) {
     return (
-      <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen" data-testid="alerts-loading">
+      <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0D1117] to-[#0D0D0D] text-slate-100 antialiased min-h-screen" data-testid="alerts-loading">
         <PageHeader 
           title="ChirpBot" 
           subtitle="Real-Time Alert Dashboard"
@@ -195,7 +195,7 @@ export default function AlertsPage() {
 
 
   return (
-    <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0B1220] to-[#0F1A32] text-slate-100 antialiased min-h-screen" data-testid="alerts-page">
+    <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0D1117] to-[#0D0D0D] text-slate-100 antialiased min-h-screen" data-testid="alerts-page">
       <PageHeader 
         title="ChirpBot" 
         subtitle="Real-Time Alert Dashboard"
@@ -213,25 +213,26 @@ export default function AlertsPage() {
         {/* Alerts Content */}
         <div className="pb-8 space-y-4" data-testid="alerts-list">
         {alertsError ? (
-          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-red-500/30 border-0 rounded-xl p-8 shadow-xl shadow-red-500/5">
+          <div className="bg-[#161B22] ring-1 ring-red-500/30 border-0 rounded-xl p-8 shadow-xl shadow-red-500/5" role="alert">
             <div className="text-center">
-              <div className="h-16 w-16 rounded-lg bg-red-500/20 ring-1 ring-red-500/30 flex items-center justify-center mx-auto mb-6">
-                <AlertTriangle className="h-8 w-8 text-red-500" />
+              <div className="h-16 w-16 rounded-xl bg-red-500/20 ring-1 ring-red-500/30 flex items-center justify-center mx-auto mb-6">
+                <AlertTriangle className="h-8 w-8 text-red-500" aria-hidden="true" />
               </div>
-              <h3 className="text-xl font-black uppercase tracking-wide text-slate-100 mb-2">
-                Connection Error
+              <h3 className="text-xl font-bold text-white mb-2">
+                Unable to load alerts
               </h3>
-              <p className="text-slate-300 text-base mb-6">
-                Unable to load alerts. Please check your connection.
+              <p className="text-slate-300 mb-6" style={{ fontSize: '17px', lineHeight: 1.5 }}>
+                We couldn't connect to the server. Check your internet connection and try again.
               </p>
-              <Button 
-                onClick={() => refetchAlerts()} 
-                variant="outline" 
+              <Button
+                onClick={() => refetchAlerts()}
+                variant="outline"
                 size="lg"
-                className="border-red-500/30 text-red-500 hover:bg-red-500/10 hover:border-red-500 transition-all duration-300 px-8 py-3 font-bold uppercase tracking-wide"
+                className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500 min-h-[48px] px-8 font-bold"
+                aria-label="Retry loading alerts"
               >
-                <Activity className="w-4 h-4 mr-2" />
-                Retry Connection
+                <Activity className="w-4 h-4 mr-2" aria-hidden="true" />
+                Try Again
               </Button>
             </div>
           </div>
@@ -325,7 +326,7 @@ export default function AlertsPage() {
           const colors = getSportEmptyStateClasses(filter === 'all' ? 'MLB' : filter);
           
           return (
-            <div className={`bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-8 shadow-xl ${colors.shadow}`}>
+            <div className={`bg-[#161B22] ring-1 ring-white/[0.08] border-0 rounded-xl p-8 shadow-xl ${colors.shadow}`}>
               <div className="text-center">
                 <div className={`h-16 w-16 rounded-lg ${colors.iconBg} ring-1 ${colors.iconRing} flex items-center justify-center mx-auto mb-6`}>
                   <Bell className={`h-8 w-8 ${colors.iconColor}`} />
