@@ -622,7 +622,6 @@ export default function Settings() {
           </Button>
         )}
       </PageHeader>
-
       {/* Sport Pills */}
       <div className="flex overflow-x-auto no-scrollbar px-4 py-3 gap-2 border-b border-slate-800">
         {SPORTS.map((sport) => {
@@ -644,9 +643,8 @@ export default function Settings() {
           );
         })}
       </div>
-
       {/* Settings Content */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 space-y-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 space-y-8 bg-[#101922]">
 
         {/* Alert Preferences */}
         {isAuthenticated && (
