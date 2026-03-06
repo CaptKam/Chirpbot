@@ -1,5 +1,5 @@
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
+import pg from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
 if (!process.env.DATABASE_URL) {
@@ -8,6 +8,13 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Pure HTTP database connection - completely WebSocket-free!
-const sql = neon(process.env.DATABASE_URL);
-export const db = drizzle({ client: sql, schema });
+const { Pool } = pg;
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL.includes('neon.tech') || process.env.DATABASE_URL.includes('sslmode=require')
+    ? { rejectUnauthorized: false }
+    : false,
+});
+
+export const db = drizzle({ client: pool, schema });
