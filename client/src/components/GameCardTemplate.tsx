@@ -287,8 +287,8 @@ export function GameCardTemplate({
       if (!response.ok) throw new Error('Weather fetch failed');
       return response.json();
     },
-    staleTime: 60 * 1000, // Cache for 1 minute
-    refetchInterval: 60 * 1000, // Refetch every minute
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    refetchInterval: false, // Weather doesn't need constant polling
     retry: 1,
     enabled: showWeather && sport === 'MLB' // Only fetch for MLB games when weather is shown
   });
