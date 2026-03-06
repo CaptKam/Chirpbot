@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import { ArrowRight, CheckCircle2, SignalHigh, Zap, ShieldCheck, TimerReset, Activity, Wifi, ChevronDown, Play, Star, Users, TrendingUp, Award, Target, Clock, Globe, Eye, Bolt, Bell, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ROICalculator } from "@/components/roi-calculator";
-import basketballArenaImage from '@/assets/basketball-arena.png';
+import heroImage from '@/assets/baseball-pitcher.png';
 
 export default function LandingPage() {
   return (
@@ -148,7 +148,7 @@ function Hero() {
       className="relative overflow-hidden" 
       id="hero"
       style={{
-        backgroundImage: `url(${basketballArenaImage})`,
+        backgroundImage: `url(${heroImage})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat'
@@ -222,7 +222,7 @@ function Hero() {
             transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }} 
             className="mt-6 max-w-3xl mx-auto text-base sm:text-xl text-slate-300 px-4 sm:px-0 leading-relaxed"
           >
-            <strong className="text-[#10B981]">AI-powered alerts</strong> for critical game moments across MLB, NFL, NCAAF, NBA, WNBA & CFL. 
+            <strong className="text-[#10B981]">AI-powered alerts</strong> for critical MLB game moments.
             Our users report <strong className="text-[#10B981]">3.7x better betting outcomes</strong> with real-time intelligence 
             delivered before bookmakers adjust their lines.
           </motion.p>
@@ -398,8 +398,8 @@ function ValueProps() {
     },
     {
       icon: <Activity className="w-6 h-6" />,
-      title: "6 Sports Covered",
-      description: "MLB, NFL, NCAAF, NBA, WNBA & CFL with sport-specific alerts for bases loaded, red zone, clutch time & more.",
+      title: "MLB Coverage",
+      description: "Complete MLB coverage with sport-specific alerts for bases loaded, RISP, pitcher duels, momentum shifts & more.",
       highlight: "Complete Coverage"
     },
     {
@@ -573,7 +573,7 @@ function HowItWorks() {
     {
       number: "01",
       title: "Select Your Teams",
-      description: "Choose which MLB, NFL, NCAAF, NBA, WNBA, and CFL teams you want to monitor for real-time alerts."
+      description: "Choose which MLB teams you want to monitor for real-time alerts."
     },
     {
       number: "02", 
@@ -916,7 +916,7 @@ function FAQ() {
     },
     {
       question: "Which sports are supported?",
-      answer: "We currently support 6 major sports leagues: MLB, NFL, NCAAF, NBA, WNBA, and CFL with sport-specific alert types like RISP for baseball, red zone for football, clutch time for basketball, and specialty alerts for college football and women's sports."
+      answer: "We currently support MLB with sport-specific alert types like RISP, bases loaded, pitcher duels, momentum shifts, and clutch situations. More sports coming soon."
     },
     {
       question: "How accurate is the AI analysis?",
