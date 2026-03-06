@@ -1,0 +1,591 @@
+CHIRP.BET
+Master Build Specification
+For Claude Code + Kameron
+Version 1.0 — March 06, 2026
+MLB Over/Under Edge Detection Platform
+
+Table of Contents
+1. Product Overview & Mission
+2. Tech Stack & Architecture
+3. Data Sources & APIs
+4. Edge Engine Specification
+5. Design System & Tokens
+6. Screen-by-Screen Spec
+7. Component Library
+8. Auth & Accounts
+9. Monetization
+10. Deployment (Replit)
+11. MCP Tool Usage Guide
+12. Build Order & Priorities
+13. Decision Framework (Kameron vs Claude Code)
+14. Existing Deliverables Inventory
+
+1. Product Overview & Mission
+What Chirp.bet Is
+A real-time MLB over/under edge detection platform. It scans every live MLB game, combines pitcher fatigue, batter power, wind, park factors, runner situations, and temperature into a multiplier-stack model, and surfaces actionable over/under edges ranked by conviction level.
+The One-Line Pitch
+See the edge before the line moves.
+What It Is NOT
+Not a sportsbook. Not a picks service. Not multi-sport (MLB only for MVP). Not a social platform. It is a data tool that surfaces statistical edges for entertainment purposes.
+Target User
+MLB bettors aged 25-45 who already bet over/unders and want a data edge. They use FanDuel/DraftKings, follow baseball, and are comfortable with stats like ERA, ISO, and park factors. They check their phone during games.
+Chirp Levels
+Level
+Edge %
+Color
+Meaning
+STRONG CHIRP
+12%+
+#EF4444 (Red)
+Highest conviction — multiple factors stacking hard
+CHIRP
+7-12%
+#F59E0B (Amber)
+Solid edge — worth acting on
+SOFT CHIRP
+4-7%
+#3B82F6 (Blue)
+Worth watching — conditions developing
+
+
+
+2. Tech Stack & Architecture
+Frontend
+Technology
+Purpose
+Next.js 14
+App router, SSR, API routes
+React 18
+UI components
+TypeScript
+Type safety
+Tailwind CSS
+Utility-first styling
+shadcn/ui
+Component library base
+Inter + JetBrains Mono
+Fonts (display + mono numbers)
+
+
+Backend
+Technology
+Purpose
+Next.js API Routes
+REST endpoints
+Python Flask (optional)
+Edge engine if JS port insufficient
+Drizzle ORM
+Database queries
+PostgreSQL (Replit)
+User data, history, waitlist
+
+
+Infrastructure
+Service
+Purpose
+Cost
+Replit Core
+Hosting, deployment, always-on
+$25/mo
+Domain (chirp.bet)
+Custom domain
+$1/mo
+MLB Stats API
+Game data, player stats, live scores
+Free
+Open-Meteo
+Weather data (wind, temp)
+Free
+GitHub
+Source control
+Free
+
+
+Total MVP cost: ~$26/month
+
+3. Data Sources & APIs
+MLB Stats API (Free, No Key Required)
+Base URL: https://statsapi.mlb.com
+Endpoint
+Returns
+Cache
+/api/v1/schedule
+Today's games, status, scores
+60s
+/api/v1.1/game/{id}/feed/live
+Live game state, pitch data, runners
+10s
+/api/v1/people/{id}/stats
+Player season stats (AVG, ERA, ISO, HR)
+5min
+
+
+Open-Meteo Weather API (Free, No Key Required)
+Base URL: https://api.open-meteo.com/v1/forecast
+Parameter
+Returns
+Cache
+latitude, longitude, current_weather
+Temp (C), wind speed (km/h), wind direction (degrees)
+5min
+
+
+Static Data Files (Already Built)
+File
+Contents
+stadiums.json
+All 30 MLB stadiums: lat/lon, cf_bearing, roof status, elevation
+park_factors.json
+Park factors for all 30 stadiums: overall, HR, 2B, 3B, BB, SO
+
+
+
+4. Edge Engine Specification
+The edge engine is a multiplier-stack model. Each factor produces a multiplier (1.0x = no effect, 1.4x = strong effect). Multipliers are weighted and combined. The final edge percentage determines the chirp level.
+Factor Weights
+Factor
+Weight
+Data Source
+What It Measures
+Batter Power
+0.35
+MLB API (ISO, HR)
+Current batter's isolated power vs pitcher handedness
+Pitcher Fatigue
+0.35
+MLB API (pitch count, velo)
+Pitch count, velocity drop from baseline, late innings
+Wind
+0.40
+Open-Meteo + stadiums.json
+Wind speed and direction relative to CF bearing
+Park Factor
+0.30
+park_factors.json
+Stadium run environment (100 = average)
+Runner Situation
+0.25
+MLB API (runners, outs)
+RE24 expected run matrix position
+Temperature
+0.20
+Open-Meteo
+Ball carry distance adjustment above/below 72°F
+
+
+Edge Calculation
+1. Each factor returns a raw multiplier (1.0x to ~1.5x)
+2. Each multiplier is weighted by its factor weight
+3. Weighted multipliers are summed
+4. Soft cap applied at 10% (diminishing returns above)
+5. Final edge % determines chirp level: 12%+ = Strong, 7-12% = Chirp, 4-7% = Soft
+Edge Direction
+The engine outputs a direction: OVER or UNDER. Wind out + high PF + power batter = OVER. Pitcher dominance + low PF + cold = UNDER. Direction is determined by the dominant factor cluster.
+
+5. Design System & Tokens
+Source: Dark Theme Style Guide + Apple HIG + Material Design 3 + Nielsen Heuristics
+Surface System (3 Layers)
+Layer
+Hex
+Used For
+Background
+#0D0D0D
+Page canvas, root background
+Card Surface
+#161B22
+Cards, panels, sidebar, content containers
+Elevated Surface
+#1E2530
+Modals, dropdowns, tooltips, popovers
+
+
+Text Hierarchy (White at Opacity)
+Role
+CSS Value
+Used For
+Headlines
+rgba(255,255,255,0.95)
+Page titles, key numbers, scores
+Primary
+rgba(255,255,255,0.82)
+Team names, card titles, labels
+Secondary
+rgba(255,255,255,0.60)
+Body text, descriptions
+Muted
+rgba(255,255,255,0.40)
+Captions, timestamps, metadata
+Dim
+rgba(255,255,255,0.25)
+Disabled states, subtle indicators
+
+
+Accent Colors
+Color
+Hex
+Usage
+Red
+#EF4444
+Strong chirp, error states, destructive actions
+Amber
+#F59E0B
+Regular chirp, warnings
+Blue
+#3B82F6
+Soft chirp, info states, active sidebar indicator
+Green
+#22C55E
+Success, live indicator, O/U line, positive edge
+Cyan
+#06B6D4
+Park factor badges
+
+
+Typography
+Element
+Font
+Weight
+Size
+Page headings
+Inter
+800
+22px
+Card titles / team names
+Inter
+700
+14px
+Body text
+Inter
+500-600
+13px
+Captions / labels
+Inter
+600
+11px (minimum)
+Scores / edge %
+JetBrains Mono
+800
+22-28px
+Data values
+JetBrains Mono
+700
+11-13px
+
+
+Spacing (8pt Grid)
+All spacing must be multiples of 4 or 8: 4, 8, 12, 16, 20, 24, 32, 48px
+Border Radius
+Badges/tags: 4px. Cards/inputs: 8px. Large cards/modals: 12-16px.
+Borders
+Cards: 1px solid rgba(255,255,255,0.06). Elevated: 1px solid rgba(255,255,255,0.08).
+Minimum Tap Targets
+Every interactive element: 44x44pt minimum (Apple HIG mandatory).
+Minimum Text Size
+11pt absolute floor for any visible text (Apple HIG mandatory).
+
+6. Screen-by-Screen Spec
+Navigation
+Desktop: Fixed left sidebar (220px) with logo, nav items (Games, Chirps, History, Settings), live status indicator, chirp count badge.
+Mobile (<768px): Sticky top header with logo + live badge. Fixed bottom tab bar with 4 tabs (Games, Chirps, History, Settings). Chirp count badge on Chirps tab.
+Landing Page
+  • Nav bar: logo + 'Get Started' CTA
+  • Hero: headline 'See the edge before the line moves', subtext, email capture or CTA button
+  • How It Works: 3 steps (scan, detect, alert)
+  • Social proof / differentiators section
+  • Footer with disclaimer: 'For entertainment purposes only'
+
+Onboarding (3 steps)
+  • Step 1: Pick your teams (grid of team logos, multi-select, 'Track All Teams' default)
+  • Step 2: Alert preferences (toggle Strong/Regular/Soft chirps on/off)
+  • Step 3: Confirmation ('You're all set' with summary)
+  • Progress dots at top. Skip button. Green CTA at bottom.
+
+Games Screen
+  • Header: 'Games' title + 'Today · X games' subtitle
+  • Game cards: away team vs home team, scores (if live), diamond (if live), venue, game status
+  • Cards sorted: Live first, then scheduled, then final
+  • Chirp badge on games that have active edges (+X.X%)
+  • Tap card → Game Detail screen
+
+Chirps Screen (Core Screen)
+  • Header: 'Chirps' title + 'X active edges · Y live games'
+  • Stat boxes (desktop only): Active Edges, Strong Chirps, Live Games, Avg Edge
+  • Scoreboard strip: horizontal scroll of all games with chirp level indicator dots
+  • Filter bar: All Chirps / Strong / Chirp / Soft
+  • Chirp cards (responsive grid — 1 col mobile, 2 col tablet, 3 col desktop):
+  •   — Level badge + edge % + timestamp
+  •   — Scoreboard: logos, abbrs, names, scores, diamond, inning, outs
+  •   — Batter/pitcher matchup cards (live games only, strong/chirp only)
+  •   — Condition badges: wind, temp, PF, velo
+  •   — Expandable 'WHY THIS CHIRP' factor breakdown with progress bars
+  •   — O/U action bar at bottom: venue + suggested line
+  • Scanning skeleton: shimmer loading state for games being analyzed
+  • Empty state: cricket emoji + 'All quiet for now'
+  • Tap O/U bar → Modal with full edge breakdown
+
+Game Detail Screen
+  • Back button → Games
+  • Large scoreboard: team logos (48px), scores (40px mono), diamond, inning, outs
+  • Edge card (if chirp exists): level badge, edge %, factor breakdown with progress bars, O/U recommendation
+  • Game info card: venue, weather, park factor
+
+History Screen
+  • Header: 'History' title + 'Past chirp performance'
+  • Stat row: Hit Rate %, Record (W-L), P&L ($)
+  • Filter tabs: All / Hits / Misses
+  • History cards: teams + line + edge % + actual result + P&L
+  • Color-coded: green left border = hit, red = miss
+
+Settings Screen
+  • Account section: avatar, name, tier (Free Beta / Pro)
+  • Chirp Alerts section: toggles for Strong/Regular/Soft
+  • Notifications section: Push on/off, Sound on/off
+  • Edge Engine section: read-only display of thresholds, data sources, version
+  • Footer: version number, copyright
+
+
+7. Component Library
+These are the reusable components. Build once, use everywhere.
+Component
+Description
+TeamLogo
+ESPN CDN team logo in circular container. Props: team (abbr), size (px)
+Diamond
+SVG baseball diamond showing base runners. Props: bases (bool[3]), size
+OutDots
+3 dots showing outs (0-2 filled). Props: count
+Badge
+Colored pill label. Props: label, color (red/green/blue/amber/cyan), pulse
+Skeleton
+Shimmer loading placeholder. Props: width, height
+StatBox
+Stat display card. Props: label, value, color, subtitle
+ChirpCard
+Full chirp alert card. Props: alert data, expanded state, callbacks
+ScoreboardStrip
+Horizontal scrollable game scores. Props: games array
+Modal
+Centered overlay with backdrop blur, close on Escape. Desktop replacement for bottom sheet
+Sidebar
+Fixed left nav (desktop). Props: activeTab, onTabChange, alertCount
+MobileHeader
+Sticky top bar (mobile). Props: alertCount
+MobileBottomNav
+Fixed bottom tabs (mobile). Props: activeTab, onTabChange, alertCount
+FilterBar
+Horizontal filter chips. Props: activeFilter, onFilter
+Toggle
+On/off switch for settings. Props: on, onToggle
+ScanningCard
+Loading skeleton for games being analyzed. Props: label
+EmptyState
+Cricket emoji + message when no chirps active
+
+
+
+8. Auth & Accounts
+MVP Auth (Phase 1)
+Email + password. JWT tokens. No OAuth yet. Store in PostgreSQL via Drizzle ORM.
+Database Schema
+Table
+Fields
+users
+id, email, password_hash, name, tier, created_at
+preferences
+user_id, favorite_teams (json), alert_levels (json), push_enabled
+waitlist
+id, email, created_at
+chirp_history
+id, user_id, game_id, edge_pct, direction, line, result, created_at
+
+
+Tiers
+Tier
+Price
+Features
+Free Beta
+$0
+All chirps, 3 games history, basic alerts
+Pro (Phase 2)
+$9.99/mo
+Unlimited history, push notifications, custom thresholds, early access
+
+
+
+9. Monetization
+Phase 1 (Launch): Free beta. Email capture. Build user base and validate demand.
+Phase 2 (Month 2-3): Freemium. Free tier with limited history. Pro at $9.99/mo for full access.
+Phase 3 (Month 4+): Affiliate links to sportsbooks. Sponsored content from data providers. Premium tiers for institutional users.
+Revenue Target
+100 paying users at $9.99/mo = ~$1,000 MRR. This is the validation threshold.
+
+10. Deployment (Replit)
+Platform: Replit Core ($25/mo). Always-on. PostgreSQL included.
+Deploy Steps
+1. Create Replit project from GitHub repo
+2. Set environment: Node.js, install dependencies
+3. Configure PostgreSQL database
+4. Set up .env (DATABASE_URL, JWT_SECRET)
+5. Run Drizzle migrations
+6. Deploy with custom domain (chirp.bet)
+7. Verify all API endpoints (/api/games, /api/edges, /api/weather, /api/waitlist)
+API Endpoints
+Method
+Endpoint
+Description
+GET
+/api/games
+Today's MLB schedule (optional ?date param)
+GET
+/api/games/[gameId]
+Live game state for specific game
+GET
+/api/weather?team=BOS
+Weather for stadium by team abbr
+GET
+/api/edges
+Run edge engine on all live games, return sorted by edge strength
+GET
+/api/edges?gameId=X
+Edge for specific game
+POST
+/api/waitlist
+Add email to waitlist
+GET
+/api/waitlist/count
+Current waitlist count
+
+
+
+11. MCP Tool Usage Guide
+When to use each tool:
+Tool
+When to Use
+When NOT to Use
+GitHub MCP
+Creating PRs, listing issues, reviewing code, managing branches. Use for ALL git operations instead of switching to browser.
+Don't use for code writing itself — write code directly, use GitHub MCP to commit/push/PR.
+21st.dev Magic
+When you need a polished React component fast: cards, modals, navbars, toggles, form elements. Describe what you need naturally.
+Don't use for custom data visualizations (Diamond, charts) or components tightly coupled to our data model.
+Nano Banana
+Hero images for landing page, social media assets, placeholder images, app store screenshots.
+Don't use for UI components or icons — those should be SVG/code.
+UI UX Pro Max
+Background design intelligence when building any UI. Also use for design system searches: color palettes, font pairings, layout patterns.
+Don't override our established design tokens with its suggestions — our tokens are already set.
+
+
+Priority Order
+1. GitHub MCP — use every day for commits, PRs, issues
+2. 21st.dev Magic — use when building new UI components
+3. UI UX Pro Max — let it run in background, consult for layout decisions
+4. Nano Banana — use only when you need generated images
+
+12. Build Order & Priorities
+Everything is prioritized by: does this get us closer to a real user seeing the product?
+Week 1: Ship Foundation
+1. Deploy to Replit — Next.js project, PostgreSQL, custom domain
+2. Wire landing page — hero, email capture, deploy live
+3. Wire API endpoints — /api/games, /api/edges, /api/weather
+4. Send link to 5 people who bet baseball
+Week 2: Core App
+5. Build Chirps screen with real data from /api/edges
+6. Build Games screen with real data from /api/games
+7. Build Game Detail screen
+8. Wire scoreboard strip + filter bar
+Week 3: Polish & Auth
+9. Add auth (email/password, JWT)
+10. Build onboarding flow
+11. Build Settings screen
+12. Build History screen (requires storing chirp results)
+Week 4: Feedback & Iterate
+13. Collect user feedback
+14. Fix top 3 issues users report
+15. Add push notifications (if users want them)
+16. Evaluate monetization timing
+
+13. Decision Framework: Kameron vs Claude Code
+What Kameron Decides (Human Judgment Required)
+  • Product direction — what to build next, what to cut
+  • Design feel — 'this doesn't feel right' is valid feedback, act on it
+  • User conversations — who to reach out to, what to ask
+  • Pricing decisions — when to charge, how much
+  • Brand voice — how Chirp.bet talks to users
+  • Go/no-go on shipping — when it's good enough to deploy
+What Claude Code Decides (Technical Execution)
+  • Code architecture — file structure, component patterns, API design
+  • Bug fixes — find and fix without asking
+  • Refactoring — clean up code, optimize performance
+  • Dependency management — package choices, version updates
+  • Database schema changes — propose and implement
+  • Git workflow — branching, PRs, commits (via GitHub MCP)
+RULE: If Kameron starts a new design iteration when the current build isn't deployed, Claude Code should push back and ask: 'Should we ship what we have first?'
+RULE: If Kameron asks for infrastructure/tooling/organization work, Claude Code should ask: 'Does this directly lead to a user seeing the product?' If not, defer it.
+
+14. Existing Deliverables Inventory
+Everything already built. Claude Code should use these as starting points, not rebuild from scratch.
+Deliverable
+Location
+Status
+Edge Engine (Python)
+edge_engine.py
+Complete — multiplier stack, all 6 factors
+Edge Engine (JavaScript)
+chirp-api/lib/edge-engine.js
+Complete — JS port of Python engine
+MLB API Client
+chirp-api/lib/mlb-api.js
+Complete — schedule, live game, player stats
+Weather API Client
+chirp-api/lib/weather-api.js
+Complete — Open-Meteo integration
+Stadium Data
+chirp-api/stadiums.json
+Complete — all 30 stadiums with coordinates
+Park Factors
+chirp-api/park_factors.json
+Complete — all 30 stadiums
+API Routes
+chirp-api/app/api/*
+Complete — games, edges, weather, waitlist
+Setup Guide
+chirp-api/SETUP.md
+Complete — Replit deployment steps
+Product Spec
+chirp_product_spec.docx
+Complete — 12 sections
+Probability Engine Spec
+chirp_probability_engine_spec.docx
+Complete — RE24 model
+Auth/Accounts Spec
+chirp_auth_accounts_spec.docx
+Complete — JWT, schema, tiers
+Landing Page (React)
+chirp_landing_page.jsx
+Complete — needs deployment
+Chirps Screen (React)
+ChirpsScreen.jsx (GitHub)
+Complete — Claude Code version
+Full App Prototype
+chirp_full_app.jsx
+Prototype — style guide applied
+Design Research Doc
+chirp_design_research.docx
+Complete — FanDuel/DK/BetMGM analysis
+Mobile App Rules
+mobile-app-rules-and-design-methods.docx
+Reference — Apple HIG/Material/Nielsen
+Dark Theme Style Guide
+dark-theme-style-guide.docx
+Reference — production app tokens
+MVP Roadmap
+chirp_mvp_roadmap.docx
+Complete — 30-day plan
+Chirpbot V1 (Production)
+github.com/CaptKam/MLBAlertsV1
+Deployed — 3,613 commits, multi-sport
+
+
+KEY INSTRUCTION FOR CLAUDE CODE: The API layer, edge engine, and data files are DONE. Do not rebuild them. Wire them into the frontend and deploy.
+
