@@ -338,11 +338,13 @@ async function startServer() {
     const server = await registerRoutes(app, httpServer);
 
     // Setup frontend serving IMMEDIATELY - before server.listen
+    const isProductionMode = process.env.NODE_ENV === 'production';
     const staticRoot = path.resolve(process.cwd(), 'dist/public');
     const indexPath = path.join(staticRoot, 'index.html');
 
-    if (fs.existsSync(indexPath)) {
-      console.log('✅ Built assets detected - serving static files from', staticRoot);
+    if (isProductionMode && fs.existsSync(indexPath)) {
+      // Production: serve pre-built static files for performance
+      console.log('✅ Production mode - serving static files from', staticRoot);
       app.use(express.static(staticRoot, {
         maxAge: '1h',
         setHeaders: (res, filePath) => {
@@ -359,19 +361,16 @@ async function startServer() {
       });
       console.log('✅ Static SPA serving configured - frontend ready');
     } else {
-      console.log('🔧 No built assets found - will use Vite dev middleware');
-      
+      // Development: always use Vite dev server so source changes are reflected immediately
+      console.log('🔧 Development mode - using Vite dev server (reads source files directly)');
+
       // Prevent duplicate setupVite calls
       if (!(globalThis as any).__VITE_ATTACHED__) {
-        // Vite reads PORT for HMR, but we need HMR on same server
-        // Temporarily unset PORT so Vite defaults to 3000 for HMR (unused)
-        // HMR will actually work via websocket on main server port
         const originalPort = process.env.PORT;
         delete process.env.PORT;
-        
+
         await setupVite(app, server);
-        
-        // Restore PORT
+
         process.env.PORT = originalPort;
         (globalThis as any).__VITE_ATTACHED__ = true;
         console.log(`✅ Vite dev server configured with HMR - frontend ready`);
@@ -490,33 +489,7 @@ async function startServer() {
 
           console.log('✅ Alert generation handled by V3 pipeline');
 
-          // Frontend serving is now handled before server.listen (moved earlier for immediate mounting)
-          // Fallback: setup Vite dev middleware if static assets weren't detected
-          if (!fs.existsSync(path.resolve(process.cwd(), 'dist/public/index.html'))) {
-            if (app.get("env") === "development") {
-              try {
-                await setupVite(app, server);
-                console.log('✅ Vite development server setup complete');
-              } catch (viteError) {
-                console.error('⚠️ Vite setup failed, serving minimal fallback');
-                // Minimal fallback - just serve a basic response
-                app.use('*', (req, res) => {
-                  res.status(200).send(`
-                    <!DOCTYPE html>
-                    <html>
-                      <head><title>ChirpBot V3</title></head>
-                      <body>
-                        <h1>ChirpBot V3 Server Running</h1>
-                        <p>Frontend temporarily unavailable - API endpoints are still accessible</p>
-                      </body>
-                    </html>
-                  `);
-                });
-              }
-            } else {
-              serveStatic(app);
-            }
-          }
+          // Frontend serving is handled before server.listen - no duplicate setup needed
 
           console.log('✅ Alert generation integrated into V3 pipeline');
 
