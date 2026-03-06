@@ -165,7 +165,6 @@ export default function GameNarrative() {
           </div>
         </div>
       </header>
-
       {/* ━━ Sticky Scoreboard ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div className="sticky top-[53px] z-20 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800 px-4 py-2 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-3">
@@ -192,13 +191,12 @@ export default function GameNarrative() {
           )}
         </div>
       </div>
-
       {/* ━━ Timeline ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <main className="flex-1 relative">
         {/* Vertical timeline line */}
         <div className="absolute left-[39px] top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-slate-800 to-transparent" />
 
-        <div className="p-4 space-y-6">
+        <div className="p-4 space-y-6 bg-[#101922] text-[#ffffff]">
           {timeline.map((event) => {
             const meta = eventMeta(event.type);
             const Icon = meta.icon;
