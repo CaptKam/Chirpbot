@@ -107,7 +107,7 @@ export class CalendarSyncService implements ICalendarSyncService {
 
   private constructor(config: Partial<CalendarSyncConfig> = {}) {
     this.config = {
-      sports: ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL'],
+      sports: ['MLB'],
       defaultPollInterval: RUNTIME.calendarPoll.defaultMs,
       preStartWindowMinutes: RUNTIME.calendarPoll.preStartWindowMin,
       preStartPollInterval: RUNTIME.calendarPoll.preStartPollMs,

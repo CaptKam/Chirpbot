@@ -286,12 +286,12 @@ function Hero() {
 }
 
 function LogosStrip() {
-  const logos = ['ESPN', 'MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL', 'OpenAI'];
+  const logos = ['ESPN', 'MLB', 'OpenAI'];
 
   return (
     <section className="py-12 border-y border-slate-800/50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <p className="text-center text-sm text-slate-400 mb-8">Powered by industry-leading data sources • <span className="text-[#10B981]">6 Sports Leagues</span> • Enterprise-Grade APIs</p>
+        <p className="text-center text-sm text-slate-400 mb-8">Powered by industry-leading data sources • <span className="text-[#10B981]">MLB</span> • Enterprise-Grade APIs</p>
         <div className="flex items-center justify-center gap-4 sm:gap-6 md:gap-8 lg:gap-12 flex-wrap">
           {logos.map((logo, index) => (
             <motion.div 

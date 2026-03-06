@@ -53,7 +53,7 @@ const instanceLock = new SingleInstanceLock();
         await gameStateManager.start();
 
         const calendarSyncService = CalendarSyncService.getInstance({
-          sports: ['MLB', 'NFL', 'NCAAF', 'NBA', 'WNBA', 'CFL'],
+          sports: ['MLB'],
           enableMetrics: true
         });
         

@@ -22,13 +22,14 @@ import { memoryManager } from '../middleware/memory-manager';
 type EngineCtor = new (...args: any[]) => BaseSportEngine;
 
 // Dynamic loaders for each sport - prevents one sport's failure from affecting others
+// NOTE: Only MLB is active right now. Other sports are disabled temporarily.
 const engineLoaders: Record<string, () => Promise<EngineCtor>> = {
   MLB: async () => (await import('./engines/mlb-engine')).MLBEngine,
-  NFL: async () => (await import('./engines/nfl-engine')).NFLEngine,
-  NCAAF: async () => (await import('./engines/ncaaf-engine')).NCAAFEngine,
-  NBA: async () => (await import('./engines/nba-engine')).NBAEngine,
-  WNBA: async () => (await import('./engines/wnba-engine')).WNBAEngine,
-  CFL: async () => (await import('./engines/cfl-engine')).CFLEngine,
+  // NFL: async () => (await import('./engines/nfl-engine')).NFLEngine,
+  // NCAAF: async () => (await import('./engines/ncaaf-engine')).NCAAFEngine,
+  // NBA: async () => (await import('./engines/nba-engine')).NBAEngine,
+  // WNBA: async () => (await import('./engines/wnba-engine')).WNBAEngine,
+  // CFL: async () => (await import('./engines/cfl-engine')).CFLEngine,
 };
 
 // Per-sport loading state for circuit breaker
