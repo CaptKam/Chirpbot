@@ -9,3 +9,21 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Development artifacts
+attached_assets/
+.local/
+server/check-preferences.js
+server/disable-weather-ai.js
+ALERT_INTEGRATION_GUIDE.md
+CHIRPBOT_V3_*.md
+DEDUPLICATION_AUDIT_REPORT.md
+DEPLOYMENT_GUIDE.md
+DEV_CONTROL_SYSTEM.md
+MLB_ALERT_SYSTEM_SPECS.md
+OPENAI_REVIEW_PACKAGE.md
+QUICK_START_TEMPLATE.md
+SPORTSDATA_SETUP.md
+SYSTEM_AUDIT_REPORT.md
+TIMING_ARCHITECTURE_ANALYSIS.md
+V3_MILESTONE_MARKER.md

@@ -87,9 +87,22 @@ export class MLBEngine extends BaseSportEngine {
       const performanceSummary = mlbPerformanceTracker.getGamePerformanceSummary(enhanced.gameId);
       const unusualPatterns = performanceSummary ? performanceSummary.unusualPatterns : [];
 
+      // Run multiplier-stack edge engine for probability scoring
+      try {
+        const { convertGameStateToMLBState, enhanceAlertWithProbability } = await import('./alert-cylinders/mlb/mlb-prob-integration');
+        const { scoreMlbAlert } = await import('./mlb-prob-model');
+        const mlbState = convertGameStateToMLBState(enhanced);
+        const edgeScore = scoreMlbAlert(mlbState);
+        if (edgeScore) {
+          (enhanced as any).edgeScore = edgeScore;
+          (enhanced as any).chirpLevel = edgeScore.chirpLevel;
+          (enhanced as any).edgeFactors = edgeScore.edge;
+        }
+      } catch { /* edge engine unavailable */ }
+
       const rawAlerts = await super.generateLiveAlerts(enhanced);
 
-      // Enrich alerts with performance context
+      // Enrich alerts with performance + edge context
       if (rawAlerts.length > 0 && performanceSummary) {
         for (const alert of rawAlerts) {
           if (enhanced.currentBatter && performanceSummary.batters.size > 0) {
@@ -104,6 +117,10 @@ export class MLBEngine extends BaseSportEngine {
           const momentumSummary = mlbPerformanceTracker.getTeamMomentumSummary(enhanced.gameId, teamId);
           if (momentumSummary) alert.context.teamMomentum = momentumSummary;
           if (unusualPatterns.length > 0) alert.context.unusualPatterns = unusualPatterns;
+          if ((enhanced as any).edgeScore) {
+            alert.context.edgeScore = (enhanced as any).edgeScore;
+            alert.context.chirpLevel = (enhanced as any).chirpLevel;
+          }
         }
       }
 

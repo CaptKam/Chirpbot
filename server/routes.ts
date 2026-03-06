@@ -2406,35 +2406,23 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
 
-      // Get current user from session
       const currentUserId = req.session?.userId;
-      console.log(`🔍 ALERTS API: Session user ID: ${currentUserId || 'none'}`);
 
-      // If user is not authenticated, return empty array
       if (!currentUserId) {
-        console.log(`⚠️ ALERTS API: No authenticated user, returning empty array`);
         res.json([]);
         return;
       }
 
-      // Get user details
       const user = await storage.getUserById(currentUserId);
       if (!user) {
-        console.log(`⚠️ ALERTS API: User not found for ID: ${currentUserId}`);
         res.json([]);
         return;
       }
 
-      console.log(`🔍 ALERTS API: User ${user.username} requesting alerts`);
-
-      // Get user's monitored games
       const monitoredGames = await storage.getUserMonitoredTeams(currentUserId);
       const monitoredGameIds = monitoredGames.map(game => game.gameId);
-      console.log(`🔍 ALERTS API: User ${currentUserId} has ${monitoredGameIds.length} monitored games`);
 
-      // If user has no monitored games, return empty array
       if (monitoredGameIds.length === 0) {
-        console.log(`⚠️ ALERTS API: User has no monitored games, returning empty array`);
         res.json([]);
         return;
       }
@@ -2459,13 +2447,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       .offset(offset);
 
       const alertsData = [];
-
-      // Environment detection for debugging
-      const environment = process.env.NODE_ENV || 'development';
-      const isReplit = !!process.env.REPL_ID;
-      const hasDatabase = !!process.env.DATABASE_URL;
-
-      console.log(`🔍 ALERTS API: Environment=${environment}, Replit=${isReplit}, DB=${hasDatabase}, User=${currentUserId}`);
 
       for (const row of result) {
         // Process alerts with minimal transformation to preserve backend formatting

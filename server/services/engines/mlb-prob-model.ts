@@ -18,12 +18,16 @@ export interface MLBState {
     hrPer9?: number;
     gbRate?: number;
     handedness?: 'L'|'R';
+    pitchCount?: number;
+    inningsPitched?: number;
   };
   matchup?: { platoonAdv?: boolean };
   park?: { hrFactor?: number };
   weather?: { windMph?: number; windDir?: WindDir; tempF?: number };
   market?: { liveWinProbHome?: number };
 }
+
+export type ChirpLevel = 'STRONG_CHIRP' | 'CHIRP' | 'SOFT_CHIRP' | null;
 
 export type MLBAlertVariant =
   | 'MLB_RISP'
@@ -39,8 +43,20 @@ export interface MathOutput {
   priority: 'P90'|'P75'|'P50'|'P25';
 }
 
+export interface EdgeFactors {
+  batterPower: number;     // weight 0.35
+  pitcherFatigue: number;  // weight 0.35
+  wind: number;            // weight 0.40
+  parkFactor: number;      // weight 0.30
+  runnerSituation: number; // weight 0.25
+  temperature: number;     // weight 0.20
+  composite: number;       // weighted sum
+}
+
 export interface MLBAlertScore extends MathOutput {
   variant: MLBAlertVariant;
+  chirpLevel: ChirpLevel;
+  edge: EdgeFactors;
   aiText: string;
   dedupeKey: string;
 }
@@ -97,6 +113,84 @@ function pitcherHRZ(p?: MLBState['pitcher']) {
 
 function parkHRFactor(park?: MLBState['park']) {
   return park?.hrFactor != null ? clamp01((park.hrFactor - 0.9) / 0.5) : 0;
+}
+
+// ---- Multiplier-Stack Edge Engine (CHIRP.BET spec) --------------------------
+// 6 factors with assigned weights, combined into a composite edge score.
+
+function pitcherFatigueScore(p?: MLBState['pitcher']): number {
+  if (!p) return 0;
+  const pc = p.pitchCount ?? 0;
+  const ip = p.inningsPitched ?? 0;
+  // Fatigue curve: low early, ramps after 75 pitches or 5+ IP
+  let fatigue = 0;
+  if (pc >= 100) fatigue = 1.0;
+  else if (pc >= 85) fatigue = 0.8;
+  else if (pc >= 75) fatigue = 0.6;
+  else if (pc >= 60) fatigue = 0.3;
+  else fatigue = 0.1;
+  // Innings pitched reinforcement
+  if (ip >= 7) fatigue = Math.max(fatigue, 0.85);
+  else if (ip >= 6) fatigue = Math.max(fatigue, 0.65);
+  else if (ip >= 5) fatigue = Math.max(fatigue, 0.45);
+  return clamp01(fatigue);
+}
+
+function temperatureScore(w?: MLBState['weather']): number {
+  if (!w || w.tempF == null) return 0;
+  const t = w.tempF;
+  // Warm air = ball carries more, cold = dead ball
+  // Neutral at 72F, peaks at 95+, negative below 55
+  if (t >= 95) return 1.0;
+  if (t >= 85) return 0.7;
+  if (t >= 75) return 0.4;
+  if (t >= 65) return 0.1;
+  if (t >= 55) return -0.1;
+  return -0.3;
+}
+
+function runnerSituationScore(bases: Bases, outs: number): number {
+  const baseWeight = (bases.on3B ? 0.50 : 0) + (bases.on2B ? 0.35 : 0) + (bases.on1B ? 0.15 : 0);
+  const outsFactor = [1.0, 0.65, 0.30][outs] ?? 0;
+  return clamp01(baseWeight * outsFactor);
+}
+
+function computeEdgeFactors(state: MLBState): EdgeFactors {
+  const bp = clamp01((batterPowerZ(state.batter) + 2.5) / 5.5); // normalize z-score to 0-1
+  const pf = pitcherFatigueScore(state.pitcher);
+  const w = windOutComponent(state.weather);
+  const pk = parkHRFactor(state.park);
+  const rs = runnerSituationScore(state.bases, state.outs);
+  const temp = clamp01((temperatureScore(state.weather) + 0.3) / 1.3); // normalize to 0-1
+
+  // Spec weights: BP 0.35, PF 0.35, Wind 0.40, Park 0.30, Runner 0.25, Temp 0.20
+  const composite = clamp01(
+    bp * 0.35 +
+    pf * 0.35 +
+    w * 0.40 +
+    pk * 0.30 +
+    rs * 0.25 +
+    temp * 0.20
+  );
+
+  return {
+    batterPower: round(bp, 3),
+    pitcherFatigue: round(pf, 3),
+    wind: round(w, 3),
+    parkFactor: round(pk, 3),
+    runnerSituation: round(rs, 3),
+    temperature: round(temp, 3),
+    composite: round(composite, 3),
+  };
+}
+
+function classifyChirpLevel(edgeComposite: number, p_event: number, leverage: number): ChirpLevel {
+  // Combined score blending edge composite with probability and leverage
+  const score = 0.50 * edgeComposite + 0.30 * p_event + 0.20 * leverage;
+  if (score >= 0.12) return 'STRONG_CHIRP';
+  if (score >= 0.07) return 'CHIRP';
+  if (score >= 0.04) return 'SOFT_CHIRP';
+  return null;
 }
 
 function lateCloseWeight(h: HalfInning, score: MLBState['score']) {
@@ -245,14 +339,23 @@ export function scoreMlbAlert(state: MLBState): MLBAlertScore | null {
 
   if (!variant) return null;
 
+  const edge = computeEdgeFactors(state);
   const leverage = leverageScore(state, variant);
   const confidence = calibratedConfidence(p_event, state);
   const priority = priorityBucket(p_event, leverage, confidence);
+  const chirpLevel = classifyChirpLevel(edge.composite, p_event, leverage);
 
-  const aiText = composeMlbOneLiner(state, variant, p_event, leverage, confidence);
+  const aiText = composeMlbOneLiner(state, variant, p_event, leverage, confidence, chirpLevel, edge);
   const dedupeKey = `MLB:${state.gameId}:${variant}:${stateHash(state)}`;
 
-  return { variant, p_event: round(p_event, 3), leverage: round(leverage, 3), confidence, priority, aiText, dedupeKey };
+  return { variant, p_event: round(p_event, 3), leverage: round(leverage, 3), confidence, priority, chirpLevel, edge, aiText, dedupeKey };
+}
+
+function chirpTag(level: ChirpLevel): string {
+  if (level === 'STRONG_CHIRP') return 'STRONG CHIRP';
+  if (level === 'CHIRP') return 'CHIRP';
+  if (level === 'SOFT_CHIRP') return 'SOFT CHIRP';
+  return '';
 }
 
 function composeMlbOneLiner(
@@ -260,34 +363,38 @@ function composeMlbOneLiner(
   variant: MLBAlertVariant,
   p: number,
   L: number,
-  conf: number
+  conf: number,
+  chirp: ChirpLevel,
+  edge: EdgeFactors
 ): string {
   const inningTag = `${s.half.frame} ${s.half.inning}`;
   const risp = rispString(s.bases);
   const name = s.batter?.name;
   const wind = windOutComponent(s.weather);
   const windEmoji = wind > 0.25 ? '🌬️' : '';
+  const chirpPrefix = chirp ? `[${chirpTag(chirp)}] ` : '';
+  const fatigueNote = edge.pitcherFatigue >= 0.6 ? ' Pitcher tiring.' : '';
 
   switch (variant) {
     case 'MLB_BASES_LOADED':
       return trim25(
-        `⚾ Bases loaded, ${inningTag}! ${name ? name + ' up — ' : ''}run chance live (${Math.round(p*100)}%). ${windEmoji}`
+        `${chirpPrefix}⚾ Bases loaded, ${inningTag}! ${name ? name + ' up — ' : ''}run chance (${Math.round(p*100)}%).${fatigueNote} ${windEmoji}`
       );
     case 'MLB_RISP':
       return trim25(
-        `⚾ ${risp}, ${s.outs} out — ${inningTag}. ${name ? name + ' at bat. ' : ''}Pressure spot (${Math.round(p*100)}%).`
+        `${chirpPrefix}⚾ ${risp}, ${s.outs} out — ${inningTag}. ${name ? name + ' at bat. ' : ''}Pressure spot (${Math.round(p*100)}%).${fatigueNote}`
       );
     case 'MLB_FULL_COUNT_RISP':
       return trim25(
-        `⚾ Full count with RISP — ${inningTag}. ${name ? name + ' ready. ' : ''}Edge ${conf}% 🔥`
+        `${chirpPrefix}⚾ Full count with RISP — ${inningTag}. ${name ? name + ' ready. ' : ''}Edge ${conf}%${fatigueNote} 🔥`
       );
     case 'MLB_HR_THREAT':
       return trim25(
-        `🚀 HR threat this at-bat — ${ inningTag }. ${name ? name + ' has pop. ' : ''}${windEmoji}Park/Wind boost. (${Math.round(p*100)}%)`
+        `${chirpPrefix}🚀 HR threat — ${inningTag}. ${name ? name + ' has pop. ' : ''}${windEmoji}Park/Wind boost (${Math.round(p*100)}%).${fatigueNote}`
       );
     case 'MLB_LATE_PRESSURE':
       return trim25(
-        `🏟️ Late pressure — ${inningTag}, close game. Big inning risk (${Math.round(p*100)}%), leverage ${Math.round(L*100)}%.`
+        `${chirpPrefix}🏟️ Late pressure — ${inningTag}, close game. Big inning risk (${Math.round(p*100)}%), leverage ${Math.round(L*100)}%.${fatigueNote}`
       );
   }
 }
