@@ -27,10 +27,9 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     return <Redirect to="/" />;
   }
 
-  // Redirect admin users to admin panel - they cannot access user pages
-  // Check both user admin role AND admin session
+  // Redirect admin users to admin panel (server-side route)
   if (isAdmin || isAdminSession) {
-    window.location.href = '/admin-panel';
+    window.location.replace('/admin-panel');
     return <AuthLoading />;
   }
 
@@ -44,9 +43,9 @@ function PublicRoute({ component: Component }: { component: React.ComponentType 
     return <AuthLoading />;
   }
 
-  // Redirect admins to admin panel first, even if they don't have user session
+  // Redirect admins to admin panel first (server-side route)
   if (isAdminSession || isAdmin) {
-    window.location.href = '/admin-panel';
+    window.location.replace('/admin-panel');
     return <AuthLoading />;
   }
 

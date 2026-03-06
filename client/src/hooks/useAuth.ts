@@ -37,6 +37,11 @@ export function useAuth() {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
+  const isUserSession = !!user;
+  const isAdminRole = user?.role === 'admin';
+
+  // Only check admin session if user is NOT already authenticated as a regular user.
+  // This prevents unnecessary /api/admin-auth/verify calls (and loading flicker) for regular users.
   const { data: adminAuth, isLoading: adminLoading } = useQuery<AdminAuth>({
     queryKey: ["/api/admin-auth/verify"],
     queryFn: async () => {
@@ -48,21 +53,22 @@ export function useAuth() {
       }
       return response.json();
     },
+    enabled: !userLoading && !isUserSession, // Only check if no user session found
     retry: false,
     refetchInterval: false,
     refetchOnWindowFocus: false,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  const isLoading = userLoading || adminLoading;
+  // Regular users: loading only depends on user query. Admin-only sessions: wait for both.
+  const isLoading = userLoading || (!isUserSession && adminLoading);
   const isAdminSession = adminAuth?.authenticated === true;
-  const isUserSession = !!user;
   
   return {
     user,
     isLoading,
     isAuthenticated: isUserSession,
-    isAdmin: user?.role === 'admin',
+    isAdmin: isAdminRole,
     isAdminSession, // NEW: Detects admin-only sessions
     error: userError,
   };
