@@ -15,8 +15,8 @@ import { Zap, LogOut, SettingsIcon, Bell, Target, Trophy, Clock, TrendingUp, Use
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { SportTabs } from '@/components/SportTabs';
 import { PageHeader } from '@/components/PageHeader';
+import { getSportAccent } from '@/utils/team-utils';
 import { AuthLoading, StatsLoading } from '@/components/sports-loading';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -623,15 +623,27 @@ export default function Settings() {
         )}
       </PageHeader>
 
-      {/* Sport Tabs */}
-      <SportTabs
-        sports={SPORTS}
-        activeSport={activeSport}
-        onSportChange={(newSport) => {
-          setActiveSport(newSport);
-          localStorage.setItem('settings-active-sport', newSport);
-        }}
-      />
+      {/* Sport Pills */}
+      <div className="flex overflow-x-auto no-scrollbar px-4 py-3 gap-2 border-b border-slate-800">
+        {SPORTS.map((sport) => {
+          const accent = getSportAccent(sport);
+          return (
+            <button
+              key={sport}
+              onClick={() => {
+                setActiveSport(sport);
+                localStorage.setItem('settings-active-sport', sport);
+              }}
+              data-testid={`sport-tab-${sport.toLowerCase()}`}
+              className={`flex-none px-5 py-2 rounded-full font-bold text-sm transition-all duration-200 ease-out ${
+                activeSport === sport ? accent.pill : accent.pillInactive
+              }`}
+            >
+              {sport}
+            </button>
+          );
+        })}
+      </div>
 
       {/* Settings Content */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 space-y-8">

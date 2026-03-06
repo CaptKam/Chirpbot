@@ -5,18 +5,8 @@ import { Link } from 'wouter';
 import { PageHeader } from '@/components/PageHeader';
 import { TeamLogo } from '@/components/team-logo';
 import { SportsLoading } from '@/components/sports-loading';
+import { getTeamAbbr, getTeamName, timeAgo } from '@/utils/team-utils';
 import type { Alert } from '@/types';
-
-// ─── Helper: time ago ─────────────────────────────────────────────
-function timeAgo(timestamp: string): string {
-  const diff = Date.now() - new Date(timestamp).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'NOW';
-  if (mins < 60) return `${mins}M AGO`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}H AGO`;
-  return `${Math.floor(hrs / 24)}D AGO`;
-}
 
 // ─── Helper: alert type to icon/color ────────────────────────────
 function alertMeta(type: string) {
@@ -29,19 +19,6 @@ function alertMeta(type: string) {
   if (type.includes('umpire') || type.includes('zone') || type.includes('trend'))
     return { icon: Crosshair, color: 'text-emeraldGreen', border: 'border-emeraldGreen' };
   return { icon: Shield, color: 'text-primaryBlue', border: 'border-primaryBlue' };
-}
-
-// ─── Helper: extract team abbreviation ───────────────────────────
-function teamAbbr(team: string | { name: string; abbreviation?: string } | undefined): string {
-  if (!team) return '???';
-  if (typeof team === 'object') return team.abbreviation || team.name?.slice(0, 3).toUpperCase() || '???';
-  const words = team.split(' ');
-  return words.length > 1 ? words[words.length - 1].slice(0, 3).toUpperCase() : team.slice(0, 3).toUpperCase();
-}
-
-function teamNameStr(team: string | { name: string } | undefined): string {
-  if (!team) return 'TBD';
-  return typeof team === 'object' ? team.name : team;
 }
 
 // ─── Mock data (shown when no live alerts) ───────────────────────
@@ -183,8 +160,8 @@ export default function Dashboard() {
 
   // ─── Live featured game helpers ─────────────────────────────────
   const featured = featuredAlert;
-  const fHome = featured ? teamAbbr(featured.context?.homeTeam || featured.homeTeam) : MOCK_COMMAND_CENTER.homeAbbr;
-  const fAway = featured ? teamAbbr(featured.context?.awayTeam || featured.awayTeam) : MOCK_COMMAND_CENTER.awayAbbr;
+  const fHome = featured ? getTeamAbbr(featured.context?.homeTeam || featured.homeTeam) : MOCK_COMMAND_CENTER.homeAbbr;
+  const fAway = featured ? getTeamAbbr(featured.context?.awayTeam || featured.awayTeam) : MOCK_COMMAND_CENTER.awayAbbr;
   const fSport = featured?.sport || MOCK_COMMAND_CENTER.sport;
 
   const situationText = featured ? (() => {
@@ -278,8 +255,8 @@ export default function Dashboard() {
                   {/* Team logos (non-MLB) */}
                   {fSport !== 'MLB' && (
                     <div className="flex -space-x-2 shrink-0">
-                      <TeamLogo teamName={teamNameStr(featured?.context?.awayTeam || featured?.awayTeam)} abbreviation={fAway} sport={fSport} size="sm" className="rounded-full border-2 border-slate-800" />
-                      <TeamLogo teamName={teamNameStr(featured?.context?.homeTeam || featured?.homeTeam)} abbreviation={fHome} sport={fSport} size="sm" className="rounded-full border-2 border-slate-800" />
+                      <TeamLogo teamName={getTeamName(featured?.context?.awayTeam || featured?.awayTeam)} abbreviation={fAway} sport={fSport} size="sm" className="rounded-full border-2 border-slate-800" />
+                      <TeamLogo teamName={getTeamName(featured?.context?.homeTeam || featured?.homeTeam)} abbreviation={fHome} sport={fSport} size="sm" className="rounded-full border-2 border-slate-800" />
                     </div>
                   )}
                 </div>
@@ -315,7 +292,7 @@ export default function Dashboard() {
           {/* ━━ 2. Flash Odds Markets ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
           <section className="py-2">
             <div className="flex items-center justify-between px-4 mb-3">
-              <h3 className="text-white text-base font-bold tracking-tight">FLASH ODDS MARKETS</h3>
+              <h3 className="text-slate-400 text-[10px] font-black tracking-[0.2em] uppercase">Flash Odds Markets</h3>
               <Link href="/alerts">
                 <span className="text-primaryBlue text-xs font-bold">VIEW ALL</span>
               </Link>
@@ -393,9 +370,9 @@ export default function Dashboard() {
 
           {/* ━━ 3. Daily Edge Picks ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
           <section className="p-4">
-            <h3 className="text-white text-base font-bold tracking-tight mb-3 flex items-center gap-2">
-              <Shield className="w-5 h-5 text-emeraldGreen" />
-              DAILY EDGE PICKS
+            <h3 className="text-slate-400 text-[10px] font-black tracking-[0.2em] uppercase mb-3 flex items-center gap-2">
+              <Shield className="w-4 h-4 text-emeraldGreen" />
+              Daily Edge Picks
             </h3>
             <div className="space-y-4">
               {/* Live edge picks from API */}
@@ -404,8 +381,8 @@ export default function Dashboard() {
                   ? Math.round(alert.gamblingInsights.confidence * 100)
                   : alert.aiConfidence || 0;
                 const advice = alert.context?.aiBettingAdvice;
-                const home = teamNameStr(alert.context?.homeTeam || alert.homeTeam);
-                const away = teamNameStr(alert.context?.awayTeam || alert.awayTeam);
+                const home = getTeamName(alert.context?.homeTeam || alert.homeTeam);
+                const away = getTeamName(alert.context?.awayTeam || alert.awayTeam);
 
                 return (
                   <div key={alert.id} className="relative overflow-hidden rounded-xl bg-gradient-to-br from-surface to-slate-800 border border-slate-700/50">
@@ -417,8 +394,8 @@ export default function Dashboard() {
                     <div className="p-5">
                       <div className="flex gap-4 items-center mb-4">
                         <div className="flex -space-x-2">
-                          <TeamLogo teamName={away} abbreviation={teamAbbr(alert.context?.awayTeam || alert.awayTeam)} sport={alert.sport} size="sm" className="rounded-full border-2 border-slate-700" />
-                          <TeamLogo teamName={home} abbreviation={teamAbbr(alert.context?.homeTeam || alert.homeTeam)} sport={alert.sport} size="sm" className="rounded-full border-2 border-slate-700" />
+                          <TeamLogo teamName={away} abbreviation={getTeamAbbr(alert.context?.awayTeam || alert.awayTeam)} sport={alert.sport} size="sm" className="rounded-full border-2 border-slate-700" />
+                          <TeamLogo teamName={home} abbreviation={getTeamAbbr(alert.context?.homeTeam || alert.homeTeam)} sport={alert.sport} size="sm" className="rounded-full border-2 border-slate-700" />
                         </div>
                         <div>
                           <h4 className="font-bold text-lg text-white">{alert.title}</h4>
@@ -466,8 +443,8 @@ export default function Dashboard() {
                   <div className="p-5">
                     <div className="flex gap-4 items-center mb-4">
                       <div className="flex -space-x-2">
-                        <TeamLogo teamName={pick.away} abbreviation={teamAbbr(pick.away)} sport={pick.sport} size="sm" className="rounded-full border-2 border-slate-700" />
-                        <TeamLogo teamName={pick.home} abbreviation={teamAbbr(pick.home)} sport={pick.sport} size="sm" className="rounded-full border-2 border-slate-700" />
+                        <TeamLogo teamName={pick.away} abbreviation={getTeamAbbr(pick.away)} sport={pick.sport} size="sm" className="rounded-full border-2 border-slate-700" />
+                        <TeamLogo teamName={pick.home} abbreviation={getTeamAbbr(pick.home)} sport={pick.sport} size="sm" className="rounded-full border-2 border-slate-700" />
                       </div>
                       <div>
                         <h4 className="font-bold text-lg text-white">{pick.playerName}</h4>

@@ -7,86 +7,7 @@ import type { Game, GameDay } from "@shared/schema";
 import { TeamLogo } from "@/components/team-logo";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-
-// Helper functions
-const removeCity = (teamName: string) => {
-  if (!teamName) return '';
-  // Remove city names from team names (e.g., "New York Yankees" -> "Yankees")
-  const words = teamName.split(' ');
-  return words.length > 1 ? words.slice(-1).join(' ') : teamName;
-};
-
-const extractTeamAbbreviation = (teamName: string) => {
-  if (!teamName || teamName.trim() === '') return 'TBD';
-
-  // Full team name mappings (check these first)
-  const fullTeamMappings: Record<string, string> = {
-    'San Diego Padres': 'SD',
-    'Washington Nationals': 'WSH',
-    'Oakland Athletics': 'OAK',
-    'Tampa Bay Rays': 'TB',
-    'Kansas City Royals': 'KC',
-    'Kansas City': 'KC',
-    'Royals': 'KC',
-    // Add college teams
-    'TCU Horned Frogs': 'TCU',
-    'North Carolina Tar Heels': 'UNC'
-  };
-
-  // Check full team name first
-  if (fullTeamMappings[teamName]) {
-    return fullTeamMappings[teamName];
-  }
-
-  // Extract abbreviation from team name
-  const cityPrefixes = ['New York', 'Los Angeles', 'San Francisco', 'St. Louis', 'Tampa Bay', 'San Diego', 'Washington', 'Kansas City'];
-  let cleanName = teamName;
-
-  // Remove city prefixes
-  for (const prefix of cityPrefixes) {
-    if (teamName.startsWith(prefix)) {
-      cleanName = teamName.replace(prefix, '').trim();
-      break;
-    }
-  }
-
-  // Common team abbreviations
-  const abbreviations: Record<string, string> = {
-    // MLB
-    'Yankees': 'NYY', 'Mets': 'NYM', 'Dodgers': 'LAD', 'Angels': 'LAA',
-    'Athletics': 'OAK', 'Padres': 'SD',
-    'Cubs': 'CHC', 'White Sox': 'CWS', 'Guardians': 'CLE',
-    'Twins': 'MIN', 'Royals': 'KC', 'Astros': 'HOU', 'Rangers': 'TEX',
-    'Mariners': 'SEA', 'Red Sox': 'BOS', 'Orioles': 'BAL', 'Blue Jays': 'TOR',
-    'Rays': 'TB', 'Marlins': 'MIA', 'Nationals': 'WSH', 'Phillies': 'PHI',
-    'Pirates': 'PIT', 'Reds': 'CIN', 'Brewers': 'MIL',
-    'Diamondbacks': 'ARI', 'Rockies': 'COL',
-    // NBA
-    'Hawks': 'ATL', 'Celtics': 'BOS', 'Nets': 'BKN', 'Hornets': 'CHA',
-    'Bulls': 'CHI', 'Cavaliers': 'CLE', 'Mavericks': 'DAL', 'Nuggets': 'DEN',
-    'Pistons': 'DET', 'Warriors': 'GSW', 'Rockets': 'HOU', 'Pacers': 'IND',
-    'Clippers': 'LAC', 'Lakers': 'LAL', 'Grizzlies': 'MEM', 'Heat': 'MIA',
-    'Bucks': 'MIL', 'Timberwolves': 'MIN', 'Pelicans': 'NOP', 'Knicks': 'NYK',
-    'Thunder': 'OKC', 'Magic': 'ORL', '76ers': 'PHI', 'Suns': 'PHX',
-    'Trail Blazers': 'POR', 'Blazers': 'POR', 'Kings': 'SAC', 'Spurs': 'SAS',
-    'Raptors': 'TOR', 'Jazz': 'UTA', 'Wizards': 'WAS',
-    // NFL
-    'Falcons': 'ATL', 'Ravens': 'BAL', 'Bills': 'BUF',
-    'Panthers': 'CAR', 'Bears': 'CHI', 'Bengals': 'CIN', 'Browns': 'CLE',
-    'Cowboys': 'DAL', 'Broncos': 'DEN', 'Lions': 'DET', 'Packers': 'GB',
-    'Texans': 'HOU', 'Colts': 'IND', 'Jaguars': 'JAX', 'Chiefs': 'KC',
-    'Chargers': 'LAC', 'Rams': 'LAR', 'Raiders': 'LV', 'Dolphins': 'MIA',
-    'Vikings': 'MIN', 'Patriots': 'NE', 'Saints': 'NO',
-    'Jets': 'NYJ', 'Eagles': 'PHI', 'Steelers': 'PIT', 'Seahawks': 'SEA',
-    '49ers': 'SF', 'Niners': 'SF', 'Buccaneers': 'TB', 'Bucs': 'TB', 'Titans': 'TEN', 'Commanders': 'WAS',
-    // Full names for disambiguation
-    'SF Giants': 'SF', 'San Francisco Giants': 'SF', 'NY Giants': 'NYG', 'New York Giants': 'NYG',
-    'STL Cardinals': 'STL', 'St. Louis Cardinals': 'STL', 'Arizona Cardinals': 'ARI',
-    'Atlanta Braves': 'ATL', 'Detroit Tigers': 'DET'
-  };
-
-  return abbreviations[cleanName] || cleanName.slice(0, 3).toUpperCase();
-};
+import { getTeamAbbr, getSportAccent } from '@/utils/team-utils';
 
 import { format, addDays, parseISO } from "date-fns";
 import { SportsLoading, GameCardLoading } from '@/components/sports-loading';
@@ -430,7 +351,7 @@ export default function Calendar() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-900 border-none rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 focus:ring-2 focus:ring-primaryBlue/50 focus:outline-none"
+            className="w-full bg-surface border border-slate-800 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 focus:ring-2 focus:ring-primaryBlue/50 focus:outline-none"
             placeholder="Search teams or venues..."
           />
         </div>
@@ -439,29 +360,30 @@ export default function Calendar() {
       {/* Sport pills */}
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-          {SPORTS.map((sport) => (
-            <button
-              key={sport}
-              onClick={() => {
-                setActiveSport(sport);
-                queryClient.invalidateQueries({ queryKey: ["/api/games/today"] });
-              }}
-              data-testid={`sport-tab-${sport.toLowerCase()}`}
-              className={`whitespace-nowrap px-6 py-1.5 rounded-full text-xs font-bold tracking-wider transition-all duration-200 ease-out ${
-                activeSport === sport
-                  ? 'bg-primaryBlue text-white shadow-sm shadow-primaryBlue/8'
-                  : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
-              }`}
-            >
-              {sport}
-            </button>
-          ))}
+          {SPORTS.map((sport) => {
+            const accent = getSportAccent(sport);
+            return (
+              <button
+                key={sport}
+                onClick={() => {
+                  setActiveSport(sport);
+                  queryClient.invalidateQueries({ queryKey: ["/api/games/today"] });
+                }}
+                data-testid={`sport-tab-${sport.toLowerCase()}`}
+                className={`whitespace-nowrap px-5 py-2 rounded-full text-sm font-bold transition-all duration-200 ease-out ${
+                  activeSport === sport ? accent.pill : accent.pillInactive
+                }`}
+              >
+                {sport}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Section header */}
       <div className="px-4 py-4 flex items-center justify-between">
-        <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">
+        <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
           {dateLabel} {activeSport} Games
         </h2>
         <span className="text-xs font-medium text-primaryBlue">{displayDate}</span>
@@ -479,7 +401,7 @@ export default function Calendar() {
             ))}
           </>
         ) : searchFilteredGames.length === 0 ? (
-          <div className="bg-slate-900/50 rounded-xl p-8 text-center border border-slate-800" data-testid="empty-state">
+          <div className="bg-surface rounded-xl p-8 text-center border border-slate-800" data-testid="empty-state">
             <CalendarIcon className="w-8 h-8 text-slate-500 mx-auto mb-3" />
             <h3 className="text-base font-bold text-slate-200 mb-1">
               {searchQuery ? 'No matches found' : 'No Games Scheduled'}
@@ -525,8 +447,8 @@ export default function Calendar() {
                         const isMonitored = selectedGames.has(game.gameId);
                         const awayTeamName = game.awayTeam?.name || 'TBD';
                         const homeTeamName = game.homeTeam?.name || 'TBD';
-                        const awayAbbr = extractTeamAbbreviation(awayTeamName);
-                        const homeAbbr = extractTeamAbbreviation(homeTeamName);
+                        const awayAbbr = getTeamAbbr(awayTeamName);
+                        const homeAbbr = getTeamAbbr(homeTeamName);
                         const badge = getContextBadge(game);
                         const startTime = new Date(game.startTime);
                         const formattedTime = isNaN(startTime.getTime()) ? 'TBD'
@@ -535,7 +457,7 @@ export default function Calendar() {
                         return (
                           <div
                             key={gameId}
-                            className={`bg-slate-900/50 rounded-xl p-4 border border-slate-800 ${game.status === 'final' ? 'opacity-60' : ''}`}
+                            className={`bg-surface rounded-xl p-4 border border-slate-800 ${game.status === 'final' ? 'opacity-60' : ''}`}
                             data-testid={`game-card-${gameId}`}
                           >
                             <div className="flex items-start justify-between gap-4">
