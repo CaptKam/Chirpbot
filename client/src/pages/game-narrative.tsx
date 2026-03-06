@@ -166,7 +166,7 @@ export default function GameNarrative() {
         </div>
       </header>
       {/* ━━ Sticky Scoreboard ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div className="sticky top-[53px] z-20 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800 px-4 py-2 flex items-center justify-between shadow-lg">
+      <div className="sticky top-[53px] z-20 backdrop-blur-sm border-b border-slate-800 px-4 py-2 flex items-center justify-between shadow-lg bg-[#101922] text-[#ffffff]">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
             <div className="h-6 w-6 bg-slate-800 rounded-full flex items-center justify-center border border-slate-700">
