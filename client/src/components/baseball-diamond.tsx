@@ -46,7 +46,7 @@ export function BaseballDiamond({
         <div className="text-center space-y-1">
           <div className="flex items-center justify-center space-x-3">
             {(balls > 0 || strikes > 0) && (
-              <div className={`${text} text-emerald-400 font-mono`}>
+              <div className={`${text} text-emeraldGreen font-mono`}>
                 {balls}-{strikes}
               </div>
             )}
@@ -60,11 +60,11 @@ export function BaseballDiamond({
       {/* Simple Baseball Diamond - Same as alerts page but bigger */}
       <div className={`relative ${size === 'sm' ? 'w-10 h-10' : 'w-16 h-16'} mx-auto flex-shrink-0`}>
         {/* Second Base */}
-        <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 ${size === 'sm' ? 'w-2 h-2' : 'w-3 h-3'} rotate-45 border-2 ${runners.second ? 'bg-emerald-400 border-emerald-400' : 'border-slate-500'}`} />
+        <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 ${size === 'sm' ? 'w-2 h-2' : 'w-3 h-3'} rotate-45 border-2 ${runners.second ? 'bg-emeraldGreen border-emeraldGreen' : 'border-slate-500'}`} />
         {/* Third Base */}
-        <div className={`absolute top-1/2 left-0 transform -translate-y-1/2 ${size === 'sm' ? 'w-2 h-2' : 'w-3 h-3'} rotate-45 border-2 ${runners.third ? 'bg-emerald-400 border-emerald-400' : 'border-slate-500'}`} />
+        <div className={`absolute top-1/2 left-0 transform -translate-y-1/2 ${size === 'sm' ? 'w-2 h-2' : 'w-3 h-3'} rotate-45 border-2 ${runners.third ? 'bg-emeraldGreen border-emeraldGreen' : 'border-slate-500'}`} />
         {/* First Base */}
-        <div className={`absolute top-1/2 right-0 transform -translate-y-1/2 ${size === 'sm' ? 'w-2 h-2' : 'w-3 h-3'} rotate-45 border-2 ${runners.first ? 'bg-emerald-400 border-emerald-400' : 'border-slate-500'}`} />
+        <div className={`absolute top-1/2 right-0 transform -translate-y-1/2 ${size === 'sm' ? 'w-2 h-2' : 'w-3 h-3'} rotate-45 border-2 ${runners.first ? 'bg-emeraldGreen border-emeraldGreen' : 'border-slate-500'}`} />
       </div>
 
       

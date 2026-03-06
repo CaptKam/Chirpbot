@@ -227,7 +227,7 @@ export default function Login() {
               <p className="text-slate-300" style={{ fontSize: '15px' }}>
                 Don't have an account?{" "}
                 <Link href="/signup">
-                  <span className="text-primaryBlue hover:text-emerald-300 hover:underline font-semibold cursor-pointer">
+                  <span className="text-primaryBlue hover:text-blue-300 hover:underline font-semibold cursor-pointer">
                     Sign up here
                   </span>
                 </Link>

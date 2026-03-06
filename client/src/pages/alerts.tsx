@@ -324,9 +324,9 @@ function FeaturedAlertCard({ alert }: { alert: Alert }) {
                 boxShadow: '0 0 20px -5px rgba(16,185,129,0.4)',
               }}
             >
-              <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-tighter">Win Prob ({leadingAbbr})</p>
+              <p className="text-[10px] font-bold text-emeraldGreen uppercase tracking-tighter">Win Prob ({leadingAbbr})</p>
               <p
-                className="text-xl font-black text-emerald-400 font-mono leading-none"
+                className="text-xl font-black text-emeraldGreen font-mono leading-none"
                 style={{ textShadow: '0 0 10px rgba(16,185,129,0.6)' }}
               >
                 {winProb}%
@@ -395,8 +395,8 @@ function FeaturedAlertCard({ alert }: { alert: Alert }) {
               className="w-full flex items-center justify-between"
             >
               <div className="flex items-center gap-2">
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                <p className="text-[11px] font-bold text-emerald-400">{alert.context.aiTitle}</p>
+                <TrendingUp className="w-3.5 h-3.5 text-emeraldGreen flex-shrink-0" />
+                <p className="text-[11px] font-bold text-emeraldGreen">{alert.context.aiTitle}</p>
               </div>
               {insights.length > 0 && (
                 <motion.div
@@ -427,7 +427,7 @@ function FeaturedAlertCard({ alert }: { alert: Alert }) {
                   >
                     {insights.map((insight, i) => (
                       <div key={i} className="flex items-start gap-2">
-                        <span className="text-emerald-400 text-[10px] mt-0.5">*</span>
+                        <span className="text-emeraldGreen text-[10px] mt-0.5">*</span>
                         <p className="text-[11px] text-[#94A3B8] leading-relaxed">{insight}</p>
                       </div>
                     ))}
@@ -729,7 +729,7 @@ export default function AlertsPage() {
               <div>
                 <div className="flex items-center justify-between mb-4 px-1">
                   <h2 className="text-lg font-bold text-[#F8FAFC]">More Alerts</h2>
-                  <span className="text-emerald-400 text-sm font-bold">{remainingAlerts.length} alert{remainingAlerts.length !== 1 ? 's' : ''}</span>
+                  <span className="text-emeraldGreen text-sm font-bold">{remainingAlerts.length} alert{remainingAlerts.length !== 1 ? 's' : ''}</span>
                 </div>
                 <div className="space-y-3">
                   {remainingAlerts.map((alert, i) => (

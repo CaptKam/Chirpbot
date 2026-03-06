@@ -241,7 +241,7 @@ export function GameCardTemplate({
             Q{quarter}
           </div>
           {timeRemaining && (
-            <div className="text-xs text-emerald-400 bg-slate-800/50 px-2 py-1 rounded font-medium">
+            <div className="text-xs text-emeraldGreen bg-slate-800/50 px-2 py-1 rounded font-medium">
               {timeRemaining}
             </div>
           )}
@@ -256,7 +256,7 @@ export function GameCardTemplate({
             Q{displayPeriod}
           </div>
           {timeRemaining && (
-            <div className="text-xs text-emerald-400 bg-slate-800/50 px-2 py-1 rounded font-medium">
+            <div className="text-xs text-emeraldGreen bg-slate-800/50 px-2 py-1 rounded font-medium">
               {timeRemaining}
             </div>
           )}
@@ -369,7 +369,7 @@ export function GameCardTemplate({
     <Card 
       className={`bg-white/5 backdrop-blur-sm cursor-pointer transition-all duration-200 p-2 ${cardHeight} ${
         isSelected 
-          ? 'ring-2 ring-emerald-500 bg-emerald-500/10 shadow-xl shadow-emerald-500/20' 
+          ? 'ring-2 ring-emeraldGreen bg-emeraldGreen/10 shadow-xl shadow-emeraldGreen/20' 
           : 'ring-1 ring-white/10'
       } ${className}`}
       style={{ borderRadius: '12px' }}
@@ -407,7 +407,7 @@ export function GameCardTemplate({
           {(status === 'live' || status === 'final') && (
             <Badge className={`px-3 py-1.5 rounded-full text-xs font-medium ${
               status === 'live' 
-                ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30' 
+                ? 'bg-emeraldGreen/20 text-emeraldGreen ring-1 ring-emeraldGreen/30' 
                 : 'bg-slate-700/50 text-slate-300 ring-1 ring-slate-600'
             }`}>
               {status === 'live' && <Play className="w-3 h-3 mr-1" />}
@@ -485,11 +485,11 @@ export function GameCardTemplate({
           <div className="flex items-center space-x-2">
             <div className="text-xs bg-slate-800/50 px-2 py-1 rounded">
               <span className="text-slate-400">Poss: </span>
-              <span className={displayPossessionData.currentPossession === 'home' ? 'text-emerald-400 font-bold' : 'text-slate-300'}>
+              <span className={displayPossessionData.currentPossession === 'home' ? 'text-emeraldGreen font-bold' : 'text-slate-300'}>
                 {displayPossessionData.homePossessions}
               </span>
               <span className="text-slate-500 mx-1">-</span>
-              <span className={displayPossessionData.currentPossession === 'away' ? 'text-emerald-400 font-bold' : 'text-slate-300'}>
+              <span className={displayPossessionData.currentPossession === 'away' ? 'text-emeraldGreen font-bold' : 'text-slate-300'}>
                 {displayPossessionData.awayPossessions}
               </span>
             </div>

@@ -128,7 +128,7 @@ function Hero() {
   return (
     <section className="relative pt-24 pb-20 sm:pt-32 sm:pb-28 lg:pt-40 lg:pb-36">
       {/* Subtle gradient glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-emerald-500/[0.04] rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-primaryBlue/[0.04] rounded-full blur-[120px] pointer-events-none" />
 
       <div className="relative mx-auto max-w-3xl px-5 text-center">
         <motion.div {...fadeUp(0)} className="inline-flex items-center gap-2 rounded-full bg-primaryBlue/10 px-4 py-2 ring-1 ring-primaryBlue/20 mb-8">
