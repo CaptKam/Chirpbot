@@ -12,11 +12,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Zap, LogOut, SettingsIcon, Bell, Target, Trophy, Clock, TrendingUp, Users, AlertTriangle, Send, CheckCircle, XCircle, Monitor, BarChart3, ArrowRight, DollarSign, Star } from "lucide-react";
-import { ChirpBotLogo } from "@/components/ChirpBotLogo";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { SportTabs } from '@/components/SportTabs';
+import { PageHeader } from '@/components/PageHeader';
 import { AuthLoading, StatsLoading } from '@/components/sports-loading';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -710,30 +710,23 @@ export default function Settings() {
 
   return (
     <div className="pb-24 sm:pb-28 bg-gradient-to-b from-[#0D1117] to-[#0D0D0D] text-slate-100 antialiased min-h-screen">
-      {/* Header */}
-      <header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-[#0D1117]/70 border-b border-white/[0.08] text-slate-100 px-4 py-6">
-        <div className="mx-auto max-w-7xl flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <ChirpBotLogo size="md" showText={false} />
-            <div>
-              <h1 className="text-xl font-bold text-white tracking-tight">ChirpBot</h1>
-              <p className="text-emerald-400/80 text-xs font-semibold">Settings Dashboard</p>
-            </div>
-          </div>
-          {isAuthenticated && (
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              size="sm"
-              className={`${getBorderClass()} ${sportColors.text} ${getHoverBgClass()} transition-all duration-300`}
-              data-testid="logout-button"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
-          )}
-        </div>
-      </header>
+      <PageHeader
+        title="ChirpBot"
+        subtitle="Settings Dashboard"
+      >
+        {isAuthenticated && (
+          <Button
+            onClick={handleLogout}
+            variant="outline"
+            size="sm"
+            className={`${getBorderClass()} ${sportColors.text} ${getHoverBgClass()} transition-all duration-300`}
+            data-testid="logout-button"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
+        )}
+      </PageHeader>
 
       {/* Sport Tabs */}
       <SportTabs
