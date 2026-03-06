@@ -266,7 +266,7 @@ export default function Dashboard() {
           <SportsLoading sport="MLB" message="Loading dashboard..." size="lg" />
         </div>
       ) : (
-        <main className="flex-1 pb-4 p-4 space-y-4">
+        <main className="flex-1 p-4 space-y-4 bg-[#101922]">
           {/* ━━ 1. Live Command Center ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
           <section>
             <div className="flex items-center justify-between mb-2">
