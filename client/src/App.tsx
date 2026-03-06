@@ -1,4 +1,4 @@
-import { Switch, Route, Redirect, useLocation } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -12,11 +12,9 @@ import Signup from "./pages/signup";
 import Login from "./pages/login";
 import Alerts from "./pages/alerts";
 import { BottomNavigation } from "@/components/bottom-navigation";
-import { useToast } from "@/hooks/use-toast";
-import { ToastAction } from "@/components/ui/toast";
 import { AuthLoading } from "@/components/sports-loading";
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isAdmin, isAdminSession, isLoading } = useAuth();
 
   if (isLoading) {
@@ -33,10 +31,10 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     return <AuthLoading />;
   }
 
-  return <Component />;
+  return <>{children}</>;
 }
 
-function PublicRoute({ component: Component }: { component: React.ComponentType }) {
+function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isAdmin, isAdminSession, isLoading } = useAuth();
 
   if (isLoading) {
@@ -53,12 +51,10 @@ function PublicRoute({ component: Component }: { component: React.ComponentType 
     return <Redirect to="/dashboard" />;
   }
 
-  return <Component />;
+  return <>{children}</>;
 }
 
 function RegularAppContent() {
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
   const { isAuthenticated } = useAuth();
 
   // Get settings to check if push notifications are enabled
@@ -71,13 +67,13 @@ function RegularAppContent() {
   return (
     <div className={isAuthenticated ? "max-w-md mx-auto bg-transparent min-h-screen relative" : "min-h-screen"}>
       <Switch>
-        <Route path="/" component={() => <PublicRoute component={Landing} />} />
-        <Route path="/login" component={() => <PublicRoute component={Login} />} />
-        <Route path="/signup" component={() => <PublicRoute component={Signup} />} />
-        <Route path="/dashboard" component={() => <ProtectedRoute component={Calendar} />} />
-        <Route path="/calendar" component={() => <ProtectedRoute component={Calendar} />} />
-        <Route path="/alerts" component={() => <ProtectedRoute component={Alerts} />} />
-        <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
+        <Route path="/"><PublicRoute><Landing /></PublicRoute></Route>
+        <Route path="/login"><PublicRoute><Login /></PublicRoute></Route>
+        <Route path="/signup"><PublicRoute><Signup /></PublicRoute></Route>
+        <Route path="/dashboard"><ProtectedRoute><Calendar /></ProtectedRoute></Route>
+        <Route path="/calendar"><ProtectedRoute><Calendar /></ProtectedRoute></Route>
+        <Route path="/alerts"><ProtectedRoute><Alerts /></ProtectedRoute></Route>
+        <Route path="/settings"><ProtectedRoute><Settings /></ProtectedRoute></Route>
         <Route component={NotFound} />
       </Switch>
       {isAuthenticated && <BottomNavigation />}
