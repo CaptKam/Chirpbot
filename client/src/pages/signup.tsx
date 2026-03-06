@@ -306,7 +306,7 @@ export default function Signup() {
               <p className="text-slate-300" style={{ fontSize: '15px' }}>
                 Already have an account?{" "}
                 <Link href="/login">
-                  <span className="text-primaryBlue hover:text-emerald-300 hover:underline font-semibold cursor-pointer">
+                  <span className="text-primaryBlue hover:text-blue-300 hover:underline font-semibold cursor-pointer">
                     Sign in here
                   </span>
                 </Link>

@@ -20,12 +20,12 @@ export function ChirpBotLogo({ size = 'sm', showText = true, className = '' }: C
 
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
-      <div className={`${cfg.box} bg-emerald-500/15 ring-1 ring-emerald-500/25 flex items-center justify-center`}>
-        <Zap className={`${cfg.icon} text-emerald-400`} />
+      <div className={`${cfg.box} bg-primaryBlue/15 ring-1 ring-primaryBlue/25 flex items-center justify-center`}>
+        <Zap className={`${cfg.icon} text-primaryBlue`} />
       </div>
       {showText && (
-        <span className={`${cfg.text} font-bold text-white tracking-tight`}>
-          ChirpBot
+        <span className={`${cfg.text} font-black text-white tracking-tight uppercase`}>
+          Chirp.bet
         </span>
       )}
     </div>

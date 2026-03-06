@@ -36,8 +36,8 @@ const SportIcons = {
 // Performance grade colors - emerald-based system
 const getGradeColor = (grade: string) => {
   switch (grade) {
-    case 'A+': case 'A': return 'text-emerald-400';
-    case 'B': return 'text-emerald-300';
+    case 'A+': case 'A': return 'text-primaryBlue';
+    case 'B': return 'text-blue-300';
     case 'C': return 'text-yellow-400';
     case 'D': return 'text-orange-400';
     default: return 'text-red-400';
@@ -46,8 +46,8 @@ const getGradeColor = (grade: string) => {
 
 // Response time status colors - emerald-based system
 const getResponseTimeStatus = (time: number) => {
-  if (time < 100) return { color: 'text-emerald-400', status: 'Excellent' };
-  if (time < 150) return { color: 'text-emerald-300', status: 'Good' };
+  if (time < 100) return { color: 'text-primaryBlue', status: 'Excellent' };
+  if (time < 150) return { color: 'text-blue-300', status: 'Good' };
   if (time < 200) return { color: 'text-yellow-400', status: 'Fair' };
   if (time < 250) return { color: 'text-orange-400', status: 'Acceptable' };
   return { color: 'text-red-400', status: 'Needs Attention' };
@@ -110,17 +110,17 @@ function MetricCard({
   status?: 'good' | 'warning' | 'error' | 'neutral';
 }) {
   const statusColors = {
-    good: 'ring-emerald-500/30',
+    good: 'ring-primaryBlue/30',
     warning: 'ring-yellow-500/30',
     error: 'ring-red-500/30',
     neutral: 'ring-white/10'
   };
 
   return (
-    <div className={`bg-white/5 backdrop-blur-sm ring-1 ${statusColors[status]} border-0 rounded-xl p-4 shadow-xl shadow-emerald-500/5 transition-all hover:scale-105 hover:bg-white/10`} data-testid={`metric-card-${title.toLowerCase().replace(/\s+/g, '-')}`}>
+    <div className={`bg-white/5 backdrop-blur-sm ring-1 ${statusColors[status]} border-0 rounded-xl p-4 shadow-xl shadow-primaryBlue/5 transition-all hover:scale-105 hover:bg-white/10`} data-testid={`metric-card-${title.toLowerCase().replace(/\s+/g, '-')}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="p-2 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30">
+          <div className="p-2 rounded-lg bg-primaryBlue/20 ring-1 ring-primaryBlue/30">
             {icon}
           </div>
           <div>
@@ -128,7 +128,7 @@ function MetricCard({
             <p className="text-2xl font-black text-slate-100">
               {value}{unit}
               {trend !== undefined && (
-                <span className={`ml-2 text-sm font-bold ${trend > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                <span className={`ml-2 text-sm font-bold ${trend > 0 ? 'text-primaryBlue' : 'text-red-400'}`}>
                   {trend > 0 ? '↗' : '↘'} {Math.abs(trend)}%
                 </span>
               )}
@@ -145,7 +145,7 @@ function SportEngineCard({ sport, metrics }: { sport: string, metrics: any }) {
   const grade = metrics.performance?.grade || 'N/A';
   
   return (
-    <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5 hover:bg-white/10 hover:ring-emerald-500/30 transition-all" data-testid={`sport-engine-${sport.toLowerCase()}`}>
+    <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-primaryBlue/5 hover:bg-white/10 hover:ring-primaryBlue/30 transition-all" data-testid={`sport-engine-${sport.toLowerCase()}`}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-3">
           <span className="text-2xl">{SportIcons[sport as keyof typeof SportIcons]}</span>
@@ -154,7 +154,7 @@ function SportEngineCard({ sport, metrics }: { sport: string, metrics: any }) {
         <div className={`px-3 py-1 rounded-xl text-xs font-semibold uppercase tracking-wide ${
           metrics.performance?.error 
             ? 'bg-red-500/20 ring-1 ring-red-500/30 text-red-400' 
-            : 'bg-emerald-500/20 ring-1 ring-emerald-500/30 text-emerald-400'
+            : 'bg-primaryBlue/20 ring-1 ring-primaryBlue/30 text-primaryBlue'
         }`}>
           {metrics.performance?.error ? "Error" : "Active"}
         </div>
@@ -199,12 +199,12 @@ function SportEngineCard({ sport, metrics }: { sport: string, metrics: any }) {
             <span className="text-sm text-slate-300 font-medium">V3 Target</span>
             <div className="flex items-center space-x-2">
               {(metrics.performance?.avgResponseTime || 0) < 250 ? (
-                <CheckCircle className="text-emerald-400" size={16} />
+                <CheckCircle className="text-primaryBlue" size={16} />
               ) : (
                 <AlertTriangle className="text-red-400" size={16} />
               )}
               <span className={`text-sm font-bold ${
-                (metrics.performance?.avgResponseTime || 0) < 250 ? 'text-emerald-400' : 'text-red-400'
+                (metrics.performance?.avgResponseTime || 0) < 250 ? 'text-primaryBlue' : 'text-red-400'
               }`}>
                 {(metrics.performance?.avgResponseTime || 0) < 250 ? 'Achieved' : 'Needs Work'}
               </span>
@@ -222,17 +222,17 @@ function V3AchievementCard({ achievements }: { achievements: any }) {
   const totalCount = achievements.sub250msTargets?.length || 6;
 
   return (
-    <div className="bg-white/5 backdrop-blur-sm ring-2 ring-emerald-500/30 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/10 bg-gradient-to-br from-emerald-500/5 to-emerald-600/5">
+    <div className="bg-white/5 backdrop-blur-sm ring-2 ring-primaryBlue/30 border-0 rounded-xl p-6 shadow-xl shadow-primaryBlue/10 bg-gradient-to-br from-primaryBlue/5 to-blue-600/5">
       <div className="flex items-center space-x-3 mb-6">
-        <div className="p-2 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30">
-          <Trophy className="text-emerald-400" size={24} />
+        <div className="p-2 rounded-lg bg-primaryBlue/20 ring-1 ring-primaryBlue/30">
+          <Trophy className="text-primaryBlue" size={24} />
         </div>
         <h3 className="text-xl font-black uppercase tracking-wide text-slate-100">V3 Optimization Achievement</h3>
       </div>
       
       <div className="space-y-6">
         <div className="text-center">
-          <div className="text-5xl font-black text-emerald-400 mb-2">
+          <div className="text-5xl font-black text-primaryBlue mb-2">
             {successRate.toFixed(1)}%
           </div>
           <p className="text-sm font-semibold text-slate-300 uppercase tracking-wide">Overall V3 Success Rate</p>
@@ -247,7 +247,7 @@ function V3AchievementCard({ achievements }: { achievements: any }) {
         
         <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden">
           <div 
-            className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500 ease-out rounded-full"
+            className="h-full bg-gradient-to-r from-primaryBlue to-primaryBlue transition-all duration-500 ease-out rounded-full"
             style={{ width: `${Math.min(successRate, 100)}%` }}
           />
         </div>
@@ -258,7 +258,7 @@ function V3AchievementCard({ achievements }: { achievements: any }) {
               key={target.sport} 
               className={`p-3 rounded-xl text-center border-0 ring-1 transition-all ${
                 target.achieved 
-                  ? 'bg-emerald-500/20 ring-emerald-500/30 text-emerald-300' 
+                  ? 'bg-primaryBlue/20 ring-primaryBlue/30 text-blue-300' 
                   : 'bg-red-500/20 ring-red-500/30 text-red-300'
               }`}
             >
@@ -325,7 +325,7 @@ export default function V3Dashboard() {
             </p>
             <Button 
               onClick={() => refetch()}
-              className="bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-bold px-6 py-3 rounded-xl transition-all hover:scale-105"
+              className="bg-primaryBlue hover:bg-blue-600 text-white font-bold px-6 py-3 rounded-xl transition-all hover:scale-105"
               data-testid="button-retry"
             >
               Retry
@@ -345,9 +345,9 @@ export default function V3Dashboard() {
           icon={BarChart3}
         />
         <div className="max-w-4xl mx-auto p-6">
-          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-8 shadow-xl shadow-emerald-500/5 text-center">
-            <div className="p-3 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30 w-fit mx-auto mb-6">
-              <BarChart3 className="text-emerald-400" size={48} />
+          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-8 shadow-xl shadow-primaryBlue/5 text-center">
+            <div className="p-3 rounded-lg bg-primaryBlue/20 ring-1 ring-primaryBlue/30 w-fit mx-auto mb-6">
+              <BarChart3 className="text-primaryBlue" size={48} />
             </div>
             <h3 className="text-2xl font-black uppercase tracking-wide text-slate-100 mb-4">
               No Data Available
@@ -369,9 +369,9 @@ export default function V3Dashboard() {
         icon={BarChart3}
       >
         <div className="flex items-center space-x-2">
-          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-emerald-500/30 border-0 rounded-xl px-3 py-1 flex items-center space-x-2">
-            <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-sm font-semibold text-emerald-400 uppercase tracking-wide">Live</span>
+          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-primaryBlue/30 border-0 rounded-xl px-3 py-1 flex items-center space-x-2">
+            <div className="h-2 w-2 rounded-full bg-primaryBlue animate-pulse" />
+            <span className="text-sm font-semibold text-primaryBlue uppercase tracking-wide">Live</span>
           </div>
           <span className="text-xs text-slate-400 font-medium">
             Last updated: {new Date(metricsData.timestamp).toLocaleTimeString()}
@@ -450,28 +450,28 @@ export default function V3Dashboard() {
             <TabsTrigger 
               value="overview" 
               data-testid="tab-overview"
-              className="data-[state=active]:bg-emerald-500/20 data-[state=active]:ring-1 data-[state=active]:ring-emerald-500/30 data-[state=active]:text-emerald-400 text-slate-300 font-semibold uppercase tracking-wide rounded-lg px-4 py-3 transition-all hover:bg-white/10"
+              className="data-[state=active]:bg-primaryBlue/20 data-[state=active]:ring-1 data-[state=active]:ring-primaryBlue/30 data-[state=active]:text-primaryBlue text-slate-300 font-semibold uppercase tracking-wide rounded-lg px-4 py-3 transition-all hover:bg-white/10"
             >
               Overview
             </TabsTrigger>
             <TabsTrigger 
               value="engines" 
               data-testid="tab-engines"
-              className="data-[state=active]:bg-emerald-500/20 data-[state=active]:ring-1 data-[state=active]:ring-emerald-500/30 data-[state=active]:text-emerald-400 text-slate-300 font-semibold uppercase tracking-wide rounded-lg px-4 py-3 transition-all hover:bg-white/10"
+              className="data-[state=active]:bg-primaryBlue/20 data-[state=active]:ring-1 data-[state=active]:ring-primaryBlue/30 data-[state=active]:text-primaryBlue text-slate-300 font-semibold uppercase tracking-wide rounded-lg px-4 py-3 transition-all hover:bg-white/10"
             >
               Sport Engines
             </TabsTrigger>
             <TabsTrigger 
               value="achievements" 
               data-testid="tab-achievements"
-              className="data-[state=active]:bg-emerald-500/20 data-[state=active]:ring-1 data-[state=active]:ring-emerald-500/30 data-[state=active]:text-emerald-400 text-slate-300 font-semibold uppercase tracking-wide rounded-lg px-4 py-3 transition-all hover:bg-white/10"
+              className="data-[state=active]:bg-primaryBlue/20 data-[state=active]:ring-1 data-[state=active]:ring-primaryBlue/30 data-[state=active]:text-primaryBlue text-slate-300 font-semibold uppercase tracking-wide rounded-lg px-4 py-3 transition-all hover:bg-white/10"
             >
               V3 Achievements
             </TabsTrigger>
             <TabsTrigger 
               value="system" 
               data-testid="tab-system"
-              className="data-[state=active]:bg-emerald-500/20 data-[state=active]:ring-1 data-[state=active]:ring-emerald-500/30 data-[state=active]:text-emerald-400 text-slate-300 font-semibold uppercase tracking-wide rounded-lg px-4 py-3 transition-all hover:bg-white/10"
+              className="data-[state=active]:bg-primaryBlue/20 data-[state=active]:ring-1 data-[state=active]:ring-primaryBlue/30 data-[state=active]:text-primaryBlue text-slate-300 font-semibold uppercase tracking-wide rounded-lg px-4 py-3 transition-all hover:bg-white/10"
             >
               System Health
             </TabsTrigger>
@@ -482,10 +482,10 @@ export default function V3Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <V3AchievementCard achievements={metricsData.v3Achievements} />
             
-            <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5">
+            <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-primaryBlue/5">
               <div className="flex items-center space-x-3 mb-6">
-                <div className="p-2 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30">
-                  <BarChart3 className="text-emerald-400" size={20} />
+                <div className="p-2 rounded-lg bg-primaryBlue/20 ring-1 ring-primaryBlue/30">
+                  <BarChart3 className="text-primaryBlue" size={20} />
                 </div>
                 <h3 className="text-xl font-black uppercase tracking-wide text-slate-100">Performance Grades</h3>
               </div>
@@ -521,10 +521,10 @@ export default function V3Dashboard() {
         
         <TabsContent value="achievements" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5">
+            <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-primaryBlue/5">
               <div className="flex items-center space-x-3 mb-6">
-                <div className="p-2 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30">
-                  <Target className="text-emerald-400" size={20} />
+                <div className="p-2 rounded-lg bg-primaryBlue/20 ring-1 ring-primaryBlue/30">
+                  <Target className="text-primaryBlue" size={20} />
                 </div>
                 <h3 className="text-xl font-black uppercase tracking-wide text-slate-100">Sub-250ms Achievement Status</h3>
               </div>
@@ -540,12 +540,12 @@ export default function V3Dashboard() {
                     </div>
                     <div className="flex items-center space-x-3">
                       {target.achieved ? (
-                        <CheckCircle className="text-emerald-400" size={20} />
+                        <CheckCircle className="text-primaryBlue" size={20} />
                       ) : (
                         <AlertTriangle className="text-red-400" size={20} />
                       )}
                       <span className={`font-bold text-sm uppercase tracking-wide ${
-                        target.achieved ? 'text-emerald-400' : 'text-red-400'
+                        target.achieved ? 'text-primaryBlue' : 'text-red-400'
                       }`}>
                         {target.achieved ? 'Achieved' : 'Needs Work'}
                       </span>
@@ -555,27 +555,27 @@ export default function V3Dashboard() {
               </div>
             </div>
             
-            <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5">
+            <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-primaryBlue/5">
               <div className="flex items-center space-x-3 mb-6">
-                <div className="p-2 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30">
-                  <TrendingUp className="text-emerald-400" size={20} />
+                <div className="p-2 rounded-lg bg-primaryBlue/20 ring-1 ring-primaryBlue/30">
+                  <TrendingUp className="text-primaryBlue" size={20} />
                 </div>
                 <h3 className="text-xl font-black uppercase tracking-wide text-slate-100">Recommendations</h3>
               </div>
               {metricsData.recommendations.length > 0 ? (
                 <div className="space-y-3">
                   {metricsData.recommendations.map((recommendation, index) => (
-                    <div key={index} className="p-4 bg-emerald-500/10 backdrop-blur-sm ring-1 ring-emerald-500/20 rounded-xl border-l-4 border-emerald-400">
+                    <div key={index} className="p-4 bg-primaryBlue/10 backdrop-blur-sm ring-1 ring-primaryBlue/20 rounded-xl border-l-4 border-primaryBlue">
                       <p className="text-slate-300 font-medium">{recommendation}</p>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <div className="p-3 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30 w-fit mx-auto mb-4">
-                    <CheckCircle className="text-emerald-400" size={48} />
+                  <div className="p-3 rounded-lg bg-primaryBlue/20 ring-1 ring-primaryBlue/30 w-fit mx-auto mb-4">
+                    <CheckCircle className="text-primaryBlue" size={48} />
                   </div>
-                  <p className="text-emerald-400 font-bold text-lg">
+                  <p className="text-primaryBlue font-bold text-lg">
                     All systems performing optimally!
                   </p>
                 </div>
@@ -587,14 +587,14 @@ export default function V3Dashboard() {
         <TabsContent value="system" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <MetricCard
-              icon={<Monitor className="text-emerald-400" size={20} />}
+              icon={<Monitor className="text-primaryBlue" size={20} />}
               title="Active Engines"
               value={`${metricsData.systemHealth.healthyEngines}/${metricsData.systemHealth.activeEngines}`}
               status={metricsData.systemHealth.overallHealth > 90 ? 'good' : 'warning'}
             />
             
             <MetricCard
-              icon={<Zap className="text-emerald-400" size={20} />}
+              icon={<Zap className="text-primaryBlue" size={20} />}
               title="System Health"
               value={metricsData.systemHealth.overallHealth.toFixed(1)}
               unit="%"
@@ -602,7 +602,7 @@ export default function V3Dashboard() {
             />
             
             <MetricCard
-              icon={<Activity className="text-emerald-400" size={20} />}
+              icon={<Activity className="text-primaryBlue" size={20} />}
               title="Alert Efficiency"
               value={metricsData.systemHealth.alertGenerationEfficiency.toFixed(1)}
               unit="%"
@@ -610,10 +610,10 @@ export default function V3Dashboard() {
             />
           </div>
           
-          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5">
+          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-primaryBlue/5">
             <div className="flex items-center space-x-3 mb-6">
-              <div className="p-2 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30">
-                <Monitor className="text-emerald-400" size={20} />
+              <div className="p-2 rounded-lg bg-primaryBlue/20 ring-1 ring-primaryBlue/30">
+                <Monitor className="text-primaryBlue" size={20} />
               </div>
               <h3 className="text-xl font-black uppercase tracking-wide text-slate-100">System Status Details</h3>
             </div>
@@ -627,7 +627,7 @@ export default function V3Dashboard() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-300 font-medium">Healthy Engines:</span>
-                    <span className="font-bold text-emerald-400">{metricsData.systemHealth.healthyEngines}</span>
+                    <span className="font-bold text-primaryBlue">{metricsData.systemHealth.healthyEngines}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-300 font-medium">Overall Health:</span>

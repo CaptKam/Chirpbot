@@ -129,7 +129,7 @@ export function ROICalculator() {
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ duration: 0.3 }}
-                  className="bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 rounded-2xl p-6 border border-emerald-500/30"
+                  className="bg-gradient-to-br from-primaryBlue/20 to-primaryBlue/10 rounded-2xl p-6 border border-primaryBlue/30"
                 >
                   <div className="flex items-center gap-2 mb-4">
                     <TrendingUp className="w-5 h-5 text-[#10B981]" />
@@ -172,7 +172,7 @@ export function ROICalculator() {
                 </div>
                 
                 <Link href="/signup?plan=pro">
-                  <Button className="w-full bg-emerald-500 hover:bg-[#10B981] text-slate-900 py-6 text-lg font-bold rounded-xl shadow-lg shadow-emerald-500/25 hover:scale-[1.02] transition-all duration-300">
+                  <Button className="w-full bg-primaryBlue hover:bg-blue-600 text-white py-6 text-lg font-bold rounded-xl shadow-lg shadow-primaryBlue/25 hover:scale-[1.02] transition-all duration-300">
                     Start Earning +${Math.round(additionalProfit)}/month
                   </Button>
                 </Link>

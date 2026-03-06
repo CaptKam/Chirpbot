@@ -566,7 +566,7 @@ export default function Settings() {
                            activeSport === 'NCAAF' ? 'text-blue-400' :
                            activeSport === 'CFL' ? 'text-red-400' :
                            activeSport === 'WNBA' ? 'text-pink-400' :
-                           'text-emerald-400';
+                           'text-primaryBlue';
 
     switch (category) {
       case "Game Situations":
@@ -588,28 +588,28 @@ export default function Settings() {
              activeSport === 'NCAAF' ? 'hover:bg-blue-500/20' :
              activeSport === 'CFL' ? 'hover:bg-red-500/20' :
              activeSport === 'WNBA' ? 'hover:bg-pink-500/20' :
-             'hover:bg-emerald-500/20',
+             'hover:bg-primaryBlue/20',
     hoverBorder: activeSport === 'MLB' ? 'hover:border-green-500' :
                  activeSport === 'NFL' ? 'hover:border-orange-500' :
                  activeSport === 'NBA' ? 'hover:border-purple-500' :
                  activeSport === 'NCAAF' ? 'hover:border-blue-500' :
                  activeSport === 'CFL' ? 'hover:border-red-500' :
                  activeSport === 'WNBA' ? 'hover:border-pink-500' :
-                 'hover:border-emerald-500',
+                 'hover:border-primaryBlue',
     cardBg: activeSport === 'MLB' ? 'bg-green-500/5' :
             activeSport === 'NFL' ? 'bg-orange-500/5' :
             activeSport === 'NBA' ? 'bg-purple-500/5' :
             activeSport === 'NCAAF' ? 'bg-blue-500/5' :
             activeSport === 'CFL' ? 'bg-red-500/5' :
             activeSport === 'WNBA' ? 'bg-pink-500/5' :
-            'bg-emerald-500/5',
+            'bg-primaryBlue/5',
     checkedBg: activeSport === 'MLB' ? 'data-[state=checked]:bg-green-500' :
                activeSport === 'NFL' ? 'data-[state=checked]:bg-orange-500' :
                activeSport === 'NBA' ? 'data-[state=checked]:bg-purple-500' :
                activeSport === 'NCAAF' ? 'data-[state=checked]:bg-blue-500' :
                activeSport === 'CFL' ? 'data-[state=checked]:bg-red-500' :
                activeSport === 'WNBA' ? 'data-[state=checked]:bg-pink-500' :
-               'data-[state=checked]:bg-emerald-500'
+               'data-[state=checked]:bg-primaryBlue'
   }), [activeSport]);
 
   const getHoverBgClass = () => sportClasses.hoverBg;
@@ -621,7 +621,7 @@ export default function Settings() {
            activeSport === 'NCAAF' ? 'hover:border-blue-500' :
            activeSport === 'CFL' ? 'hover:border-red-500' :
            activeSport === 'WNBA' ? 'hover:border-pink-500' :
-           'hover:border-emerald-500';
+           'hover:border-primaryBlue';
   };
 
   const getHoverRingClass = () => {
@@ -631,7 +631,7 @@ export default function Settings() {
            activeSport === 'NCAAF' ? 'hover:ring-blue-500/30' :
            activeSport === 'CFL' ? 'hover:ring-red-500/30' :
            activeSport === 'WNBA' ? 'hover:ring-pink-500/30' :
-           'hover:ring-emerald-500/30';
+           'hover:ring-primaryBlue/30';
   };
 
   const getGroupHoverTextClass = () => {
@@ -641,7 +641,7 @@ export default function Settings() {
            activeSport === 'NCAAF' ? 'group-hover:text-blue-400' :
            activeSport === 'CFL' ? 'group-hover:text-red-400' :
            activeSport === 'WNBA' ? 'group-hover:text-pink-400' :
-           'group-hover:text-emerald-400';
+           'group-hover:text-primaryBlue';
   };
 
   const getCheckedBgClass = () => {
@@ -651,7 +651,7 @@ export default function Settings() {
            activeSport === 'NCAAF' ? 'data-[state=checked]:bg-blue-500' :
            activeSport === 'CFL' ? 'data-[state=checked]:bg-red-500' :
            activeSport === 'WNBA' ? 'data-[state=checked]:bg-pink-500' :
-           'data-[state=checked]:bg-emerald-500';
+           'data-[state=checked]:bg-primaryBlue';
   };
 
   const getRingClass = () => {
@@ -661,7 +661,7 @@ export default function Settings() {
            activeSport === 'NCAAF' ? 'ring-blue-500/30' :
            activeSport === 'CFL' ? 'ring-red-500/30' :
            activeSport === 'WNBA' ? 'ring-pink-500/30' :
-           'ring-emerald-500/30';
+           'ring-primaryBlue/30';
   };
 
   const getBorderClass = () => {
@@ -671,7 +671,7 @@ export default function Settings() {
            activeSport === 'NCAAF' ? 'border-blue-500' :
            activeSport === 'CFL' ? 'border-red-500' :
            activeSport === 'WNBA' ? 'border-pink-500' :
-           'border-emerald-500';
+           'border-primaryBlue';
   };
 
   const getCardBgClass = () => {
@@ -681,7 +681,7 @@ export default function Settings() {
            activeSport === 'NCAAF' ? 'bg-blue-500/5' :
            activeSport === 'CFL' ? 'bg-red-500/5' :
            activeSport === 'WNBA' ? 'bg-pink-500/5' :
-           'bg-emerald-500/5';
+           'bg-primaryBlue/5';
   };
 
   const getCardBorderClass = () => {
@@ -691,7 +691,7 @@ export default function Settings() {
            activeSport === 'NCAAF' ? 'border-blue-500/20' :
            activeSport === 'CFL' ? 'border-red-500/20' :
            activeSport === 'WNBA' ? 'border-pink-500/20' :
-           'border-emerald-500/20';
+           'border-primaryBlue/20';
   };
 
   const getCardHoverBgClass = () => {
@@ -701,7 +701,7 @@ export default function Settings() {
            activeSport === 'NCAAF' ? 'hover:bg-blue-500/10' :
            activeSport === 'CFL' ? 'hover:bg-red-500/10' :
            activeSport === 'WNBA' ? 'hover:bg-pink-500/10' :
-           'hover:bg-emerald-500/10';
+           'hover:bg-primaryBlue/10';
   };
 
   if (isAuthLoading) {
@@ -1000,9 +1000,9 @@ export default function Settings() {
 
         {/* Telegram Configuration Section */}
         {isAuthenticated && user && (
-          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-emerald-500/5">
+          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-primaryBlue/5">
             <div className="flex items-center space-x-4 mb-6">
-              <div className="h-12 w-12 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-lg bg-primaryBlue/20 ring-1 ring-primaryBlue/30 flex items-center justify-center">
                 <Send className="w-6 h-6 text-[#10B981]" />
               </div>
               <div>
@@ -1090,7 +1090,7 @@ export default function Settings() {
                     variant="outline"
                     size="sm"
                     data-testid="button-test-telegram"
-                    className="border-emerald-500/30 text-[#10B981] hover:bg-emerald-500/10 hover:border-[#10B981] transition-all duration-300 group"
+                    className="border-primaryBlue/30 text-primaryBlue hover:bg-primaryBlue/10 hover:border-[#10B981] transition-all duration-300 group"
                   >
                     {testingConnection ? (
                       <div className="w-4 h-4 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin mr-2" />
@@ -1109,7 +1109,7 @@ export default function Settings() {
                     disabled={updateTelegramMutation.isPending}
                     size="sm"
                     data-testid="button-save-telegram"
-                    className="bg-[#10B981] hover:bg-emerald-600 text-slate-900 shadow-lg shadow-emerald-500/25 hover:scale-[1.02] transition-all duration-300 group font-semibold"
+                    className="bg-primaryBlue hover:bg-blue-600 text-white shadow-lg shadow-primaryBlue/25 hover:scale-[1.02] transition-all duration-300 group font-semibold"
                   >
                     {updateTelegramMutation.isPending ? (
                       <div className="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin mr-2" />
@@ -1121,7 +1121,7 @@ export default function Settings() {
                 </div>
 
                 {/* Help Text */}
-                <div className="p-4 bg-emerald-500/10 rounded-lg border border-emerald-500/20 ring-1 ring-emerald-500/20">
+                <div className="p-4 bg-primaryBlue/10 rounded-lg border border-primaryBlue/20 ring-1 ring-primaryBlue/20">
                   <h4 className="text-sm font-semibold text-[#10B981] mb-2">How to Set Up Your Telegram Bot:</h4>
                   <ol className="text-xs text-slate-300 space-y-1 list-decimal list-inside">
                     <li>Open Telegram and search for @BotFather</li>
