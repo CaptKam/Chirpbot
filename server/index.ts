@@ -343,10 +343,18 @@ async function startServer() {
 
     if (fs.existsSync(indexPath)) {
       console.log('✅ Built assets detected - serving static files from', staticRoot);
-      app.use(express.static(staticRoot));
+      app.use(express.static(staticRoot, {
+        maxAge: '1h',
+        setHeaders: (res, filePath) => {
+          if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+          }
+        }
+      }));
 
       // SPA catch-all for all non-API routes
       app.get(/^\/(?!api|admin|realtime-alerts).*$/, (_req, res) => {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         res.sendFile(indexPath);
       });
       console.log('✅ Static SPA serving configured - frontend ready');
