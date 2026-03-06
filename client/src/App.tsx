@@ -12,6 +12,7 @@ import Settings from "./pages/settings";
 import Signup from "./pages/signup";
 import Login from "./pages/login";
 import Alerts from "./pages/alerts";
+import GameNarrative from "./pages/game-narrative";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { AuthLoading } from "@/components/sports-loading";
 
@@ -63,6 +64,7 @@ function ProtectedDashboard() { return <ProtectedRoute><Dashboard /></ProtectedR
 function ProtectedCalendar() { return <ProtectedRoute><Calendar /></ProtectedRoute>; }
 function ProtectedAlerts() { return <ProtectedRoute><Alerts /></ProtectedRoute>; }
 function ProtectedSettings() { return <ProtectedRoute><Settings /></ProtectedRoute>; }
+function ProtectedGameNarrative() { return <ProtectedRoute><GameNarrative /></ProtectedRoute>; }
 
 function RegularAppContent() {
   const { isAuthenticated } = useAuth();
@@ -77,6 +79,7 @@ function RegularAppContent() {
         <Route path="/calendar" component={ProtectedCalendar} />
         <Route path="/alerts" component={ProtectedAlerts} />
         <Route path="/settings" component={ProtectedSettings} />
+        <Route path="/game/:gameId" component={ProtectedGameNarrative} />
         <Route component={NotFound} />
       </Switch>
       {isAuthenticated && <BottomNavigation />}
