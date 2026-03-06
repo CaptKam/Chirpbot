@@ -383,8 +383,11 @@ export class UnifiedAIProcessor {
           // FIXED: Now we AWAIT the promise chain instead of fire-and-forget
           try {
             let enhancedAlert = { ...alert };
-            const gamblingEnhanced = await this.applyGamblingInsightsEnhancement(enhancedAlert, context);
-            const fullyEnhanced = await this.applyWeatherEnhancement(gamblingEnhanced, context);
+            const [gamblingEnhanced, weatherResult] = await Promise.all([
+              this.applyGamblingInsightsEnhancement(enhancedAlert, context),
+              this.applyWeatherEnhancement(enhancedAlert, context),
+            ]);
+            const fullyEnhanced = { ...gamblingEnhanced, context: { ...gamblingEnhanced.context, ...weatherResult.context } };
             
             // Build enhanced alert with cached AI response and unified flags
             const finalAlert = this.buildEnhancedAlert(fullyEnhanced, {
@@ -1073,14 +1076,13 @@ export class UnifiedAIProcessor {
       }
 
       // NORMAL ENHANCEMENT PATHWAY: Standard alert enhancement
-      // Step 1: Apply gambling insights enhancement
-      enhancedAlert = await this.applyGamblingInsightsEnhancement(enhancedAlert, context);
-
-      // Step 2: Apply weather enhancement (for outdoor sports)
-      enhancedAlert = await this.applyWeatherEnhancement(enhancedAlert, context);
-
-      // Step 3: Apply AI enhancement  
-      const aiResponse = await this.enhanceAlert(context);
+      // Steps 1-3 run in parallel where possible
+      const [gamblingResult, weatherResult, aiResponse] = await Promise.all([
+        this.applyGamblingInsightsEnhancement(enhancedAlert, context),
+        this.applyWeatherEnhancement(enhancedAlert, context),
+        this.enhanceAlert(context),
+      ]);
+      enhancedAlert = { ...gamblingResult, context: { ...gamblingResult.context, ...weatherResult.context } };
 
       // Combine all enhancements into final result
       const merged = {
@@ -1121,16 +1123,17 @@ export class UnifiedAIProcessor {
 
   // LIMITED ENHANCEMENT: Apply gambling + weather only (for gated alerts)
   async applyLimitedUnifiedEnhancement(alert: AlertResult, context: CrossSportContext): Promise<AlertResult> {
-    console.log(`🔗 Limited Enhancement: Applying gambling+weather only for ${context.sport} ${context.alertType}`);
+    // Limited enhancement: gambling + weather only (no AI)
 
     let enhancedAlert = { ...alert };
 
     try {
-      // Step 1: Apply gambling insights enhancement
-      enhancedAlert = await this.applyGamblingInsightsEnhancement(enhancedAlert, context);
-
-      // Step 2: Apply weather enhancement (for outdoor sports)
-      enhancedAlert = await this.applyWeatherEnhancement(enhancedAlert, context);
+      // Steps 1+2: Apply gambling + weather in parallel
+      const [gamblingResult, weatherResult] = await Promise.all([
+        this.applyGamblingInsightsEnhancement(enhancedAlert, context),
+        this.applyWeatherEnhancement(enhancedAlert, context),
+      ]);
+      enhancedAlert = { ...gamblingResult, context: { ...gamblingResult.context, ...weatherResult.context } };
 
       // Mark as having limited enhancement
       enhancedAlert.context = {

@@ -714,7 +714,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Set up callback to save enhanced alerts to database
   unifiedAIProcessor.setOnEnhancedAlert(async (alert, userId, sport, wasActuallyEnhanced) => {
     try {
-      console.log(`💾 Saving enhanced alert to database: ${alert.alertKey}`);
 
       // Extract gameId from alertKey for all sports
       let gameId = 'unknown';
@@ -754,21 +753,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Pattern 4: Fallback to context.gameId if extraction failed
       if (gameId === 'unknown' && (alert as any).context?.gameId) {
         gameId = (alert as any).context.gameId;
-        console.log(`✅ Using gameId from alert context: ${gameId}`);
       }
 
-      console.log(`📌 Extracted gameId: ${gameId} from alertKey: ${alert.alertKey}`);
-
-      // Get all users monitoring this game
       const usersMonitoring = await storage.getUsersMonitoringGame(gameId);
-      console.log(`👥 Found ${usersMonitoring.length} users monitoring game ${gameId}`);
 
       // FIXED: Always save enhanced alerts with gambling insights to database
       // Only skip user-specific deliveries if no users are monitoring
       if (usersMonitoring.length === 0) {
-        console.log(`⚠️ No users monitoring game ${gameId}, skipping user deliveries but saving enhanced alert for analytics`);
-
-        // Save the enhanced alert without user association for data completeness
         try {
           await storage.createAlert({
             alertKey: alert.alertKey,
@@ -789,9 +780,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
               hasComposerEnhancement: alert.hasComposerEnhancement || false
             })
           });
-          console.log(`✅ Enhanced alert saved to database for analytics: ${alert.alertKey}`);
         } catch (saveError) {
-          console.error(`❌ Failed to save enhanced alert:`, saveError);
+          console.error('[Alert] Failed to save unmonitored alert:', saveError);
         }
         return;
       }
@@ -802,43 +792,23 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       for (const userGame of usersMonitoring) {
         try {
-          // 🔎 CRITICAL FIX: Check user preferences FIRST before ANY other checks (including deduplication)
           const sportKey = (sport || '').toString().toLowerCase();
-          console.log(`🔎 PrefCheck start for user ${userGame.userId} type=${alert.type} sport=${sportKey}`);
-
-          if (!sportKey) {
-            console.log(`⚠️ No sport key found for alert ${alert.type}, skipping user ${userGame.userId}`);
-            continue;
-          }
+          if (!sportKey) continue;
 
           const userPrefs = await storage.getUserAlertPreferencesBySport(userGame.userId, sportKey);
           const alertPref = userPrefs.find(p => p.alertType === alert.type);
-          // CRITICAL FIX: Change default from true to false - opt-in instead of opt-out
           const isEnabled = alertPref ? !!alertPref.enabled : false;
-
-          // Enhanced logging to track preference behavior
-          if (!alertPref) {
-            console.log(`🔍 NO_PREFERENCE_SET for user ${userGame.userId} alert ${alert.type} - defaulting to DISABLED (opt-in behavior)`);
-          } else {
-            console.log(`🔧 EXPLICIT_PREFERENCE for user ${userGame.userId} alert ${alert.type} = ${alertPref.enabled}`);
-          }
 
           if (!isEnabled) {
             skippedCount++;
-            console.log(`🚫 Alert ${alert.type} disabled for user ${userGame.userId}, skipping`);
             continue;
           }
 
-          // Check global admin settings as final filter before sending alerts
-          // This allows users to set preferences, but enforces admin settings at delivery time
           const isGloballyEnabled = await storage.isAlertGloballyEnabled(sportKey, alert.type);
           if (!isGloballyEnabled) {
             skippedCount++;
-            console.log(`🚫 Alert ${alert.type} globally disabled by admin for user ${userGame.userId}, skipping`);
             continue;
           }
-
-          console.log(`✅ Alert ${alert.type} enabled for user ${userGame.userId}, proceeding to duplicate check`);
 
           // FIXED DEDUPLICATION BUG: Check if this specific alert already exists AND is still active (non-expired)
           const existingAlerts = await db.select()
@@ -867,8 +837,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
             // If new alert has gambling insights and existing doesn't, UPDATE the existing alert
             if (hasNewGamblingInsights && !hasExistingGamblingInsights) {
-              console.log(`🔄 Updating existing alert with AI-enhanced gambling insights for user ${userGame.userId}`);
-
               const updatedPayload = {
                 ...existingPayload,
                 gamblingInsights: alert.gamblingInsights,
@@ -885,11 +853,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
                 .where(eq(alertsTable.id, existingAlert.id));
 
               savedCount++;
-              console.log(`✅ Alert updated with gambling insights for user ${userGame.userId}: ${alert.alertKey}`);
             } else {
-              // Both alerts are the same type (both basic or both enhanced) - skip duplicate
               skippedCount++;
-              console.log(`⏭️ Active alert already exists for user ${userGame.userId}, skipping`);
             }
             continue;
           }
@@ -915,37 +880,19 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           });
 
           savedCount++;
-          console.log(`✅ Alert saved for user ${userGame.userId}: ${alert.alertKey}`);
 
-          // 📱 FIXED: Add Telegram delivery (was missing in UnifiedAIProcessor pipeline)
-          try {
-            const user = await storage.getUserById(userGame.userId);
+          // Telegram delivery (fire-and-forget, don't block alert pipeline)
+          storage.getUserById(userGame.userId).then(user => {
             if (user?.telegramEnabled && user?.telegramBotToken && user?.telegramChatId) {
-              const telegramConfig = {
-                botToken: user.telegramBotToken,
-                chatId: user.telegramChatId
-              };
-              console.log(`📱 Sending Telegram alert to ${user.username || user.id}`);
-              const sent = await sendTelegramAlert(telegramConfig, alert);
-              if (sent) {
-                console.log(`📱 ✅ Telegram alert delivered to ${user.username || user.id}`);
-              } else {
-                console.log(`📱 ❌ Telegram delivery failed to ${user.username || user.id}`);
-              }
-            } else {
-              console.log(`📱 ⏭️ Telegram not configured for user ${user?.username || userGame.userId}`);
+              sendTelegramAlert({ botToken: user.telegramBotToken, chatId: user.telegramChatId }, alert)
+                .catch(err => console.error('[Telegram] delivery failed:', err));
             }
-          } catch (telegramError) {
-            console.error(`⚠️ Telegram notification failed for user ${userGame.userId}:`, telegramError);
-          }
+          }).catch(() => {});
 
         } catch (error: any) {
-          // Handle any other database errors
-          console.error(`❌ Failed to save alert for user ${userGame.userId}:`, error);
+          console.error(`[Alert] save failed for user ${userGame.userId}:`, error?.message);
         }
       }
-
-      console.log(`📊 Alert save summary: ${savedCount} saved, ${skippedCount} skipped (already existed)`);
 
       // Broadcast to frontend via SSE (once for all users)
       if (savedCount > 0) {
