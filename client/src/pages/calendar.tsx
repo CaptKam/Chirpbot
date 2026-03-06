@@ -1,14 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Zap, Bell, Play, Clock, Sun, CloudRain, Cloud, UserPlus, LogOut, Sparkles, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { Play, Calendar as CalendarIcon, Search } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import type { Game, GameDay } from "@shared/schema";
 import { TeamLogo } from "@/components/team-logo";
-import { GameCardTemplate } from "@/components/GameCardTemplate";
-import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -92,107 +88,18 @@ const extractTeamAbbreviation = (teamName: string) => {
   return abbreviations[cleanName] || cleanName.slice(0, 3).toUpperCase();
 };
 
-import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
+import { format, addDays, parseISO } from "date-fns";
 import { SportsLoading, GameCardLoading } from '@/components/sports-loading';
-import { BaseballDiamond, WeatherDisplay } from '@/components/baseball-diamond';
-import { WeatherImpactVisualizer } from '@/components/WeatherImpactVisualizer';
-
-import { SportTabs } from '@/components/SportTabs';
 import { PageHeader } from '@/components/PageHeader';
 
 import { getSeasonAwareSports } from '@shared/season-manager';
 
 const SPORTS = getSeasonAwareSports();
 
-// Enhanced Game Display Component for Live MLB Games
-function EnhancedGameDisplay({ gameId, inning, isTopInning, isLive }: {
-  gameId: string;
-  inning: number;
-  isTopInning: boolean;
-  isLive: boolean
-}) {
-  const { data: enhancedData } = useQuery({
-    queryKey: ['enhanced-game', gameId],
-    queryFn: async () => {
-      const response = await fetch(`/api/games/${gameId}/live`, {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch live game data");
-      return response.json();
-    },
-    enabled: isLive,
-    refetchInterval: isLive ? 10000 : false, // Refresh every 10s for live games
-    staleTime: 8000,
-    retry: 3,
-    retryDelay: 1000
-  });
-
-  return (
-    <BaseballDiamond
-      runners={enhancedData?.runners || {
-        first: false,
-        second: false,
-        third: false
-      }}
-      inning={enhancedData?.inning || inning}
-      isTopInning={enhancedData?.isTopInning ?? isTopInning}
-      outs={enhancedData?.outs || 0}
-      balls={enhancedData?.balls || 0}
-      strikes={enhancedData?.strikes || 0}
-      size="sm"
-      showCount={isLive}
-    />
-  );
-}
-
-// Weather Display Wrapper with real API data
-function GameWeatherDisplay({ teamName, size = 'sm' }: { teamName: string; size?: 'sm' | 'md' }) {
-  const { data: weather } = useQuery({
-    queryKey: ['weather', teamName],
-    queryFn: async () => {
-      const response = await fetch(`/api/weather/team/${encodeURIComponent(teamName)}`, {
-        credentials: 'include'
-      });
-      if (!response.ok) throw new Error('Weather fetch failed');
-      return response.json();
-    },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    refetchInterval: false, // Weather doesn't need constant polling
-    retry: 1
-  });
-
-  if (!weather) {
-    // Show loading state with fallback data
-    return (
-      <WeatherDisplay
-        windSpeed={5}
-        windDirection="N"
-        size={size}
-      />
-    );
-  }
-
-  // Convert wind direction degrees to cardinal direction
-  const getCardinalDirection = (degrees: number) => {
-    const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-    const index = Math.round(degrees / 22.5) % 16;
-    return directions[index];
-  };
-
-  return (
-    <WeatherDisplay
-      windSpeed={weather.windSpeed}
-      windDirection={getCardinalDirection(weather.windDirection)}
-      size={size}
-    />
-  );
-}
-
 export default function Calendar() {
   const { toast } = useToast();
   const [activeSport, setActiveSport] = useState("MLB");
   const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [teamFilter, setTeamFilter] = useState<{homeTeam?: string, awayTeam?: string} | null>(null);
 
   // Fetch server's Pacific date to ensure timezone alignment
@@ -477,376 +384,228 @@ export default function Calendar() {
   // Calculate selected count only for current sport's games
   const selectedCount = games.filter(game => selectedGames.has(game.gameId || game.id)).length;
 
-  const getWeatherIcon = (condition: string) => {
-    switch (condition.toLowerCase()) {
-      case "sunny":
-      case "clear":
-        return <Sun className="w-3 h-3" />;
-      case "cloudy":
-      case "overcast":
-        return <Cloud className="w-3 h-3" />;
-      case "rain":
-      case "rainy":
-        return <CloudRain className="w-3 h-3" />;
-      default:
-        return <Sun className="w-3 h-3" />;
+  // Search filter
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchFilteredGames = searchQuery.trim()
+    ? games.filter(g => {
+        const q = searchQuery.toLowerCase();
+        return (g.homeTeam?.name?.toLowerCase().includes(q) ||
+                g.awayTeam?.name?.toLowerCase().includes(q) ||
+                g.venue?.toLowerCase().includes(q));
+      })
+    : games;
+
+  // Get contextual badge for a game (weather, live status, etc.)
+  const getContextBadge = (game: any) => {
+    if (game.status === 'live') {
+      const state = game.inning ? `${game.inningState === 'Top' ? 'Top' : 'Bot'} ${game.inning}` :
+                    game.quarter ? `Q${game.quarter} ${game.timeRemaining || ''}`.trim() :
+                    game.period ? `P${game.period} ${game.timeRemaining || ''}`.trim() : 'Live';
+      return { text: state, color: 'text-emeraldGreen', bg: 'bg-emeraldGreen/10', icon: <Play className="w-3.5 h-3.5" /> };
     }
+    if (game.status === 'final') {
+      return { text: 'Final', color: 'text-slate-400', bg: 'bg-slate-500/10', icon: null };
+    }
+    return null;
   };
 
+  const dateLabel = selectedDates.size === 1 && serverDate?.date && selectedDates.has(serverDate.date)
+    ? "Today's"
+    : selectedDates.size === 4 ? "Next 4 Days"
+    : `${selectedDates.size} Days`;
+
+  const displayDate = serverDate?.date
+    ? format(parseISO(serverDate.date + 'T12:00:00'), 'MMM d, yyyy')
+    : '';
 
   return (
-    <>
-
-
     <div className="pb-24 sm:pb-28 bg-solidBackground text-white antialiased min-h-screen">
-      <PageHeader
-        title="ChirpBot"
-        subtitle="Game Calendar & Monitoring"
-      />
+      <PageHeader title="ChirpBot" subtitle="Smart Alert Setup" />
 
-      {/* Sport Tabs */}
-      <SportTabs
-        sports={SPORTS}
-        activeSport={activeSport}
-        onSportChange={setActiveSport}
-        onSportChangeCallback={() => {
-          // Clear cache when switching sports to ensure fresh data
-          queryClient.invalidateQueries({ queryKey: ["/api/games/today"] });
-        }}
-      />
-
-      {/* Teams List */}
-      <div className="p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center space-x-3">
-              <h2 className="text-xl font-black uppercase tracking-wide text-slate-100">
-                {selectedDates.size === 1 && serverDate?.date && selectedDates.has(serverDate.date)
-                  ? "Today's Games"
-                  : selectedDates.size === 1
-                  ? format(parseISO(Array.from(selectedDates)[0] + 'T12:00:00'), 'MMMM d, yyyy')
-                  : selectedDates.size === 4 && serverDate?.date && Array.from(selectedDates).includes(serverDate.date)
-                  ? "Next 4 Days"
-                  : `${selectedDates.size} Days Selected`}
-                {teamFilter && (
-                  <span className="text-sm font-normal text-primaryBlue ml-2">
-                    - {teamFilter.homeTeam || teamFilter.awayTeam} games
-                  </span>
-                )}
-              </h2>
-              <Button
-                variant="outline"
-                size="default"
-                onClick={() => setShowDatePicker(!showDatePicker)}
-                className="bg-primaryBlue/30 backdrop-blur-sm border-primaryBlue/60 ring-2 ring-primaryBlue/40 text-blue-200 hover:bg-primaryBlue/40 hover:text-blue-100 hover:border-primaryBlue hover:ring-primaryBlue/60 transition-all duration-200 font-bold shadow-lg shadow-primaryBlue/20"
-                data-testid="button-date-picker"
-              >
-                <CalendarIcon className="w-5 h-5 mr-2" />
-                Pick Multiple Days
-              </Button>
-            </div>
-
-          </div>
-          <div className="px-3 py-1 rounded-xl bg-white/5 ring-1 ring-white/10 backdrop-blur-sm">
-            <span className="text-sm font-semibold text-slate-300" data-testid="text-selected-count">
-              {selectedCount}/{games.length} Selected
-            </span>
-          </div>
+      {/* Search bar */}
+      <div className="px-4 pt-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-slate-900 border-none rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 focus:ring-2 focus:ring-primaryBlue/50 focus:outline-none"
+            placeholder="Search teams or venues..."
+          />
         </div>
+      </div>
 
-        {/* Date Picker */}
-        {showDatePicker && (
-          <div className="mb-4 bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl shadow-primaryBlue/5" data-testid="date-picker-container">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-black uppercase tracking-wide text-slate-100">
-                  Select Multiple Days
-                </h3>
-                <div className="text-sm text-slate-400">
-                  {selectedDates.size} day{selectedDates.size !== 1 ? 's' : ''} selected
-                </div>
-              </div>
+      {/* Sport pills */}
+      <div className="px-4 pt-4 pb-2">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+          {SPORTS.map((sport) => (
+            <button
+              key={sport}
+              onClick={() => {
+                setActiveSport(sport);
+                queryClient.invalidateQueries({ queryKey: ["/api/games/today"] });
+              }}
+              data-testid={`sport-tab-${sport.toLowerCase()}`}
+              className={`whitespace-nowrap px-6 py-1.5 rounded-full text-xs font-bold tracking-wider transition-colors ${
+                activeSport === sport
+                  ? 'bg-primaryBlue text-white'
+                  : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+              }`}
+            >
+              {sport}
+            </button>
+          ))}
+        </div>
+      </div>
 
-              {/* Team Filter Section */}
-              {teamFilter && (
-                <div className="p-3 bg-primaryBlue/10 backdrop-blur-sm ring-1 ring-primaryBlue/30 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm font-semibold text-blue-300">Filtering:</span>
-                      <span className="text-sm text-slate-200">{teamFilter.homeTeam || teamFilter.awayTeam}</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setTeamFilter(null)}
-                      className="text-red-400 hover:text-red-300 hover:bg-red-500/20 h-7 px-2"
-                    >
-                      Clear Filter
-                    </Button>
-                  </div>
-                </div>
-              )}
+      {/* Section header */}
+      <div className="px-4 py-4 flex items-center justify-between">
+        <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">
+          {dateLabel} {activeSport} Games
+        </h2>
+        <span className="text-xs font-medium text-primaryBlue">{displayDate}</span>
+      </div>
 
-              {/* Week View */}
-              <div className="grid grid-cols-7 gap-2">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                  <div key={day} className="text-center text-xs font-bold uppercase tracking-wide text-slate-400 py-2">
-                    {day}
-                  </div>
-                ))}
-
-                {serverDate?.date && eachDayOfInterval({
-                  start: startOfWeek(parseISO(serverDate.date + 'T12:00:00')),
-                  end: addDays(endOfWeek(parseISO(serverDate.date + 'T12:00:00')), 14)
-                }).map(date => {
-                  const dateStr = format(date, 'yyyy-MM-dd');
-                  const isSelected = selectedDates.has(dateStr);
-                  const todayStr = serverDate.date;
-                  const isToday = dateStr === todayStr;
-
-                  return (
-                    <Button
-                      key={date.toISOString()}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        const newDates = new Set(selectedDates);
-                        if (isSelected) {
-                          newDates.delete(dateStr);
-                          // Don't allow deselecting all dates
-                          if (newDates.size === 0 && serverDate?.date) {
-                            newDates.add(serverDate.date);
-                          }
-                        } else {
-                          newDates.add(dateStr);
-                        }
-                        setSelectedDates(newDates);
-                      }}
-                      className={`h-10 text-sm rounded-xl transition-all duration-200 ${
-                        isSelected
-                          ? 'bg-primaryBlue/30 text-blue-300 ring-2 ring-primaryBlue/50 backdrop-blur-sm shadow-lg shadow-primaryBlue/20 font-bold'
-                          : isToday
-                          ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/30 backdrop-blur-sm'
-                          : 'text-slate-300 hover:text-slate-100 hover:bg-white/5 hover:ring-1 hover:ring-white/10 backdrop-blur-sm'
-                      }`}
-                      data-testid={`button-date-${dateStr}`}
-                    >
-                      {format(date, 'd')}
-                    </Button>
-                  );
-                })}
-              </div>
-
-              {/* Quick Actions */}
-              <div className="flex flex-wrap gap-2 pt-4 border-t border-white/10">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (!serverDate?.date) return;
-                    const dates = new Set<string>();
-                    // Parse the date at noon to avoid timezone shifts
-                    const now = parseISO(serverDate.date + 'T12:00:00');
-                    for (let i = 0; i < 4; i++) {
-                      dates.add(format(addDays(now, i), 'yyyy-MM-dd'));
-                    }
-                    setSelectedDates(dates);
-                    // Force refresh the games after updating dates
-                    queryClient.invalidateQueries({ queryKey: ["/api/games/multi-day"] });
-                  }}
-                  className="text-primaryBlue border-primaryBlue/30 bg-primaryBlue/10 hover:bg-primaryBlue/20 ring-1 ring-primaryBlue/20 backdrop-blur-sm rounded-xl transition-all duration-200 font-semibold"
-                  data-testid="button-today"
-                >
-                  Next 4 Days
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (!serverDate?.date) return;
-                    const weekend = [];
-                    const now = parseISO(serverDate.date + 'T12:00:00');
-                    for (let i = 0; i < 7; i++) {
-                      const day = addDays(now, i);
-                      const dayOfWeek = day.getDay();
-                      if (dayOfWeek === 0 || dayOfWeek === 6) {
-                        weekend.push(format(day, 'yyyy-MM-dd'));
-                      }
-                    }
-                    setSelectedDates(new Set(weekend));
-                  }}
-                  className="text-blue-400 border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 ring-1 ring-blue-500/20 backdrop-blur-sm rounded-xl transition-all duration-200 font-semibold"
-                  data-testid="button-weekend"
-                >
-                  This Weekend
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (!serverDate?.date) return;
-                    const week = [];
-                    const now = parseISO(serverDate.date + 'T12:00:00');
-                    for (let i = 0; i < 7; i++) {
-                      week.push(format(addDays(now, i), 'yyyy-MM-dd'));
-                    }
-                    setSelectedDates(new Set(week));
-                  }}
-                  className="text-purple-400 border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 ring-1 ring-purple-500/20 backdrop-blur-sm rounded-xl transition-all duration-200 font-semibold"
-                  data-testid="button-week"
-                >
-                  Next 7 Days
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setShowDatePicker(false);
-                  }}
-                  className="ml-auto text-slate-400 border-slate-500/30 bg-slate-500/10 hover:bg-slate-500/20 ring-1 ring-slate-500/20 backdrop-blur-sm rounded-xl transition-all duration-200 font-semibold"
-                  data-testid="button-close"
-                >
-                  Done
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
+      {/* Game cards */}
+      <div className="flex flex-col px-4 gap-3 pb-4">
         {!isInitialized ? (
-          <div className="space-y-3">
-            <SportsLoading sport={activeSport} message="Initializing calendar..." size="lg" />
-          </div>
+          <SportsLoading sport={activeSport} message="Initializing..." size="lg" />
         ) : isLoading ? (
-          <div className="space-y-3">
+          <>
             <SportsLoading sport={activeSport} message={`Loading ${activeSport} games...`} size="lg" />
             {[...Array(2)].map((_, i) => (
               <GameCardLoading key={i} sport={activeSport} />
             ))}
-          </div>
-        ) : games.length === 0 ? (
-          <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-8 text-center shadow-xl shadow-primaryBlue/5" data-testid="empty-state">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primaryBlue/20 ring-1 ring-primaryBlue/30 flex items-center justify-center">
-              <CalendarIcon className="w-8 h-8 text-primaryBlue" />
-            </div>
-            <h3 className="text-xl font-black uppercase tracking-wide text-slate-100 mb-2">No Games Scheduled</h3>
-            <p className="text-sm text-slate-400">Check back later or try a different sport</p>
+          </>
+        ) : searchFilteredGames.length === 0 ? (
+          <div className="bg-slate-900/50 rounded-xl p-8 text-center border border-slate-800" data-testid="empty-state">
+            <CalendarIcon className="w-8 h-8 text-slate-500 mx-auto mb-3" />
+            <h3 className="text-base font-bold text-slate-200 mb-1">
+              {searchQuery ? 'No matches found' : 'No Games Scheduled'}
+            </h3>
+            <p className="text-sm text-slate-500">
+              {searchQuery ? 'Try a different search term' : 'Check back later or try a different sport'}
+            </p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Games grouped by date */}
+          <>
             {Array.from(selectedDates)
               .sort()
               .map(dateStr => {
-                const dateGames = games.filter(g => g.fetchDate === dateStr);
+                const dateGames = searchFilteredGames.filter(g => g.fetchDate === dateStr);
                 if (dateGames.length === 0) return null;
 
                 const date = parseISO(dateStr + 'T12:00:00');
                 const isToday = serverDate?.date ? dateStr === serverDate.date : false;
 
                 return (
-                  <div key={dateStr} className="space-y-3">
+                  <div key={dateStr}>
                     {selectedDates.size > 1 && (
-                      <div className="flex items-center space-x-2 mt-6 first:mt-0">
-                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primaryBlue/30 to-transparent" />
-                        <h3 className="text-sm font-bold uppercase tracking-wider text-primaryBlue px-3 py-1 bg-primaryBlue/10 rounded-full ring-1 ring-primaryBlue/20">
+                      <div className="flex items-center gap-2 mb-3 mt-4 first:mt-0">
+                        <div className="h-px flex-1 bg-slate-800" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
                           {isToday ? 'Today' : format(date, 'EEEE, MMM d')}
-                        </h3>
-                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primaryBlue/30 to-transparent" />
+                        </span>
+                        <div className="h-px flex-1 bg-slate-800" />
                       </div>
                     )}
                     {dateGames
                       .sort((a, b) => {
-                        // Live games first
                         if (a.status === 'live' && b.status !== 'live') return -1;
                         if (b.status === 'live' && a.status !== 'live') return 1;
-                        // Then scheduled games
                         if (a.status === 'scheduled' && b.status === 'final') return -1;
                         if (b.status === 'scheduled' && a.status === 'final') return 1;
-                        // Then by start time
                         return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
                       })
                       .map((game, index) => {
-              const isSelected = selectedGames.has(game.gameId);
-              const startTime = new Date(game.startTime);
-              const formattedTime = isNaN(startTime.getTime())
-                ? 'TBD'
-                : startTime.toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit'
-                  });
+                        const gameId = game.gameId || `${activeSport.toLowerCase()}-${index}-${game.startTime || Date.now()}`;
+                        if (!gameId || gameId === 'undefined' || gameId.includes('undefined') || gameId === 'null') return null;
 
-              // Validate game data before rendering
-              const gameId = game.gameId || `${activeSport.toLowerCase()}-${index}-${game.startTime || Date.now()}`;
+                        const isMonitored = selectedGames.has(game.gameId);
+                        const awayTeamName = game.awayTeam?.name || 'TBD';
+                        const homeTeamName = game.homeTeam?.name || 'TBD';
+                        const awayAbbr = extractTeamAbbreviation(awayTeamName);
+                        const homeAbbr = extractTeamAbbreviation(homeTeamName);
+                        const badge = getContextBadge(game);
+                        const startTime = new Date(game.startTime);
+                        const formattedTime = isNaN(startTime.getTime()) ? 'TBD'
+                          : startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
-              // Skip games with invalid IDs
-              if (!gameId || gameId === 'undefined' || gameId.includes('undefined') || gameId === 'null') {
-                console.warn(`Skipping game with invalid ID at index ${index}`, game);
-                return null;
-              }
+                        return (
+                          <div
+                            key={gameId}
+                            className={`bg-slate-900/50 rounded-xl p-4 border border-slate-800 ${game.status === 'final' ? 'opacity-60' : ''}`}
+                            data-testid={`game-card-${gameId}`}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              {/* Left: stacked logos + info */}
+                              <div className="flex flex-1 gap-4">
+                                {/* Stacked team logos */}
+                                <div className="flex flex-col shrink-0">
+                                  <TeamLogo teamName={awayTeamName} abbreviation={awayAbbr} sport={activeSport} size="sm" className="rounded-full border border-slate-700" />
+                                  <TeamLogo teamName={homeTeamName} abbreviation={homeAbbr} sport={activeSport} size="sm" className="rounded-full border border-slate-700 -mt-3" />
+                                </div>
 
-              const awayTeamName = game.awayTeam?.name || 'TBD';
-              const homeTeamName = game.homeTeam?.name || 'TBD';
-              const awayTeamAbbr = extractTeamAbbreviation(awayTeamName);
-              const homeTeamAbbr = extractTeamAbbreviation(homeTeamName);
+                                {/* Game info */}
+                                <div className="flex flex-col gap-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-base font-bold">
+                                      {awayAbbr}
+                                      {(game.status === 'live' || game.status === 'final') && game.awayTeam?.score != null
+                                        ? ` ${game.awayTeam.score}`
+                                        : ''
+                                      }
+                                      {' @ '}
+                                      {(game.status === 'live' || game.status === 'final') && game.homeTeam?.score != null
+                                        ? `${game.homeTeam.score} `
+                                        : ''
+                                      }
+                                      {homeAbbr}
+                                    </span>
+                                    {game.status === 'live' && (
+                                      <span className="px-1.5 py-0.5 rounded bg-primaryBlue/10 text-primaryBlue text-[10px] font-bold uppercase tracking-tighter">
+                                        Live
+                                      </span>
+                                    )}
+                                  </div>
 
-              console.log(`🔍 Rendering game card: gameId=${gameId}, sport=${activeSport}, home=${homeTeamName}, away=${awayTeamName}`);
+                                  {/* Context badge */}
+                                  {badge && (
+                                    <div className={`flex items-center gap-1.5 ${badge.color} ${badge.bg} px-2 py-0.5 rounded-md w-fit`}>
+                                      {badge.icon}
+                                      <span className="text-[11px] font-semibold">{badge.text}</span>
+                                    </div>
+                                  )}
 
-              return (
-                <div key={gameId} className="relative">
-                  <GameCardTemplate
-                    gameId={gameId}
-                    homeTeam={{
-                      name: homeTeamName,
-                      abbreviation: homeTeamAbbr,
-                      score: game.homeTeam?.score
-                    }}
-                    awayTeam={{
-                      name: awayTeamName,
-                      abbreviation: awayTeamAbbr,
-                      score: game.awayTeam?.score
-                    }}
-                    sport={activeSport}
-                    status={game.status === 'live' ? 'live' : game.status === 'final' ? 'final' : 'scheduled'}
-                    startTime={game.startTime}
-                    venue={game.venue}
-                    inning={game.inning}
-                    quarter={game.quarter}
-                    period={game.period}
-                    isTopInning={game.inningState === 'Top'}
-                    timeRemaining={game.timeRemaining}
-                    runners={{ first: false, second: false, third: false }}
-                    balls={0}
-                    strikes={0}
-                    outs={0}
-                    possessionData={game.possession ? {
-                      tracked: true,
-                      currentPossession: game.possession === game.homeTeam?.name ? 'home' : 'away',
-                      homePossessions: (game as any).homePossessions || 0,
-                      awayPossessions: (game as any).awayPossessions || 0
-                    } : undefined}
-                    timeoutData={(game.homeTimeoutsRemaining != null || game.awayTimeoutsRemaining != null) ? {
-                      tracked: true,
-                      homeTimeoutsRemaining: game.homeTimeoutsRemaining ?? 0,
-                      awayTimeoutsRemaining: game.awayTimeoutsRemaining ?? 0
-                    } : undefined}
-                    isSelected={isSelected}
-                    onSelect={() => toggleGameSelection(gameId)}
-                    size="lg"
-                    showWeather={true}
-                    showVenue={true}
-                    showEnhancedMLB={true}
-                  />
-                </div>
-              );
+                                  <p className="text-xs text-slate-400 font-medium truncate">
+                                    {game.venue ? `${game.venue} \u2022 ` : ''}{formattedTime}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Right: monitoring toggle */}
+                              <div className="flex flex-col items-end justify-center pt-1">
+                                <Switch
+                                  checked={isMonitored}
+                                  onCheckedChange={() => toggleGameSelection(gameId)}
+                                  className="data-[state=checked]:bg-emeraldGreen"
+                                  data-testid={`toggle-monitor-${gameId}`}
+                                />
+                                <span className="text-[10px] mt-1 font-semibold text-slate-400 uppercase tracking-tighter">
+                                  {isMonitored ? 'Monitoring' : 'Follow'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
                       })}
                   </div>
                 );
               })}
-          </div>
+          </>
         )}
       </div>
     </div>
-    </>
   );
 }
