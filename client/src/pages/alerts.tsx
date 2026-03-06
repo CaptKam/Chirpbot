@@ -1,9 +1,50 @@
 import React, { useState, useMemo, Component, ErrorInfo, ReactNode } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { Bell, Shield, Activity, AlertTriangle, ChevronRight, TrendingUp } from 'lucide-react';
+import { Bell, Shield, Activity, AlertTriangle, ChevronRight, TrendingUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getSeasonAwareSports } from '@shared/season-manager';
 import { Alert } from '@/types';
+
+// ─── Design System Tokens (Midnight Sports Theme) ─────────────────
+// Background:  #000000 → #0F1A32 gradient
+// Card Surface: #161B22
+// MLB Green:    #22C55E
+// Emerald Glow: #10B981
+// Primary Text: #F8FAFC
+// Muted Text:   #94A3B8
+// Border:       #1E293B
+// Alert Red:    #F02D3A
+
+const DS = {
+  cardSurface: '#161B22',
+  border: '#1E293B',
+  alertRed: '#F02D3A',
+  mlbGreen: '#22C55E',
+  emeraldGlow: '#10B981',
+} as const;
+
+// ─── Animation Variants ──────────────────────────────────────────
+// 01 Alert Slide: 0.4s ease-out, y: 30→0
+const cardSlide = {
+  initial: { opacity: 0, y: 30 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -20 },
+  transition: { duration: 0.4, ease: 'easeOut' },
+};
+
+// 03 Insight Expand: 0.3s cubic-bezier mask-reveal
+const insightExpand = {
+  initial: { height: 0, opacity: 0 },
+  animate: { height: 'auto', opacity: 1 },
+  exit: { height: 0, opacity: 0 },
+  transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] },
+};
+
+// Stagger children
+const staggerContainer = {
+  animate: { transition: { staggerChildren: 0.08 } },
+};
 
 // ─── Error Boundary ───────────────────────────────────────────────
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error?: Error }> {
@@ -20,12 +61,12 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   render() {
     if (this.state.hasError) {
       return (
-        <div className="bg-white/5 ring-1 ring-red-500/30 rounded-2xl p-6" role="alert">
+        <div className="rounded-xl border p-6" style={{ background: DS.cardSurface, borderColor: DS.border }} role="alert">
           <div className="flex items-center gap-3">
             <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />
             <div>
               <h3 className="text-sm font-bold text-red-400 mb-1">Something went wrong</h3>
-              <p className="text-sm text-slate-300">This alert could not be displayed.</p>
+              <p className="text-sm text-[#94A3B8]">This alert could not be displayed.</p>
             </div>
           </div>
         </div>
@@ -63,16 +104,17 @@ function getTeamName(team: string | { name: string } | undefined): string {
   return typeof team === 'string' ? team : team.name;
 }
 
-function getSportColor(sport: string) {
+// Sport accent color: returns the sport's 4px top-bar color + text accent
+function getSportAccent(sport: string) {
   switch (sport) {
-    case 'MLB': return { pill: 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20', accent: 'text-emerald-400', border: 'border-emerald-500/20', glow: 'shadow-emerald-500/10' };
-    case 'NBA': return { pill: 'bg-purple-500 text-white shadow-lg shadow-purple-500/20', accent: 'text-purple-400', border: 'border-purple-500/20', glow: 'shadow-purple-500/10' };
-    case 'NFL': return { pill: 'bg-orange-500 text-white shadow-lg shadow-orange-500/20', accent: 'text-orange-400', border: 'border-orange-500/20', glow: 'shadow-orange-500/10' };
-    case 'NHL': return { pill: 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20', accent: 'text-cyan-400', border: 'border-cyan-500/20', glow: 'shadow-cyan-500/10' };
-    case 'NCAAF': return { pill: 'bg-blue-500 text-white shadow-lg shadow-blue-500/20', accent: 'text-blue-400', border: 'border-blue-500/20', glow: 'shadow-blue-500/10' };
-    case 'CFL': return { pill: 'bg-red-500 text-white shadow-lg shadow-red-500/20', accent: 'text-red-400', border: 'border-red-500/20', glow: 'shadow-red-500/10' };
-    case 'WNBA': return { pill: 'bg-pink-500 text-white shadow-lg shadow-pink-500/20', accent: 'text-pink-400', border: 'border-pink-500/20', glow: 'shadow-pink-500/10' };
-    default: return { pill: 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20', accent: 'text-emerald-400', border: 'border-emerald-500/20', glow: 'shadow-emerald-500/10' };
+    case 'MLB': return { bar: '#22C55E', text: 'text-green-400', pill: 'bg-green-500 text-white shadow-lg shadow-green-500/20', pillInactive: 'bg-[#161B22] text-[#94A3B8] hover:text-slate-200' };
+    case 'NBA': return { bar: '#A855F7', text: 'text-purple-400', pill: 'bg-purple-500 text-white shadow-lg shadow-purple-500/20', pillInactive: 'bg-[#161B22] text-[#94A3B8] hover:text-slate-200' };
+    case 'NFL': return { bar: '#F97316', text: 'text-orange-400', pill: 'bg-orange-500 text-white shadow-lg shadow-orange-500/20', pillInactive: 'bg-[#161B22] text-[#94A3B8] hover:text-slate-200' };
+    case 'NHL': return { bar: '#06B6D4', text: 'text-cyan-400', pill: 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20', pillInactive: 'bg-[#161B22] text-[#94A3B8] hover:text-slate-200' };
+    case 'NCAAF': return { bar: '#3B82F6', text: 'text-blue-400', pill: 'bg-blue-500 text-white shadow-lg shadow-blue-500/20', pillInactive: 'bg-[#161B22] text-[#94A3B8] hover:text-slate-200' };
+    case 'CFL': return { bar: '#EF4444', text: 'text-red-400', pill: 'bg-red-500 text-white shadow-lg shadow-red-500/20', pillInactive: 'bg-[#161B22] text-[#94A3B8] hover:text-slate-200' };
+    case 'WNBA': return { bar: '#EC4899', text: 'text-pink-400', pill: 'bg-pink-500 text-white shadow-lg shadow-pink-500/20', pillInactive: 'bg-[#161B22] text-[#94A3B8] hover:text-slate-200' };
+    default: return { bar: '#22C55E', text: 'text-green-400', pill: 'bg-green-500 text-white shadow-lg shadow-green-500/20', pillInactive: 'bg-[#161B22] text-[#94A3B8] hover:text-slate-200' };
   }
 }
 
@@ -132,34 +174,83 @@ function timeAgo(dateString: string): string {
   }
 }
 
-// ─── Diamond Component (inline, matches mockup) ──────────────────
+// ─── Diamond Component (80x80, 12x12 bases per spec) ─────────────
+// 04 Base Runner Glow: gray → green with scale pulse, 0.5s fade
 
 function Diamond({ first, second, third }: { first?: boolean; second?: boolean; third?: boolean }) {
-  const baseClass = 'w-2.5 h-2.5 rotate-45 border';
-  const emptyClass = `${baseClass} border-slate-500/30`;
-  const activeClass = `${baseClass} bg-emerald-400 border-emerald-400 shadow-[0_0_8px_rgba(34,197,94,0.8)]`;
+  const baseSize = 'w-3 h-3'; // 12px
+  const emptyStyle = `${baseSize} rotate-45 border-2 border-[#1E293B] transition-all duration-500`;
+  const activeStyle = `${baseSize} rotate-45 border-2 border-green-400 bg-green-500 transition-all duration-500`;
+  // Glow effect via box-shadow
+  const glowShadow = '0 0 10px rgba(34,197,94,0.6), 0 0 20px rgba(34,197,94,0.3)';
+
   return (
-    <div className="relative w-14 h-14 flex items-center justify-center">
+    <div className="relative w-20 h-20 flex items-center justify-center mx-auto flex-shrink-0">
       {/* 2nd base - top center */}
-      <div className={`absolute top-0 left-1/2 -translate-x-1/2 ${second ? activeClass : emptyClass}`} />
+      <motion.div
+        className={`absolute top-0 left-1/2 -translate-x-1/2 ${second ? activeStyle : emptyStyle}`}
+        animate={second ? { scale: [1, 1.2, 1], boxShadow: glowShadow } : { scale: 1, boxShadow: 'none' }}
+        transition={{ duration: 0.5 }}
+      />
       {/* 3rd base - left middle */}
-      <div className={`absolute left-0 top-1/2 -translate-y-1/2 ${third ? activeClass : emptyClass}`} />
+      <motion.div
+        className={`absolute left-0 top-1/2 -translate-y-1/2 ${third ? activeStyle : emptyStyle}`}
+        animate={third ? { scale: [1, 1.2, 1], boxShadow: glowShadow } : { scale: 1, boxShadow: 'none' }}
+        transition={{ duration: 0.5 }}
+      />
       {/* 1st base - right middle */}
-      <div className={`absolute right-0 top-1/2 -translate-y-1/2 ${first ? activeClass : emptyClass}`} />
-      {/* Home plate - bottom center */}
-      <div className="w-1.5 h-1.5 rotate-45 bg-slate-600 absolute bottom-1 left-1/2 -translate-x-1/2 opacity-50" />
+      <motion.div
+        className={`absolute right-0 top-1/2 -translate-y-1/2 ${first ? activeStyle : emptyStyle}`}
+        animate={first ? { scale: [1, 1.2, 1], boxShadow: glowShadow } : { scale: 1, boxShadow: 'none' }}
+        transition={{ duration: 0.5 }}
+      />
+      {/* Home plate */}
+      <div className="w-2 h-2 rotate-45 bg-[#1E293B] absolute bottom-1 left-1/2 -translate-x-1/2 opacity-50" />
     </div>
+  );
+}
+
+// ─── Live Pulse Indicator ─────────────────────────────────────────
+// 02 Live Pulse: 2s infinite loop, scale 100%→150%, opacity→0
+
+function LivePulse() {
+  return (
+    <span className="relative flex h-2.5 w-2.5">
+      <span
+        className="absolute inline-flex h-full w-full rounded-full opacity-60"
+        style={{
+          backgroundColor: DS.alertRed,
+          animation: 'livePulse 2s ease-out infinite',
+        }}
+      />
+      <span
+        className="relative inline-flex h-2.5 w-2.5 rounded-full"
+        style={{ backgroundColor: DS.alertRed }}
+      />
+      <style>{`
+        @keyframes livePulse {
+          0% { transform: scale(1); opacity: 0.6; }
+          100% { transform: scale(1.5); opacity: 0; }
+        }
+      `}</style>
+    </span>
   );
 }
 
 // ─── Skeleton Loader ─────────────────────────────────────────────
 
-function AlertSkeleton() {
+function AlertSkeleton({ delay = 0 }: { delay?: number }) {
   return (
-    <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-4 animate-pulse">
+    <motion.div
+      className="rounded-xl border p-4 animate-pulse"
+      style={{ background: DS.cardSurface, borderColor: DS.border }}
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: 'easeOut', delay: delay * 0.08 }}
+    >
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-slate-700" />
+          <div className="h-2.5 w-2.5 rounded-full bg-slate-700" />
           <div className="h-3 w-16 bg-slate-700 rounded" />
         </div>
         <div className="h-8 w-24 bg-slate-700 rounded-lg" />
@@ -172,7 +263,7 @@ function AlertSkeleton() {
         </div>
         <div className="flex-1 flex flex-col items-center gap-3">
           <div className="h-3 w-20 bg-slate-700 rounded" />
-          <div className="h-14 w-14 bg-slate-700 rounded" />
+          <div className="h-20 w-20 bg-slate-700 rounded" />
           <div className="h-3 w-24 bg-slate-700 rounded" />
         </div>
         <div className="flex flex-col items-center gap-2 w-1/4">
@@ -181,15 +272,15 @@ function AlertSkeleton() {
           <div className="h-10 w-10 bg-slate-700 rounded" />
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 // ─── Featured Live Alert Card ─────────────────────────────────────
 
 function FeaturedAlertCard({ alert }: { alert: Alert }) {
-  const homeTeam = getTeamName(alert.homeTeam);
-  const awayTeam = getTeamName(alert.awayTeam);
+  const [insightsOpen, setInsightsOpen] = useState(false);
+
   const homeAbbr = getAbbr(alert.homeTeam);
   const awayAbbr = getAbbr(alert.awayTeam);
   const homeScore = alert.homeScore ?? alert.context?.homeScore ?? 0;
@@ -200,135 +291,218 @@ function FeaturedAlertCard({ alert }: { alert: Alert }) {
   const leading = homeScore >= awayScore ? 'home' : 'away';
   const leadingAbbr = leading === 'home' ? homeAbbr : awayAbbr;
   const isMLB = alert.sport === 'MLB';
-  const colors = getSportColor(alert.sport);
+  const accent = getSportAccent(alert.sport);
+  const insights = alert.context?.aiInsights || [];
 
   const first = alert.hasFirst || alert.context?.hasFirst;
   const second = alert.hasSecond || alert.context?.hasSecond;
   const third = alert.hasThird || alert.context?.hasThird;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/5 backdrop-blur-sm shadow-2xl p-4">
-      {/* Header row */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-          <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Live Alert</p>
+    <motion.div
+      className="relative overflow-hidden rounded-xl border"
+      style={{
+        background: DS.cardSurface,
+        borderColor: DS.border,
+        borderTopWidth: '4px',
+        borderTopColor: accent.bar,
+      }}
+      {...cardSlide}
+    >
+      <div className="p-4">
+        {/* Header row */}
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-2">
+            <LivePulse />
+            <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-widest">Live Alert</p>
+          </div>
+          {winProb && (
+            <div
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border"
+              style={{
+                background: 'rgba(16,185,129,0.1)',
+                borderColor: 'rgba(16,185,129,0.2)',
+                boxShadow: '0 0 20px -5px rgba(16,185,129,0.4)',
+              }}
+            >
+              <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-tighter">Win Prob ({leadingAbbr})</p>
+              <p
+                className="text-xl font-black text-emerald-400 font-mono leading-none"
+                style={{ textShadow: '0 0 10px rgba(16,185,129,0.6)' }}
+              >
+                {winProb}%
+              </p>
+            </div>
+          )}
         </div>
-        {winProb && (
-          <div className={`flex items-center gap-2 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20 shadow-[0_0_20px_-5px_rgba(34,197,94,0.4)]`}>
-            <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-tighter">Win Prob ({leadingAbbr})</p>
-            <p className="text-xl font-black text-emerald-400 leading-none" style={{ textShadow: '0 0 10px rgba(34,197,94,0.6)' }}>{winProb}%</p>
+
+        {/* Scoreboard */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Home team */}
+          <div className={`flex flex-col items-center gap-1 w-1/4 ${leading !== 'home' ? 'opacity-40' : ''}`}>
+            <div
+              className="h-12 w-12 rounded-xl flex items-center justify-center border"
+              style={{ background: 'rgba(255,255,255,0.04)', borderColor: DS.border }}
+            >
+              <Shield className="w-6 h-6 text-[#94A3B8]" />
+            </div>
+            <span className="text-xs font-black tracking-tighter text-[#94A3B8] uppercase">{homeAbbr}</span>
+            <span className="text-4xl font-black text-[#F8FAFC] font-mono">{homeScore}</span>
+          </div>
+
+          {/* Center — inning + diamond */}
+          <div className="flex-1 flex flex-col items-center justify-center gap-3">
+            {inningLabel && (
+              <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-widest">{inningLabel}</p>
+            )}
+            {isMLB && (
+              <Diamond first={first} second={second} third={third} />
+            )}
+            <div className="text-center space-y-0.5">
+              {isMLB && (
+                <p className={`text-[10px] font-bold ${accent.text} tracking-tight`}>
+                  {getRunnerText(alert).toUpperCase()}
+                </p>
+              )}
+              {alert.context?.down && (
+                <p className={`text-[10px] font-bold ${accent.text} tracking-tight`}>
+                  {alert.context.down}{alert.context.down === 1 ? 'st' : alert.context.down === 2 ? 'nd' : alert.context.down === 3 ? 'rd' : 'th'} & {alert.context.yardsToGo} {alert.context.fieldPosition ? `at ${alert.context.fieldPosition}` : ''}
+                </p>
+              )}
+              {(isMLB || outs > 0) && (
+                <p className="text-[11px] font-black text-[#F8FAFC] tracking-widest uppercase">{outs} OUT{outs !== 1 ? 'S' : ''}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Away team */}
+          <div className={`flex flex-col items-center gap-1 w-1/4 ${leading !== 'away' ? 'opacity-40' : ''}`}>
+            <div
+              className="h-12 w-12 rounded-xl flex items-center justify-center border"
+              style={{ background: 'rgba(255,255,255,0.04)', borderColor: DS.border }}
+            >
+              <Shield className="w-6 h-6 text-[#94A3B8]" />
+            </div>
+            <span className="text-xs font-black tracking-tighter text-[#94A3B8] uppercase">{awayAbbr}</span>
+            <span className="text-4xl font-black text-[#F8FAFC] font-mono">{awayScore}</span>
+          </div>
+        </div>
+
+        {/* AI Insight strip */}
+        {alert.context?.aiTitle && (
+          <div className="mt-4 pt-3" style={{ borderTop: `1px solid ${DS.border}` }}>
+            <button
+              onClick={() => setInsightsOpen(!insightsOpen)}
+              className="w-full flex items-center justify-between"
+            >
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                <p className="text-[11px] font-bold text-emerald-400">{alert.context.aiTitle}</p>
+              </div>
+              {insights.length > 0 && (
+                <motion.div
+                  animate={{ rotate: insightsOpen ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronDown className="w-4 h-4 text-[#94A3B8]" />
+                </motion.div>
+              )}
+            </button>
+            {alert.context.aiCallToAction && (
+              <p className="text-[11px] text-[#94A3B8] mt-1 ml-[22px]">{alert.context.aiCallToAction}</p>
+            )}
+
+            {/* 03 Insight Expand — Gambling/AI drawer */}
+            <AnimatePresence>
+              {insightsOpen && insights.length > 0 && (
+                <motion.div
+                  className="overflow-hidden"
+                  initial={insightExpand.initial}
+                  animate={insightExpand.animate}
+                  exit={insightExpand.exit}
+                  transition={insightExpand.transition}
+                >
+                  <div
+                    className="mt-3 rounded-lg p-3 space-y-2 backdrop-blur-md"
+                    style={{ background: 'rgba(0,0,0,0.6)', border: `1px solid ${DS.border}` }}
+                  >
+                    {insights.map((insight, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <span className="text-emerald-400 text-[10px] mt-0.5">*</span>
+                        <p className="text-[11px] text-[#94A3B8] leading-relaxed">{insight}</p>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
       </div>
-
-      {/* Scoreboard */}
-      <div className="flex items-center justify-between gap-2">
-        {/* Home team */}
-        <div className={`flex flex-col items-center gap-1 w-1/4 ${leading !== 'home' ? 'opacity-40' : ''}`}>
-          <div className="h-12 w-12 bg-white/5 rounded-xl flex items-center justify-center border border-white/10">
-            <Shield className="w-6 h-6 text-slate-400" />
-          </div>
-          <span className="text-xs font-black tracking-tighter text-slate-500 uppercase">{homeAbbr}</span>
-          <span className="text-4xl font-black">{homeScore}</span>
-        </div>
-
-        {/* Center - inning + diamond */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-3">
-          {inningLabel && (
-            <div className="text-center">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{inningLabel}</p>
-            </div>
-          )}
-          {isMLB && (
-            <Diamond first={first} second={second} third={third} />
-          )}
-          <div className="text-center space-y-0.5">
-            {isMLB && (
-              <p className={`text-[10px] font-bold ${colors.accent} tracking-tight`}>
-                {getRunnerText(alert).toUpperCase()}
-              </p>
-            )}
-            {alert.context?.down && (
-              <p className={`text-[10px] font-bold ${colors.accent} tracking-tight`}>
-                {alert.context.down}{alert.context.down === 1 ? 'st' : alert.context.down === 2 ? 'nd' : alert.context.down === 3 ? 'rd' : 'th'} & {alert.context.yardsToGo} {alert.context.fieldPosition ? `at ${alert.context.fieldPosition}` : ''}
-              </p>
-            )}
-            {(isMLB || outs > 0) && (
-              <p className="text-[11px] font-black text-white tracking-widest uppercase">{outs} OUT{outs !== 1 ? 'S' : ''}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Away team */}
-        <div className={`flex flex-col items-center gap-1 w-1/4 ${leading !== 'away' ? 'opacity-40' : ''}`}>
-          <div className="h-12 w-12 bg-white/5 rounded-xl flex items-center justify-center border border-white/10">
-            <Shield className="w-6 h-6 text-slate-400" />
-          </div>
-          <span className="text-xs font-black tracking-tighter uppercase text-slate-500">{awayAbbr}</span>
-          <span className="text-4xl font-black">{awayScore}</span>
-        </div>
-      </div>
-
-      {/* AI Insight strip */}
-      {alert.context?.aiTitle && (
-        <div className="mt-4 pt-3 border-t border-white/[0.06]">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-            <p className="text-[11px] font-bold text-emerald-400">{alert.context.aiTitle}</p>
-          </div>
-          {alert.context.aiCallToAction && (
-            <p className="text-[11px] text-slate-400 mt-1 ml-5.5">{alert.context.aiCallToAction}</p>
-          )}
-        </div>
-      )}
 
       {/* Background decoration */}
       <div className="absolute -right-6 -bottom-6 opacity-[0.03] pointer-events-none">
         <Activity className="w-24 h-24" />
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 // ─── Compact Alert Card (for the list) ────────────────────────────
 
-function CompactAlertCard({ alert }: { alert: Alert }) {
+function CompactAlertCard({ alert, index }: { alert: Alert; index: number }) {
   const homeAbbr = getAbbr(alert.homeTeam);
   const awayAbbr = getAbbr(alert.awayTeam);
   const homeScore = alert.homeScore ?? alert.context?.homeScore;
   const awayScore = alert.awayScore ?? alert.context?.awayScore;
-  const colors = getSportColor(alert.sport);
+  const accent = getSportAccent(alert.sport);
   const ago = timeAgo(alert.timestamp || alert.createdAt || '');
 
   return (
-    <div className="bg-white/5 p-4 rounded-xl border border-white/[0.06] flex items-center justify-between hover:bg-white/[0.08] transition-colors">
+    <motion.div
+      className="p-4 rounded-xl border flex items-center justify-between hover:brightness-110 transition-all cursor-pointer"
+      style={{
+        background: DS.cardSurface,
+        borderColor: DS.border,
+        borderTopWidth: '4px',
+        borderTopColor: accent.bar,
+      }}
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: 'easeOut', delay: index * 0.08 }}
+    >
       <div className="flex items-center gap-4">
         <div className="flex -space-x-3">
-          <div className="h-10 w-10 bg-white/5 rounded-full border-2 border-[#0D1117] flex items-center justify-center">
-            <Shield className="w-4 h-4 text-slate-400" />
+          <div
+            className="h-10 w-10 rounded-full border-2 flex items-center justify-center"
+            style={{ background: DS.cardSurface, borderColor: '#000' }}
+          >
+            <Shield className="w-4 h-4 text-[#94A3B8]" />
           </div>
-          <div className="h-10 w-10 bg-white/[0.08] rounded-full border-2 border-[#0D1117] flex items-center justify-center">
+          <div
+            className="h-10 w-10 rounded-full border-2 flex items-center justify-center"
+            style={{ background: 'rgba(255,255,255,0.04)', borderColor: '#000' }}
+          >
             <Shield className="w-4 h-4 text-slate-500" />
           </div>
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <p className="font-bold text-sm text-white">
+            <p className="font-semibold text-sm text-[#F8FAFC] font-mono">
               {homeAbbr} {homeScore !== undefined ? homeScore : ''} - {awayScore !== undefined ? awayScore : ''} {awayAbbr}
             </p>
-            <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${colors.pill} !shadow-none text-[9px]`}>
+            <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-sm ${accent.pill} !shadow-none`}>
               {alert.sport}
             </span>
           </div>
-          <p className="text-xs text-slate-500 font-medium truncate max-w-[200px]">
+          <p className="text-xs text-[#94A3B8] font-medium truncate max-w-[200px]">
             {alert.title || alert.description?.substring(0, 60)}
           </p>
           {ago && <p className="text-[10px] text-slate-600 mt-0.5">{ago}</p>}
         </div>
       </div>
       <ChevronRight className="w-4 h-4 text-slate-600 flex-shrink-0" />
-    </div>
+    </motion.div>
   );
 }
 
@@ -376,7 +550,7 @@ export default function AlertsPage() {
           homeScore: 4, awayScore: 2, inning: 7, isTopInning: false,
           confidence: 0.87, scoringProbability: 0.86,
           currentBatter: 'Aaron Judge', currentPitcher: 'Chris Sale',
-          aiInsights: ['Judge batting .340 in bases-loaded situations', 'Sale has allowed 4 hits in last 2 innings'],
+          aiInsights: ['Judge batting .340 in bases-loaded situations', 'Sale has allowed 4 hits in last 2 innings', 'Wind blowing out at 14mph to center field at Fenway', 'Run expectancy with runners on 1st & 3rd, 2 out: +0.54 runs'],
           aiTitle: 'High-Leverage At-Bat',
           aiCallToAction: 'Watch for grand slam opportunity',
           aiGameProjection: { finalScorePrediction: '6-3 NYY', keyMoments: [], winProbability: { home: 82, away: 18 } },
@@ -395,7 +569,7 @@ export default function AlertsPage() {
           homeTeam: 'Kansas City Chiefs', awayTeam: 'Buffalo Bills',
           homeScore: 24, awayScore: 27, quarter: 4, timeRemaining: '2:15',
           down: 4, yardsToGo: 3, fieldPosition: 'BUF 3', confidence: 0.92,
-          aiInsights: ['Chiefs convert 78% of 4th & Goal from the 3'],
+          aiInsights: ['Chiefs convert 78% of 4th & Goal from the 3', 'Kelce has 3 TDs in red zone this season', 'Bills defense allowing 62% red zone conversion rate'],
           aiTitle: 'Must-Score Situation', aiCallToAction: 'Game-deciding play incoming',
           scoringProbability: 0.78,
         },
@@ -413,7 +587,7 @@ export default function AlertsPage() {
           homeTeam: 'Los Angeles Lakers', awayTeam: 'Golden State Warriors',
           homeScore: 108, awayScore: 108, quarter: 4, timeRemaining: '1:42',
           confidence: 0.85,
-          aiInsights: ['LeBron shoots 48% in final 2 minutes this season'],
+          aiInsights: ['LeBron shoots 48% in final 2 minutes this season', 'Warriors have blown 3 4th-quarter leads this week', 'Lakers on an 8-0 run in last 2 minutes'],
           aiTitle: 'Clutch Time Showdown', aiCallToAction: 'Star vs star in crunch time',
           scoringProbability: 0.52,
         },
@@ -432,7 +606,7 @@ export default function AlertsPage() {
           homeTeam: 'Los Angeles Dodgers', awayTeam: 'San Diego Padres',
           homeScore: 6, awayScore: 3, inning: 6, isTopInning: false,
           currentBatter: 'Freddie Freeman',
-          aiInsights: ['Ohtani now 4-for-4 today'],
+          aiInsights: ['Ohtani now 4-for-4 today', 'Padres bullpen ERA is 5.20 this month'],
           aiTitle: 'Rally in Progress',
         },
         timestamp: new Date(Date.now() - 300000).toISOString(), sentToTelegram: false,
@@ -445,7 +619,6 @@ export default function AlertsPage() {
     ? displayAlerts
     : displayAlerts.filter((a) => a.sport === filter);
 
-  // Sort by priority — highest first
   const sortedAlerts = useMemo(() =>
     [...filteredAlerts].sort((a, b) => (b.priority || 0) - (a.priority || 0)),
     [filteredAlerts]
@@ -457,13 +630,11 @@ export default function AlertsPage() {
   // ─── Loading State ──────────────────────────────────────────────
   if (isLoading || statsLoading) {
     return (
-      <div className="pb-24 min-h-screen" data-testid="alerts-loading">
+      <div className="pb-24 min-h-screen" style={{ background: 'linear-gradient(to bottom, #000000, #0F1A32)' }} data-testid="alerts-loading">
         <Header />
         <SportPills sports={availableSports} active={filter} onSelect={setFilter} />
-        <main className="p-4 space-y-4">
-          <AlertSkeleton />
-          <AlertSkeleton />
-          <AlertSkeleton />
+        <main className="p-4 space-y-6">
+          {[0, 1, 2].map((i) => <AlertSkeleton key={i} delay={i} />)}
         </main>
       </div>
     );
@@ -471,32 +642,51 @@ export default function AlertsPage() {
 
   // ─── Render ─────────────────────────────────────────────────────
   return (
-    <div className="pb-24 min-h-screen" data-testid="alerts-page">
+    <div className="pb-24 min-h-screen" style={{ background: 'linear-gradient(to bottom, #000000, #0F1A32)' }} data-testid="alerts-page">
       <Header alertCount={displayAlerts.length} />
       <SportPills sports={availableSports} active={filter} onSelect={setFilter} />
 
-      <main className="p-4 space-y-6 overflow-y-auto">
+      <motion.main
+        className="p-4 space-y-6 overflow-y-auto"
+        variants={staggerContainer}
+        initial="initial"
+        animate="animate"
+      >
         {/* Demo mode banner */}
         {alerts.length === 0 && !error && !isLoading && (
-          <div className="bg-white/5 rounded-2xl px-4 py-3 flex items-center gap-3 border-l-[3px] border-amber-500">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-500/10 border border-amber-500/15">
+          <motion.div
+            className="rounded-xl px-4 py-3 flex items-center gap-3"
+            style={{
+              background: DS.cardSurface,
+              borderLeft: '3px solid #F59E0B',
+              border: `1px solid ${DS.border}`,
+              borderLeftWidth: '3px',
+              borderLeftColor: '#F59E0B',
+            }}
+            {...cardSlide}
+          >
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.15)' }}>
               <Bell className="w-4 h-4 text-amber-400" />
             </div>
             <div>
-              <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">Demo Mode</span>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">Demo Mode</span>
+              <p className="text-[11px] text-[#94A3B8] mt-0.5">
                 Showing sample alerts. Real alerts appear when games are live.
               </p>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Error state */}
         {error ? (
-          <div className="bg-white/5 rounded-2xl p-8 border border-red-500/20 text-center">
+          <motion.div
+            className="rounded-xl p-8 border text-center"
+            style={{ background: DS.cardSurface, borderColor: DS.border, borderTopWidth: '4px', borderTopColor: DS.alertRed }}
+            {...cardSlide}
+          >
             <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-white mb-2">Unable to load alerts</h3>
-            <p className="text-slate-400 text-sm mb-6">Check your connection and try again.</p>
+            <h3 className="text-lg font-bold text-[#F8FAFC] mb-2">Unable to load alerts</h3>
+            <p className="text-[#94A3B8] text-sm mb-6">Check your connection and try again.</p>
             <Button
               onClick={() => refetch()}
               variant="outline"
@@ -505,23 +695,27 @@ export default function AlertsPage() {
               <Activity className="w-4 h-4 mr-2" />
               Try Again
             </Button>
-          </div>
+          </motion.div>
         ) : sortedAlerts.length === 0 ? (
-          <div className="bg-white/5 rounded-2xl p-8 text-center">
-            <Bell className="h-8 w-8 text-slate-500 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-white mb-2">No Alerts Available</h3>
-            <p className="text-slate-400 text-sm mb-6">
+          <motion.div
+            className="rounded-xl p-8 border text-center"
+            style={{ background: DS.cardSurface, borderColor: DS.border }}
+            {...cardSlide}
+          >
+            <Bell className="h-8 w-8 text-[#94A3B8] mx-auto mb-4" />
+            <h3 className="text-lg font-bold text-[#F8FAFC] mb-2">No Alerts Available</h3>
+            <p className="text-[#94A3B8] text-sm mb-6">
               No alerts for {filter === 'all' ? 'any sport' : filter} at the moment.
             </p>
             <Button
               onClick={() => refetch()}
               variant="outline"
-              className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+              className="border-green-500/30 text-green-400 hover:bg-green-500/10"
             >
               <Activity className="w-4 h-4 mr-2" />
               Refresh
             </Button>
-          </div>
+          </motion.div>
         ) : (
           <>
             {/* Featured card */}
@@ -535,13 +729,13 @@ export default function AlertsPage() {
             {remainingAlerts.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-4 px-1">
-                  <h2 className="text-lg font-bold text-white">More Alerts</h2>
+                  <h2 className="text-lg font-bold text-[#F8FAFC]">More Alerts</h2>
                   <span className="text-emerald-400 text-sm font-bold">{remainingAlerts.length} alert{remainingAlerts.length !== 1 ? 's' : ''}</span>
                 </div>
                 <div className="space-y-3">
-                  {remainingAlerts.map((alert) => (
+                  {remainingAlerts.map((alert, i) => (
                     <ErrorBoundary key={alert.id}>
-                      <CompactAlertCard alert={alert} />
+                      <CompactAlertCard alert={alert} index={i} />
                     </ErrorBoundary>
                   ))}
                 </div>
@@ -549,7 +743,7 @@ export default function AlertsPage() {
             )}
           </>
         )}
-      </main>
+      </motion.main>
     </div>
   );
 }
@@ -558,20 +752,22 @@ export default function AlertsPage() {
 
 function Header({ alertCount }: { alertCount?: number }) {
   return (
-    <header className="sticky top-0 z-20 bg-[#0D1117]/80 backdrop-blur-md border-b border-white/[0.06]">
+    <header
+      className="sticky top-0 z-20 backdrop-blur-md"
+      style={{ background: 'rgba(0,0,0,0.8)', borderBottom: `1px solid ${DS.border}` }}
+    >
       <div className="flex items-center justify-between px-4 py-4">
         <div className="flex items-center gap-3">
-          <div className="bg-emerald-500/20 p-2 rounded-lg text-emerald-400">
-            <Activity className="w-6 h-6" />
+          <div className="p-2 rounded-lg" style={{ background: 'rgba(34,197,94,0.15)' }}>
+            <Activity className="w-6 h-6 text-green-400" />
           </div>
-          <h1 className="text-xl font-extrabold tracking-tight text-white">MLB Live Alert</h1>
+          <h1 className="text-xl font-black tracking-tight text-[#F8FAFC]">ChirpBot</h1>
         </div>
-        <button className="relative p-2 text-slate-400">
+        <button className="relative p-2 text-[#94A3B8]">
           <Bell className="w-6 h-6" />
           {alertCount !== undefined && alertCount > 0 && (
-            <span className="absolute top-2 right-2 flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+            <span className="absolute top-2 right-2 flex h-2.5 w-2.5">
+              <LivePulse />
             </span>
           )}
         </button>
@@ -584,19 +780,20 @@ function Header({ alertCount }: { alertCount?: number }) {
 
 function SportPills({ sports, active, onSelect }: { sports: string[]; active: string; onSelect: (s: string) => void }) {
   return (
-    <div className="flex overflow-x-auto px-4 py-3 gap-2 border-b border-white/[0.06] bg-[#0D1117]/60 backdrop-blur-sm" style={{ scrollbarWidth: 'none' }}>
+    <div
+      className="flex overflow-x-auto px-4 py-3 gap-2 backdrop-blur-sm"
+      style={{ background: 'rgba(0,0,0,0.6)', borderBottom: `1px solid ${DS.border}`, scrollbarWidth: 'none' }}
+    >
       {sports.map((sport) => {
         const isActive = sport === active;
-        const colors = getSportColor(sport === 'all' ? 'MLB' : sport);
+        const accent = getSportAccent(sport === 'all' ? 'MLB' : sport);
         return (
           <button
             key={sport}
             onClick={() => onSelect(sport)}
             data-testid={`sport-tab-${sport.toLowerCase()}`}
             className={`flex-none px-5 py-2 rounded-full font-bold text-sm transition-all ${
-              isActive
-                ? colors.pill
-                : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'
+              isActive ? accent.pill : accent.pillInactive
             }`}
           >
             {sport.toUpperCase()}
