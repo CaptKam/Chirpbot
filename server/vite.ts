@@ -31,8 +31,7 @@ export async function setupVite(app: Express, server: Server) {
     appType: "spa",
   });
 
-  app.use(vite.ssrFixStacktrace);
-  app.use("*", vite.middlewares);
+  app.use(vite.middlewares);
 }
 
 export function serveStatic(app: Express) {
