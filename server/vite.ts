@@ -20,15 +20,13 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
-  const PORT = parseInt(process.env.PORT || "3000", 10);
-
   const vite = await createViteDevServer({
     server: {
       middlewareMode: true,
       hmr: {
-        port: PORT,
-        host: '0.0.0.0'
-      }
+        server,
+      },
+      allowedHosts: true,
     },
     appType: "spa",
   });
