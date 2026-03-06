@@ -76,3 +76,4 @@ args = "echo \"Generative AI metrics retrieved successfully!\""
 
 [agent]
 integrations = ["javascript_database:1.0.0"]
+expertMode = true
