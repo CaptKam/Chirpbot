@@ -608,20 +608,7 @@ export default function Settings() {
       <PageHeader
         title="ChirpBot"
         subtitle="Settings Dashboard"
-      >
-        {isAuthenticated && (
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            size="sm"
-            className={`${getBorderClass()} ${sportColors.text} ${getHoverBgClass()} transition-all duration-300`}
-            data-testid="logout-button"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
-          </Button>
-        )}
-      </PageHeader>
+      />
       {/* Sport Pills */}
       <div className="flex overflow-x-auto no-scrollbar px-4 py-3 gap-2 border-b border-slate-800 bg-[#101922]">
         {SPORTS.map((sport) => {
@@ -886,19 +873,31 @@ export default function Settings() {
         {/* User Info Section */}
         {isAuthenticated && user && (
           <div className={`bg-white/5 backdrop-blur-sm ring-1 ring-white/10 border-0 rounded-xl p-6 shadow-xl ${sportColors.bg}`}>
-            <div className="flex items-center space-x-4">
-              <div className={`h-12 w-12 rounded-lg ${sportColors.bg} ring-1 ${getRingClass()} flex items-center justify-center`}>
-                <SettingsIcon className={`w-6 h-6 ${sportColors.text}`} />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className={`h-12 w-12 rounded-lg ${sportColors.bg} ring-1 ${getRingClass()} flex items-center justify-center`}>
+                  <SettingsIcon className={`w-6 h-6 ${sportColors.text}`} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black uppercase tracking-wide text-slate-100">Account Settings</h2>
+                  <p className="text-sm text-slate-300">
+                    Logged in as <span className={`${sportColors.text} font-semibold`}>{user.username}</span>
+                  </p>
+                  {user.email && (
+                    <p className="text-xs text-slate-400">{user.email}</p>
+                  )}
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-black uppercase tracking-wide text-slate-100">Account Settings</h2>
-                <p className="text-sm text-slate-300">
-                  Logged in as <span className={`${sportColors.text} font-semibold`}>{user.username}</span>
-                </p>
-                {user.email && (
-                  <p className="text-xs text-slate-400">{user.email}</p>
-                )}
-              </div>
+              <Button
+                onClick={handleLogout}
+                variant="outline"
+                size="sm"
+                className={`${getBorderClass()} ${sportColors.text} ${getHoverBgClass()} transition-all duration-300`}
+                data-testid="logout-button"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
             </div>
           </div>
         )}
