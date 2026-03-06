@@ -4514,7 +4514,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           ...rolloutStatus,
           savedState
         },
-        supportedSports: ['MLB', 'NFL', 'NBA', 'WNBA', 'NCAAF', 'CFL'],
+        supportedSports: ['MLB'],
         timestamp: new Date().toISOString()
       });
 

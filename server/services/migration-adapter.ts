@@ -32,7 +32,7 @@ export class MigrationAdapter {
       } else {
         // Get all games across all sports
         const allGames: any[] = [];
-        const sports = ['MLB', 'NFL', 'NBA', 'NCAAF', 'WNBA', 'CFL'];
+        const sports = ['MLB'];
         
         for (const sportName of sports) {
           const sportGames = this.calendarSyncService.getGamesBySource(sportName) || [];
@@ -60,7 +60,7 @@ export class MigrationAdapter {
       return {
         status: 'active',
         timestamp: new Date().toISOString(),
-        sports: ['MLB', 'NFL', 'NBA', 'NCAAF', 'WNBA', 'CFL'],
+        sports: ['MLB'],
         totalGames: this.getGameData().length,
         userMonitoringEnabled: true
       };

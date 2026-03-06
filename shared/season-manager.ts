@@ -16,6 +16,7 @@ export interface SportSeason {
 }
 
 // Sport season definitions with priorities and colors
+// NOTE: Only MLB is active right now. Other sports are commented out temporarily.
 export const SPORT_SEASONS: SportSeason[] = [
   {
     sport: 'MLB',
@@ -24,41 +25,41 @@ export const SPORT_SEASONS: SportSeason[] = [
     priority: 90,     // High priority during summer
     color: { border: 'border-green-500', text: 'text-green-400', bg: 'bg-green-500/10' }
   },
-  {
-    sport: 'NFL', 
-    startMonth: 9,    // September
-    endMonth: 2,      // February (crosses year boundary)
-    priority: 100,    // Highest priority during fall/winter
-    color: { border: 'border-orange-500', text: 'text-orange-400', bg: 'bg-orange-500/10' }
-  },
-  {
-    sport: 'NBA',
-    startMonth: 10,   // October
-    endMonth: 6,      // June (crosses year boundary)
-    priority: 85,     // High priority during winter/spring
-    color: { border: 'border-purple-500', text: 'text-purple-400', bg: 'bg-purple-500/10' }
-  },
-  {
-    sport: 'NCAAF',
-    startMonth: 8,    // August
-    endMonth: 1,      // January (crosses year boundary)
-    priority: 75,     // Popular during college season
-    color: { border: 'border-blue-500', text: 'text-blue-400', bg: 'bg-blue-500/10' }
-  },
-  {
-    sport: 'CFL',
-    startMonth: 6,    // June
-    endMonth: 11,     // November
-    priority: 60,     // Lower priority
-    color: { border: 'border-red-500', text: 'text-red-400', bg: 'bg-red-500/10' }
-  },
-  {
-    sport: 'WNBA',
-    startMonth: 5,    // May
-    endMonth: 10,     // October
-    priority: 70,     // Good priority during summer
-    color: { border: 'border-pink-500', text: 'text-pink-400', bg: 'bg-pink-500/10' }
-  }
+  // {
+  //   sport: 'NFL',
+  //   startMonth: 9,    // September
+  //   endMonth: 2,      // February (crosses year boundary)
+  //   priority: 100,    // Highest priority during fall/winter
+  //   color: { border: 'border-orange-500', text: 'text-orange-400', bg: 'bg-orange-500/10' }
+  // },
+  // {
+  //   sport: 'NBA',
+  //   startMonth: 10,   // October
+  //   endMonth: 6,      // June (crosses year boundary)
+  //   priority: 85,     // High priority during winter/spring
+  //   color: { border: 'border-purple-500', text: 'text-purple-400', bg: 'bg-purple-500/10' }
+  // },
+  // {
+  //   sport: 'NCAAF',
+  //   startMonth: 8,    // August
+  //   endMonth: 1,      // January (crosses year boundary)
+  //   priority: 75,     // Popular during college season
+  //   color: { border: 'border-blue-500', text: 'text-blue-400', bg: 'bg-blue-500/10' }
+  // },
+  // {
+  //   sport: 'CFL',
+  //   startMonth: 6,    // June
+  //   endMonth: 11,     // November
+  //   priority: 60,     // Lower priority
+  //   color: { border: 'border-red-500', text: 'text-red-400', bg: 'bg-red-500/10' }
+  // },
+  // {
+  //   sport: 'WNBA',
+  //   startMonth: 5,    // May
+  //   endMonth: 10,     // October
+  //   priority: 70,     // Good priority during summer
+  //   color: { border: 'border-pink-500', text: 'text-pink-400', bg: 'bg-pink-500/10' }
+  // }
 ];
 
 /**
@@ -200,6 +201,6 @@ export function getSportTabColors(sport: string): { border: string; text: string
 
 // Export default sports array sorted by current season
 export function getSeasonAwareSports(currentDate = new Date()): string[] {
-  const allSports = ["MLB", "NFL", "NBA", "CFL", "NCAAF", "WNBA"];
+  const allSports = ["MLB"];
   return sortSportsBySeason(allSports, currentDate);
 }
