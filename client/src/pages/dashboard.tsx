@@ -247,7 +247,7 @@ export default function Dashboard() {
               {/* LIVE badge */}
               <div className="absolute top-0 right-0 p-3">
                 <span className="inline-flex items-center gap-1 rounded-full bg-chirpRed/10 px-2 py-1 text-[10px] font-bold text-chirpRed">
-                  <span className="h-1.5 w-1.5 rounded-full bg-chirpRed animate-pulse" /> LIVE
+                  <span className="h-1.5 w-1.5 rounded-full bg-chirpRed animate-live-pulse-ring" /> LIVE
                 </span>
               </div>
 
@@ -268,9 +268,9 @@ export default function Dashboard() {
                   {/* Baseball diamond */}
                   {fSport === 'MLB' && (
                     <div className="flex items-center justify-center h-16 w-16 rotate-45 border-2 border-slate-700/50 relative shrink-0">
-                      <div className={`absolute -top-1.5 -right-1.5 size-3 rounded-sm ${hasSecond ? 'bg-emeraldGreen' : 'border border-slate-600'}`} />
-                      <div className={`absolute -top-1.5 -left-1.5 size-3 rounded-sm ${hasThird ? 'bg-emeraldGreen' : 'border border-slate-600'}`} />
-                      <div className={`absolute -bottom-1.5 -right-1.5 size-3 rounded-sm ${hasFirst ? 'bg-emeraldGreen' : 'border border-slate-600'}`} />
+                      <div className={`absolute -top-1.5 -right-1.5 size-3 rounded-sm transition-all duration-300 ${hasSecond ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/50 animate-diamond-pop' : 'border border-slate-600'}`} />
+                      <div className={`absolute -top-1.5 -left-1.5 size-3 rounded-sm transition-all duration-300 ${hasThird ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/50 animate-diamond-pop' : 'border border-slate-600'}`} />
+                      <div className={`absolute -bottom-1.5 -right-1.5 size-3 rounded-sm transition-all duration-300 ${hasFirst ? 'bg-emeraldGreen shadow-sm shadow-emeraldGreen/50 animate-diamond-pop' : 'border border-slate-600'}`} />
                       <div className="absolute -bottom-1.5 -left-1.5 size-3 border border-slate-600 rounded-sm" />
                     </div>
                   )}
@@ -501,7 +501,10 @@ export default function Dashboard() {
           <section className="p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-slate-400 text-[10px] font-black tracking-[0.2em] uppercase">Signal Log</h3>
-              <span className="flex h-2 w-2 rounded-full bg-emeraldGreen animate-pulse" />
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inset-0 rounded-full bg-emeraldGreen animate-live-pulse-ring blur-[2px]" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emeraldGreen" />
+              </span>
             </div>
             <div className="space-y-2">
               {displaySignals.map((signal) => {

@@ -133,21 +133,30 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        "pulse-emerald": {
-          "0%": { boxShadow: "0 0 0 0 rgba(16, 185, 129, 0.7)" },
-          "70%": { boxShadow: "0 0 0 10px rgba(16, 185, 129, 0)" },
-          "100%": { boxShadow: "0 0 0 0 rgba(16, 185, 129, 0)" },
+        // V3 Motion: Live Pulse Ring — 2s infinite scale+opacity
+        "pulse-ring": {
+          "0%": { transform: "scale(0.8)", opacity: "0.8" },
+          "50%": { transform: "scale(1.1)", opacity: "0.3" },
+          "100%": { transform: "scale(0.8)", opacity: "0.8" },
         },
-        "slide-alert": {
-          from: { transform: "translateX(-100%)" },
-          to: { transform: "translateX(100%)" },
+        // V3 Motion: Diamond Base Pop — 0.3s overshoot bounce
+        "diamond-pop": {
+          "0%": { transform: "scale(0.5)", opacity: "0" },
+          "60%": { transform: "scale(1.15)" },
+          "100%": { transform: "scale(1)", opacity: "1" },
+        },
+        // V3 Motion: Alert Slide Entry — 0.4s from right
+        "alert-slide-in": {
+          from: { transform: "translateX(100%)", opacity: "0" },
+          to: { transform: "translateX(0)", opacity: "1" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "pulse-live": "pulse-emerald 2s infinite",
-        "slide-alert": "slide-alert 0.4s ease-in-out infinite",
+        "live-pulse-ring": "pulse-ring 2s infinite ease-in-out",
+        "diamond-pop": "diamond-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards",
+        "alert-slide": "alert-slide-in 0.4s ease-out forwards",
       },
     },
   },
