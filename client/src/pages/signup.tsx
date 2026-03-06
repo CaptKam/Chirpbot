@@ -284,7 +284,7 @@ export default function Signup() {
         <div className="mt-8 text-center text-slate-400 text-sm">
           <p className="mb-2">✨ AI-powered sports analysis</p>
           <p className="mb-2">⚡ Real-time game alerts</p>
-          <p>🏆 MLB • NFL • NBA • NHL coverage</p>
+          <p>🏆 MLB coverage</p>
         </div>
       </div>
     </div>
