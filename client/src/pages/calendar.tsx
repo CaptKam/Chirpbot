@@ -386,7 +386,7 @@ export default function Calendar() {
         <span className="text-xs font-medium text-primaryBlue">{displayDate}</span>
       </div>
       {/* Game cards */}
-      <div className="flex flex-col px-4 gap-3 pb-4">
+      <div className="flex flex-col px-4 gap-3 pb-4 bg-[#101922] text-[#ffffff]">
         {!isInitialized ? (
           <SportsLoading sport={activeSport} message="Initializing..." size="lg" />
         ) : isLoading ? (
