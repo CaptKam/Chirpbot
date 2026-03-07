@@ -1,10 +1,10 @@
 # CHIRPBOT COMPLETE SYSTEM DOCUMENT
 
 **Date:** March 7, 2026
-**Codebase Size:** ~51,000 lines of TypeScript across 191 files
-**Test Coverage:** 0% (zero test files exist)
-**CI/CD:** None
-**Linting:** None
+**Codebase Size:** ~52,500 lines of TypeScript/JS across 196 files
+**Test Framework:** Jest installed, zero test files written
+**CI/CD:** None (Husky pre-commit/pre-push hooks only)
+**Linting:** None (no ESLint, Prettier, or Biome)
 
 ---
 
@@ -13,23 +13,25 @@
 1. [System Overview](#1-system-overview)
 2. [Technology Stack](#2-technology-stack)
 3. [Server Architecture](#3-server-architecture)
-4. [Client Architecture](#4-client-architecture)
-5. [Core Pipeline: Game State to Alert to User](#5-core-pipeline)
-6. [Database Layer](#6-database-layer)
-7. [External API Integrations](#7-external-api-integrations)
-8. [Authentication System](#8-authentication-system)
-9. [Real-Time Architecture](#9-real-time-architecture)
-10. [Infrastructure & Deployment](#10-infrastructure--deployment)
-11. [Shared Code](#11-shared-code)
-12. [Complete File Inventory](#12-complete-file-inventory)
-13. [Verdict: Keep vs Replace](#13-verdict-keep-vs-replace)
-14. [2026 Standards Recommendations](#14-2026-standards-recommendations)
+4. [Alert Cylinder Engine Architecture](#4-alert-cylinder-engine-architecture)
+5. [Client Architecture](#5-client-architecture)
+6. [Core Pipeline: Game State to Alert to User](#6-core-pipeline)
+7. [Database Layer](#7-database-layer)
+8. [External API Integrations](#8-external-api-integrations)
+9. [Authentication System](#9-authentication-system)
+10. [Real-Time Architecture](#10-real-time-architecture)
+11. [AI Integration](#11-ai-integration)
+12. [Infrastructure & Deployment](#12-infrastructure--deployment)
+13. [Shared Code](#13-shared-code)
+14. [Complete File Inventory](#14-complete-file-inventory)
+15. [Verdict: Keep vs Replace](#15-verdict-keep-vs-replace)
+16. [2026 Standards Recommendations](#16-2026-standards-recommendations)
 
 ---
 
 ## 1. SYSTEM OVERVIEW
 
-Chirpbot is a real-time sports alert platform that monitors live games across 6 sports (MLB, NFL, NCAAF, NBA, WNBA, CFL), detects significant in-game events (momentum shifts, scoring surges, close games, etc.), enriches them with gambling odds and weather data, and delivers alerts to users via a web dashboard.
+Chirpbot is a real-time sports alert platform that monitors live games across 6 sports (MLB, NFL, NCAAF, NBA, WNBA, CFL), detects significant in-game events via modular "alert cylinders," enriches them with AI-generated insights, gambling odds, and weather data, then delivers alerts to users via a web dashboard and Telegram.
 
 ### Core Loop
 
@@ -40,19 +42,25 @@ Sport APIs (MLB/ESPN) --> CalendarSyncService (schedules every 5min)
                      GameStateManager (polls live data every 30s)
                               |
                               v
-                        AlertEngine (detects events, scores confidence)
+                  EngineLifecycleManager (starts/stops sport engines)
                               |
                               v
-                  GamblingInsightsComposer (enriches with odds + weather)
+                   Sport Engines (MLB/NFL/NBA/etc.)
+                     + Alert Cylinder Modules (94 modules across 6 sports)
+                              |
+                              v
+                  UnifiedAIProcessor (GPT-4o enrichment)
+                     + GamblingInsightsComposer (odds + weather)
                               |
                               v
                     broadcast_alerts table (PostgreSQL)
                               |
-                              v
-                  /api/alerts/snapshot (client polls every 10-15s)
-                              |
-                              v
-                        User Dashboard
+                     +--------+--------+
+                     |                 |
+              /api/alerts/snapshot     Telegram Bot
+              (client polls 10-15s)   (push delivery)
+                     |
+                User Dashboard
 ```
 
 ---
@@ -61,30 +69,43 @@ Sport APIs (MLB/ESPN) --> CalendarSyncService (schedules every 5min)
 
 | Layer | Current | Version |
 |-------|---------|---------|
-| Runtime | Node.js | 20 |
+| Runtime | Node.js | 20.16.11 |
 | Language | TypeScript | 5.6.3 |
 | Server Framework | Express | 4.21.2 |
-| Database | PostgreSQL (Neon Serverless) | - |
-| ORM | Drizzle | 0.39.3 |
+| Security Headers | Helmet | 8.1.0 |
+| Database | PostgreSQL (Neon Serverless) | 16 |
+| ORM | Drizzle | 0.39.1 |
 | Frontend Framework | React | 18.3.1 |
-| Build Tool | Vite | 6.0.0 |
+| Build Tool (Client) | Vite | 5.4.19 |
+| Build Tool (Server) | esbuild | 0.25.0 |
 | CSS Framework | Tailwind CSS | 3.4.17 |
-| UI Components | shadcn/ui + Radix UI | various |
-| Data Fetching | TanStack React Query | 5.62.11 |
-| Routing (Client) | Wouter | 3.5.0 |
-| Animation | Framer Motion | 11.15.0 |
-| Auth | bcrypt + express-session | - |
+| UI Components | shadcn/ui + Radix UI | various (20+ primitives) |
+| Data Fetching | TanStack React Query | 5.60.5 |
+| Routing (Client) | Wouter | 3.3.5 |
+| Animation | Framer Motion | 11.13.1 |
+| Charts | Recharts | 2.15.2 |
+| Forms | React Hook Form + Zod | 7.55.0 / 3.24.2 |
+| Auth | Passport (local + Google OAuth) + bcryptjs | 0.7.0 / 3.0.2 |
+| CSRF | csrf | 3.1.0 |
+| OpenID Connect | openid-client | 6.7.1 |
 | Session Store | connect-pg-simple (PostgreSQL) | 10.0.0 |
-| Deployment | Replit | - |
-| Testing | None | - |
-| CI/CD | None | - |
-| Linting | None | - |
+| Logging | Pino + pino-pretty | 9.9.0 |
+| AI | OpenAI GPT-4o | via OPENAI_API_KEY |
+| Notifications | Telegram Bot API | custom service |
+| Caching (functions) | memoizee | 0.4.17 |
+| Retry Logic | p-retry | 6.2.1 |
+| ID Generation | uuid | 13.0.0 |
+| Dates | date-fns | 3.6.0 |
+| Icons | lucide-react | 0.453.0 |
+| Testing | Jest + ts-jest (installed, unused) | 30.1.3 |
+| Dev Runner | tsx | 4.19.1 |
+| Deployment | Replit (autoscale) | stable-24_05 nix |
 
-### Installed but Unused Dependencies
-- `passport` / `passport-local` -- listed in package.json but auth uses manual bcrypt + session
-- `ws` -- WebSocket library installed but no WebSocket implementation exists
-- `memorystore` -- fallback session store, likely unused with pg sessions
-- Several shadcn/ui components (~15 of 33) appear unused
+### Unused/Partially Used Dependencies
+- `memorystore` -- fallback session store, likely unused
+- `ws` -- WebSocket library installed, no implementation
+- ~15 of 33 shadcn/ui components appear unused
+- Jest/ts-jest installed but zero test files exist
 
 ---
 
@@ -93,28 +114,29 @@ Sport APIs (MLB/ESPN) --> CalendarSyncService (schedules every 5min)
 ### Entry Point
 
 **`server/index.ts`** (66 lines) -- Creates Express app, registers routes, starts HTTP server on port 5000.
-**`server/main.ts`** (11 lines) -- Simple wrapper that imports and runs index.ts.
+**`server/main.ts`** (11 lines) -- Wrapper that imports index.ts.
+**`server/db.ts`** (20 lines) -- Drizzle ORM + Neon PostgreSQL connection setup.
 
-### Routes (`server/routes.ts` -- 2,786 lines)
+### Routes (`server/routes.ts` -- 5,213 lines)
 
-This single file contains ALL route definitions, middleware, service initialization, and helper functions.
+This single file contains ALL route definitions, middleware setup, service initialization, and helper functions. It is the largest file in the codebase.
 
 #### Authentication
 | Method | Path | Auth | Purpose |
 |--------|------|------|---------|
-| POST | `/api/register` | No | Create user (bcrypt hash) |
-| POST | `/api/login` | No | Login, create session |
-| POST | `/api/logout` | Yes | Destroy session |
-| GET | `/api/user` | Yes | Get current user |
+| POST | `/api/register` or `/api/auth/signup` | No | Create user |
+| POST | `/api/login` or `/api/auth/login` | No | Login, create session |
+| POST | `/api/logout` or `/api/auth/logout` | Yes | Destroy session |
+| GET | `/api/user` or `/api/auth/user` | Yes | Get current user |
 
 #### Games
 | Method | Path | Auth | Purpose |
 |--------|------|------|---------|
 | GET | `/api/games/today` | No | Games by sport + date (from CalendarSyncService) |
+| GET | `/api/games/multi-day` | No | Multi-day game schedule |
 | GET | `/api/games/:gameId/live` | No | Live game data (MLBApiService) |
 | GET | `/api/games/calendar-status` | No | Calendar sync status |
 | GET | `/api/server-date` | No | Server's Pacific timezone date |
-| GET | `/api/games/multi-day` | No | Multi-day game schedule |
 
 #### User Monitored Games
 | Method | Path | Auth | Purpose |
@@ -126,19 +148,19 @@ This single file contains ALL route definitions, middleware, service initializat
 #### Alerts
 | Method | Path | Auth | Purpose |
 |--------|------|------|---------|
-| GET | `/api/alerts/snapshot` | Yes | Broadcast alerts filtered by user's monitored games + preferences |
+| GET | `/api/alerts/snapshot` | Yes | Broadcast alerts filtered by user prefs |
+| GET | `/api/alerts` | Yes | Alert list with limit param |
 | GET | `/api/alerts/stats` | No | Alert statistics |
 | GET | `/api/alerts/count` | No | Simple alert count |
-| GET | `/api/alerts` | Yes | Alert list with limit param |
 
-#### User Settings
+#### User Settings & Preferences
 | Method | Path | Auth | Purpose |
 |--------|------|------|---------|
 | GET | `/api/user/:userId/settings` | Yes | Get settings |
 | PUT | `/api/user/:userId/settings` | Yes | Update settings |
 | GET | `/api/user/:userId/settings/gambling` | Yes | Get gambling settings |
 | PUT | `/api/user/:userId/settings/gambling` | Yes | Update gambling settings |
-| GET | `/api/user/:userId/alert-preferences` | Yes | Get alert preferences by sport |
+| GET | `/api/user/:userId/alert-preferences` | Yes | Get alert preferences |
 | POST | `/api/user/:userId/alert-preferences` | Yes | Set alert preferences |
 
 #### Gambling
@@ -153,120 +175,189 @@ This single file contains ALL route definitions, middleware, service initializat
 | GET | `/api/health` | No | Health check |
 | GET | `/api/debug/services` | No | Service status |
 
-### Services
+### Middleware (`server/middleware/`)
 
-#### AlertEngine (`server/services/alert-engine.ts` -- 1,093 lines)
-Core alert detection engine. Processes game state updates and generates alerts.
+| File | Lines | Purpose |
+|------|-------|---------|
+| `circuit-breaker.ts` | 190 | Circuit breaker pattern for external API calls |
+| `memory-manager.ts` | 139 | Memory usage monitoring, cleanup triggers |
 
-**Alert Types Detected:**
-| Type | Detection Logic |
-|------|----------------|
-| `momentum_shift` | Consecutive scoring events, scoring runs |
-| `scoring_surge` | Rapid scoring (3+ runs in an inning, etc.) |
-| `close_game` | Score within 1-2 points in late game |
-| `blowout` | Large score differential |
-| `comeback_alert` | Team overcoming significant deficit |
-| `base_situation` | Runners in scoring position, bases loaded (MLB) |
-| `pitcher_change` | Pitching changes, bullpen usage (MLB) |
-| `weather_impact` | Weather conditions affecting play |
+### Configuration (`server/config/`)
 
-**Key Features:**
-- Deduplication via alert keys + cooldown periods (3-10 minutes per type)
-- Confidence scoring (0-100) based on game context
-- Broadcasts alerts to `broadcast_alerts` table
+| File | Lines | Purpose |
+|------|-------|---------|
+| `ai-features.ts` | 12 | AI feature flags (enable AI enhancement, scanner, similarity threshold) |
+| `runtime.ts` | 170 | Runtime configuration, game state types, weather-arm reasons |
 
-#### GameStateManager (`server/services/game-state-manager.ts` -- 858 lines)
-Singleton that manages live game state tracking and user-game associations.
+### Utilities (`server/utils/`)
 
-**Data Structures:**
-```
-gameStates:     Map<gameId, GameState>       -- current state per game
-userGames:      Map<userId, Set<gameId>>     -- which games each user monitors
-gameUsers:      Map<gameId, Set<userId>>     -- which users monitor each game
-previousStates: Map<gameId, GameState>       -- for diff detection
-```
+| File | Lines | Purpose |
+|------|-------|---------|
+| `singleton-lock.ts` | 211 | Ensures single instance of background services |
+| `timezone.ts` | 32 | Pacific timezone helpers |
 
-**Key Behavior:**
-- Polls live game data every 30 seconds for monitored games
-- Compares current vs previous state to detect changes
-- Feeds changed states into AlertEngine
-- Creates new API service instances on every poll cycle (no reuse)
-- All state lives in memory -- lost on server restart
+### Services (non-engine, `server/services/`)
 
-#### GamblingInsightsComposer (`server/services/gambling-insights-composer.ts` -- 1,345 lines)
-The largest service. Combines alert + game state + weather + odds into rich gambling insights.
-
-**Produces:**
-- Situation summary (what happened)
-- Market impact analysis
-- Edge analysis (potential value plays)
-- Risk assessment with confidence
-
-#### OddsApiService (`server/services/odds-api-service.ts` -- 380 lines)
-Integration with The Odds API (`api.the-odds-api.com/v4`).
-
-**Key Details:**
-- Rate limit: 450 requests per 30 days
-- Cache: 5-minute fresh, 10-minute stale fallback
-- Bookmaker priority: DraftKings > FanDuel > BetMGM > Caesars > any
-- Markets: moneyline (h2h), spreads, totals
-- Data quality scoring: excellent/good/limited/poor
-- User-provided API keys supported
-
-#### CalendarSyncService (`server/services/calendar-sync-service.ts` -- 484 lines)
-Singleton that pre-fetches game schedules every 5 minutes to avoid rate limiting sport APIs.
-- Syncs today + tomorrow for all sports
-- In-memory cache
-- Used by `/api/games/today` endpoint
-
-#### BaseSportApi (`server/services/base-sport-api.ts` -- 489 lines)
-Abstract base class for all sport API integrations.
-- HTTP request wrapper with retry (3 retries, exponential backoff)
-- In-memory cache with configurable TTL (default 60s)
-- Rate limiting per service
-- Abstract methods: `getGames()`, `getLiveGameData()`, `parseGameData()`
-
-#### Sport-Specific APIs
-| Service | File | Lines | External API |
-|---------|------|-------|-------------|
-| MLBApiService | `mlb-api.ts` | 724 | `statsapi.mlb.com/api/v1/` |
-| NFLApiService | `nfl-api.ts` | 365 | ESPN `site.api.espn.com` |
-| NCAAFApiService | `ncaaf-api.ts` | 295 | ESPN |
-| NBAApiService | `nba-api.ts` | 310 | ESPN |
-| WNBAApiService | `wnba-api.ts` | 265 | ESPN |
-| CFLApiService | `cfl-api.ts` | 248 | ESPN |
-
-MLB uses MLB's official Stats API. All other sports use ESPN's public scoreboard API.
-
-#### WeatherService (`server/services/weather-service.ts` -- 245 lines)
-OpenWeatherMap integration with stadium coordinate mapping (30+ MLB stadiums, some NFL/NBA venues). 30-minute cache TTL.
-
-#### Other Services
 | Service | File | Lines | Purpose |
 |---------|------|-------|---------|
-| TeamLogoService | `team-logo-service.ts` | 156 | Maps team names to ESPN CDN logo URLs (~124 teams) |
-| TimeoutPossessionTracker | `timeout-possession-tracker.ts` | 312 | Tracks timeouts + possession for football sports |
-| NotificationService | `notification-service.ts` | 178 | Stub/basic notification delivery (partially implemented) |
+| GameStateManager | `game-state-manager.ts` | 858 | Live game state tracking, user-game associations, polling loop |
+| EngineLifecycleManager | `engine-lifecycle-manager.ts` | 1,256 | Dynamic sport engine start/stop, pre-warming, health recovery |
+| CalendarSyncService | `calendar-sync-service.ts` | 484 | Pre-fetches game schedules every 5min |
+| GamblingInsightsComposer | `gambling-insights-composer.ts` | 1,345 | Combines alert + game state + weather + odds |
+| UnifiedAIProcessor | `unified-ai-processor.ts` | 2,032 | GPT-4o integration for alert enrichment |
+| UnifiedDeduplicator | `unified-deduplicator.ts` | 244 | Cross-sport alert deduplication |
+| UnifiedHealthMonitor | `unified-health-monitor.ts` | 718 | System health monitoring + automatic recovery |
+| UnifiedSettings | `unified-settings.ts` | 732 | Centralized settings management |
+| OddsApiService | `odds-api-service.ts` | 380 | The Odds API integration (moneyline, spreads, totals) |
+| WeatherService | `weather-service.ts` | 245 | OpenWeatherMap for stadium weather |
+| WeatherOnLiveService | `weather-on-live-service.ts` | 957 | Weather monitoring for live games |
+| Telegram | `telegram.ts` | 268 | Telegram Bot API for push alerts |
+| BaseSportApi | `base-sport-api.ts` | 489 | Abstract base class for all sport API integrations |
+| MLBApiService | `mlb-api.ts` | 724 | MLB Stats API |
+| NFLApiService | `nfl-api.ts` | 365 | NFL via ESPN |
+| NCAAFApiService | `ncaaf-api.ts` | 295 | NCAAF via ESPN |
+| NBAApiService | `nba-api.ts` | 310 | NBA via ESPN |
+| WNBAApiService | `wnba-api.ts` | 265 | WNBA via ESPN |
+| CFLApiService | `cfl-api.ts` | 248 | CFL via ESPN |
+| AISituationParser | `ai-situation-parser.ts` | 205 | AI-powered game situation analysis |
+| AdvancedPlayerStats | `advanced-player-stats.ts` | 534 | Player performance tracking |
+| QualityValidator | `quality-validator.ts` | 210 | AI output validation + XSS protection |
+| AlertCleanup | `alert-cleanup.ts` | 125 | Periodic alert data cleanup |
+| GameMonitoringCleanup | `game-monitoring-cleanup.ts` | 197 | Cleanup stale monitored games |
+| MigrationAdapter | `migration-adapter.ts` | 102 | Data migration helpers |
+| SportsDataApi | `sportsdata-api.ts` | 156 | Additional sports data source |
+| HttpService | `http.ts` | 71 | HTTP fetch wrapper |
+| TextUtils | `text-utils.ts` | 12 | Text similarity (Jaccard) |
 
-### Storage Layer (`server/storage.ts` -- 494 lines)
+### Storage Layer (`server/storage.ts` -- 1,156 lines)
 
-Implements `IStorage` interface using Drizzle ORM against Neon PostgreSQL.
+Implements `IStorage` interface using Drizzle ORM against Neon PostgreSQL. Also exports `unifiedSettings` singleton.
 
 **Key Methods:**
 - User CRUD: `getUser()`, `getUserByUsername()`, `createUser()`
 - Alerts: `createAlert()`, `getAlerts()`, `getRecentAlerts()`, `getAlertsByType()`
 - Broadcast Alerts: `createBroadcastAlert()`, `getBroadcastAlertsSince()`
-- Monitored Games: `getUserMonitoredTeams()`, `addUserMonitoredTeam()`, `removeUserMonitoredTeam()`
+- Monitored Games: `getUserMonitoredTeams()`, `addUserMonitoredTeam()`, `removeUserMonitoredTeam()`, `getAllMonitoredGames()`
 - Settings: `getUserSettings()`, `updateUserSettings()`, `getUserAlertPreferences()`, `setUserAlertPreference()`
-
-**Issues:**
-- Some raw SQL mixed with Drizzle query builder
-- No connection pooling configuration
-- No transaction support for multi-step operations
+- Global Alert Settings: admin-controlled per-sport alert toggles
 
 ---
 
-## 4. CLIENT ARCHITECTURE
+## 4. ALERT CYLINDER ENGINE ARCHITECTURE
+
+This is the most sophisticated part of the system. **94 files, 18,460 lines** organized as a plugin architecture.
+
+### Base Engine (`server/services/engines/base-engine.ts` -- 572 lines)
+
+The `BaseSportEngine` abstract class provides:
+- `parseTimeToSeconds()` -- standardized time parsing
+- `loadAlertModule()` -- dynamic import of cylinder modules
+- `initializeUserAlertModules()` -- loads user-enabled modules with change-detection caching
+- `isAlertEnabled()` -- checks if an alert type is enabled for the user/sport
+- `generateLiveAlerts()` -- main alert generation loop
+- Possession tracking, timeout tracking
+- Performance metrics (generation time, module load time, cache hits/misses)
+- Deduplication (single implementation for all sports)
+
+Sport engines override:
+- `calculateProbability()` -- sport-specific probability weighting
+- `enhanceGameStateWithLiveData()` -- sport-specific API enrichment
+- `getModuleMap()` -- maps alert types to module file paths
+
+### Sport Engines
+
+| Engine | File | Lines | Status |
+|--------|------|-------|--------|
+| MLBEngine | `mlb-engine.ts` | 309 | **ACTIVE** |
+| NFLEngine | `nfl-engine.ts` | 187 | Disabled in EngineLifecycleManager |
+| NCAAFEngine | `ncaaf-engine.ts` | ~200 | Disabled |
+| NBAEngine | `nba-engine.ts` | ~200 | Disabled |
+| WNBAEngine | `wnba-engine.ts` | ~200 | Disabled |
+| CFLEngine | `cfl-engine.ts` | ~200 | Disabled |
+
+**Note:** Only MLB is currently active. Other sports are disabled in `engine-lifecycle-manager.ts` line 26-32 with comment "Only MLB is active right now."
+
+### MLB Probability Model (`mlb-prob-model.ts` -- 406 lines)
+Statistical probability calculations for MLB situations: RE24 run expectancy, scoring probability by base/out state, win probability.
+
+### MLB Performance Tracker (`mlb-performance-tracker.ts` -- 1,353 lines)
+Tracks batter and pitcher performance metrics during live games.
+
+### Alert Cylinder Modules (80 modules)
+
+Each module is a self-contained alert detector for a specific game situation.
+
+#### MLB (27 modules)
+| Module | Purpose |
+|--------|---------|
+| `bases-loaded-no-outs-module.ts` | Bases loaded, 0 outs |
+| `bases-loaded-one-out-module.ts` | Bases loaded, 1 out |
+| `bases-loaded-two-outs-module.ts` | Bases loaded, 2 outs |
+| `first-and-second-module.ts` | Runners on 1st and 2nd |
+| `first-and-third-no-outs-module.ts` | Runners on 1st and 3rd, 0 outs |
+| `first-and-third-one-out-module.ts` | Runners on 1st and 3rd, 1 out |
+| `first-and-third-two-outs-module.ts` | Runners on 1st and 3rd, 2 outs |
+| `second-and-third-no-outs-module.ts` | Runners on 2nd and 3rd, 0 outs |
+| `second-and-third-one-out-module.ts` | Runners on 2nd and 3rd, 1 out |
+| `runner-on-second-no-outs-module.ts` | Runner on 2nd, 0 outs |
+| `runner-on-third-no-outs-module.ts` | Runner on 3rd, 0 outs |
+| `runner-on-third-one-out-module.ts` | Runner on 3rd, 1 out |
+| `runner-on-third-two-outs-module.ts` | Runner on 3rd, 2 outs |
+| `scoring-opportunity-module.ts` | General RISP situations |
+| `risp-prob-enhanced-module.ts` | RISP with probability enhancement |
+| `steal-likelihood-module.ts` | Stolen base probability |
+| `pitching-change-module.ts` | Pitching changes |
+| `strikeout-module.ts` | Strikeout detection |
+| `batter-due-module.ts` | Key batter approaching |
+| `on-deck-prediction-module.ts` | On-deck batter prediction |
+| `clutch-situation-module.ts` | Clutch moments |
+| `late-inning-close-module.ts` | Close game, late innings |
+| `high-scoring-situation-module.ts` | High-scoring game detection |
+| `momentum-shift-module.ts` | Momentum shifts |
+| `seventh-inning-stretch-module.ts` | 7th inning stretch |
+| `wind-change-module.ts` | Wind impact on play |
+| `game-start-module.ts` | Game starting |
+
+#### NFL (9 modules)
+| Module | Purpose |
+|--------|---------|
+| `red-zone-module.ts` | Red zone entry |
+| `red-zone-opportunity-module.ts` | Red zone scoring chance |
+| `fourth-down-module.ts` | 4th down decisions |
+| `two-minute-warning-module.ts` | 2-minute warning |
+| `second-half-kickoff-module.ts` | 2nd half start |
+| `turnover-likelihood-module.ts` | Turnover probability |
+| `massive-weather-module.ts` | Severe weather impact |
+| `game-start-module.ts` | Game starting |
+| `ai-scanner-module.ts` | AI-powered situation scan |
+
+#### NBA (10 modules)
+Clutch performance, final minutes, 4th quarter, overtime, playoff intensity, superstar analytics, championship implications, game start, 2-minute warning, AI scanner
+
+#### NCAAF (14 modules)
+Red zone, 4th down decision, close game, comeback potential, upset opportunity, scoring play, halftime, 4th quarter, 2-minute warning, massive weather, 2nd half kickoff, red zone efficiency, game start, AI scanner
+
+#### WNBA (11 modules)
+Clutch time, crunch time defense, comeback potential, final minutes, 4th quarter, high-scoring quarter, low-scoring quarter, championship implications, overtime, game start, 2-minute warning, AI scanner
+
+#### CFL (11 modules)
+3rd down situation, rouge opportunity, final minutes, 4th quarter, overtime, Grey Cup implications, massive weather, 2nd half kickoff, 2-minute warning, game start, AI scanner
+
+**Each sport also has an `ai-scanner-module.ts`** that uses GPT-4o to detect unusual situations not covered by rule-based modules.
+
+### Engine Lifecycle Manager (`engine-lifecycle-manager.ts` -- 1,256 lines)
+
+Manages when sport engines run:
+- **Pre-warming:** Starts engines 15 minutes before a game goes live
+- **Dynamic start/stop:** Only runs engines when games are in progress
+- **Circuit breaker:** Per-sport loading state with exponential backoff on failure (10s, 30s, 60s, max 2m)
+- **Health monitoring:** Automatic recovery on engine failure
+- **Resource cleanup:** Stops engines when all games for a sport end
+- **Currently: only MLB engine is enabled** (others commented out)
+
+---
+
+## 5. CLIENT ARCHITECTURE
 
 ### Entry Point & Providers
 
@@ -277,8 +368,9 @@ Implements `IStorage` interface using Drizzle ORM against Neon PostgreSQL.
 ```
 QueryClientProvider (React Query)
   -> TooltipProvider (Radix)
-    -> AuthProvider (custom context)
-      -> Toaster (sonner)
+    -> Toaster (sonner)
+      -> RegularAppContent (layout wrapper, max-w-md mobile-first)
+        -> BottomNavigation (for authenticated users)
         -> Routes
 ```
 
@@ -290,18 +382,20 @@ QueryClientProvider (React Query)
 | `/login` | Login | No (redirects if authed) |
 | `/signup` | Signup | No (redirects if authed) |
 | `/dashboard` | Dashboard | Yes |
-| `/calendar` | Calendar | Yes |
+| `/calendar` | Calendar (Games) | Yes |
 | `/alerts` | Alerts | Yes |
 | `/settings` | Settings | Yes |
 | `/game/:gameId` | GameNarrative | Yes |
 | `*` | NotFound | No |
+
+Admin users are redirected to `/admin-panel` (server-rendered).
 
 ### Pages
 
 | Page | File | Lines | Key API Calls | Polling |
 |------|------|-------|---------------|---------|
 | Dashboard | `dashboard.tsx` | 545 | alerts, stats, monitored-games | 15s/30s/60s |
-| Landing | `landing.tsx` | 730 | None (static marketing) | -- |
+| Landing | `landing.tsx` | 730 | None (static marketing page) | -- |
 | Login | `login.tsx` | 250 | POST /api/auth/login | -- |
 | Signup | `signup.tsx` | 330 | POST /api/auth/signup | -- |
 | Alerts | `alerts.tsx` | 651 | alerts (limit=120), stats | 30s/60s |
@@ -314,107 +408,111 @@ QueryClientProvider (React Query)
 
 | Component | File | Lines | Purpose |
 |-----------|------|-------|---------|
-| BottomNavigation | `bottom-navigation.tsx` | 126 | Mobile bottom nav with alert badge |
+| BottomNavigation | `bottom-navigation.tsx` | 126 | Mobile bottom nav with alert badge counter |
 | TeamLogo | `team-logo.tsx` | 912 | Team logos with ESPN CDN fallback, 370+ team mappings |
 | SportsLoading | `sports-loading.tsx` | 317 | Sport-specific loading spinners |
+| BaseballDiamond | `baseball-diamond.tsx` | ~50 | MLB diamond with animated runner indicators |
 | PageHeader | `PageHeader.tsx` | ~40 | Sticky page header |
 | ChirpBotLogo | `ChirpBotLogo.tsx` | ~30 | App logo |
-| BaseballDiamond | `baseball-diamond.tsx` | ~50 | MLB diamond with runner indicators |
 | ErrorDisplay | `EnhancedErrorDisplay.tsx` | ~80 | Error boundary + formatted errors |
 | RetryFeedback | `RetryFeedback.tsx` | ~50 | Retry state UI |
+| WeatherVisualizer | `WeatherImpactVisualizer.tsx` | ~60 | Weather effect visualization |
+| ROICalculator | `roi-calculator.tsx` | ~80 | Betting ROI calculator |
+| SportTabs | `SportTabs.tsx` | ~40 | Reusable sport tab filter |
 
 ### UI Component Library (shadcn/ui)
-33 files, ~2,700 lines total. Copy-pasted components (not npm). Includes: button, card, dialog, dropdown-menu, input, select, tabs, toast, tooltip, badge, switch, form, accordion, alert-dialog, avatar, calendar, carousel, chart, checkbox, collapsible, command, drawer, input-otp, pagination, popover, progress, radio-group, resizable, scroll-area, separator, skeleton, slider, textarea.
-
-~15 of these appear unused.
+33 files, ~2,700 lines total. Copy-pasted Radix-based components. Includes: button, card, dialog, dropdown-menu, input, select, tabs, toast, tooltip, badge, switch, form, accordion, alert-dialog, avatar, calendar, carousel, chart, checkbox, collapsible, command, drawer, input-otp, pagination, popover, progress, radio-group, resizable, scroll-area, separator, skeleton, slider, textarea.
 
 ### Hooks
 
 | Hook | File | Lines | Purpose |
 |------|------|-------|---------|
-| useAuth | `useAuth.ts` | 75 | Auth context: user, isLoading, isAuthenticated, isAdmin |
-| useGamesAvailability | `useGamesAvailability.ts` | 43 | Check available games across sports |
-| useToast | `use-toast.ts` | 189 | Toast notification queue |
-| useMobile | `use-mobile.tsx` | 19 | Mobile viewport detection |
-| useAlertSound | `use-alert-sound.ts` | ~30 | Play sound on alerts |
+| useAuth | `useAuth.ts` | 75 | Auth context: user, isAuthenticated, isAdmin. Two-tier check (user + admin session) |
+| useGamesAvailability | `useGamesAvailability.ts` | 43 | Check available games across all sports for today |
+| useToast | `use-toast.ts` | 189 | Toast notification queue management |
+| useMobile | `use-mobile.tsx` | 19 | Mobile viewport detection (768px breakpoint) |
+| useAlertSound | `use-alert-sound.ts` | ~30 | Play sound on new alerts |
 
 ### State Management
 
 **Primary:** TanStack React Query v5 for all server state.
-**Client State:** React Context (auth only). No Zustand/Redux/Jotai.
+**Client State:** None (no Zustand/Redux/Jotai). Auth via React Context only.
 
 **Query Client Config:**
 - `staleTime: 30s`
 - `gcTime: 5min`
 - `refetchOnWindowFocus: false`
-- `retry: 3` with exponential backoff (1s, 2s, 4s max 10s)
-- Only retries 5xx, 408, 429 errors
+- `retry: 3` with exponential backoff via `p-retry` (1s, 2s, 4s max 10s)
+- Only retries 5xx, 408 (timeout), 429 (rate limit) errors
 
 ### Utilities
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `queryClient.ts` | 167 | React Query setup, `apiRequest()` with retry |
-| `utils.ts` | 6 | `cn()` class name merge |
-| `team-utils.ts` | 157 | Team abbreviations, nicknames, `timeAgo()`, sport accent colors |
-| `error-messages.ts` | 338 | Context-aware API error parsing |
+| `queryClient.ts` | 167 | React Query setup, `apiRequest()` with retry via p-retry |
+| `utils.ts` | 6 | `cn()` Tailwind class merge helper |
+| `team-utils.ts` | 157 | Team abbreviations (100+), nicknames, `timeAgo()`, sport accent colors |
+| `error-messages.ts` | 338 | Context-aware API error parsing (network, auth, validation, rate limit) |
 | `alert-message.ts` | ~50 | Alert text formatting |
-| `clean-alert-formatter.ts` | ~50 | Clean alert text for Telegram |
+| `clean-alert-formatter.ts` | ~50 | Clean alert text for Telegram delivery |
 
 ### Types (`client/src/types/index.ts` -- 220 lines)
-Key interfaces: `Team`, `Alert` (with nested context, gambling insights, weather), `Settings`, `User`.
+Key interfaces: `Team`, `Alert` (with nested context including MLB base runners, football field position, basketball clock, gambling insights with moneyline/spread/total, AI confidence/projections, weather), `Settings`, `User`.
 
 ---
 
-## 5. CORE PIPELINE
+## 6. CORE PIPELINE
 
 ### Step 1: Schedule Sync
 `CalendarSyncService` runs every 5 minutes:
 - Calls each sport API's `getGames(today)` and `getGames(tomorrow)`
 - Stores results in memory Map keyed by sport
-- `/api/games/today` reads from this cache (not directly from APIs)
+- `/api/games/today` reads from this cache
 
 ### Step 2: User Monitors a Game
-- User clicks "Monitor" on Calendar page
-- Client: `POST /api/user/:userId/monitored-games` with gameId, sport, teams
+- User toggles "Monitor" on Calendar page
+- Client: `POST /api/user/:userId/monitored-games`
 - Server: Inserts into `userMonitoredTeams` table
 - Server: Calls `gameStateManager.addUserToGame(gameId, userId)`
-- GameStateManager: Adds to `userGames` and `gameUsers` maps, triggers initial fetch
+- GameStateManager: Adds to bidirectional maps, triggers initial fetch
 
-### Step 3: Live Polling
+### Step 3: Live Polling + Engine Lifecycle
 `GameStateManager.pollAllGames()` runs every 30 seconds:
 - Gets all active gameIds from `gameUsers` map
-- For each game: determines sport, creates API service instance, calls `getLiveGameData(gameId)`
-- Compares new state vs previous state
-- If changes detected: calls `alertEngine.processGameState(newState)`
+- For each game: determines sport, calls appropriate API service
+- `EngineLifecycleManager` starts sport engines when games go live (pre-warms 15min early)
+- Compares new state vs previous state for change detection
 
-### Step 4: Alert Detection
-`AlertEngine.processGameState(gameState)`:
-- Runs 8 detection methods (momentum, scoring, close game, blowout, comeback, base situation, pitcher change, weather)
-- Each detector returns alerts with confidence scores
-- Deduplication: generates alert key, checks against recent alerts + cooldown
-- New alerts are broadcast via `storage.createBroadcastAlert()`
+### Step 4: Alert Cylinder Processing
+When game state changes, the sport engine processes it:
+1. `enhanceGameStateWithLiveData()` -- enriches raw API data with sport-specific details
+2. `initializeUserAlertModules()` -- loads only user-enabled cylinder modules (cached)
+3. Each active module's `evaluate(gameState)` runs
+4. Modules return `AlertResult[]` with type, confidence, priority, context
+5. `UnifiedDeduplicator` prevents duplicate alerts (Jaccard similarity)
 
-### Step 5: Gambling Enrichment
-When alerts are generated or when client requests `/api/gambling/insights/:gameId`:
-- `GamblingInsightsComposer` combines: alert + game state + weather + odds
-- Odds fetched from `OddsApiService` (if user has API key and rate limit allows)
-- Produces structured template with situation, market impact, edge analysis
+### Step 5: AI Enrichment
+`UnifiedAIProcessor` processes generated alerts:
+- Calls GPT-4o with game context (2.5s timeout, temperature 0.2)
+- Generates primary insight (max 14 words) + secondary insight (max 18 words)
+- `QualityValidator` validates AI output, strips XSS
+- `GamblingInsightsComposer` adds odds data from OddsApiService + weather data
 
-### Step 6: Client Consumption
-- Dashboard polls `/api/alerts/snapshot?seq=N` every 15 seconds
-- Server filters `broadcast_alerts` by: user's monitored game IDs + user's alert preferences
+### Step 6: Storage & Delivery
+- Alerts stored in `broadcast_alerts` table with auto-incrementing sequence number
+- Telegram: `telegram.ts` sends MarkdownV2-formatted alerts to users with Telegram configured
+- Client polls `/api/alerts/snapshot?seq=N` every 10-15 seconds
+- Server filters by user's monitored game IDs + alert preferences
 - Returns only new alerts since last sequence number
-- Client renders alerts in Command Center, Signal Log, etc.
 
 ---
 
-## 6. DATABASE LAYER
+## 7. DATABASE LAYER
 
 ### ORM & Driver
-- **Drizzle ORM** v0.39.3 with `drizzle-kit` for schema management
+- **Drizzle ORM** v0.39.1 with `drizzle-kit` for schema management
 - **Neon Serverless** PostgreSQL driver (`@neondatabase/serverless`)
-- Schema push workflow (`npm run db:push`) -- no migration files
+- Schema push workflow (`npm run db:push`) -- no versioned migration files
 
 ### Tables
 
@@ -423,78 +521,67 @@ When alerts are generated or when client requests `/api/gambling/insights/:gameI
 |--------|------|-------|
 | id | serial PK | Auto-increment |
 | username | varchar | Unique |
-| password | varchar | bcrypt hash |
+| password | varchar | bcryptjs hash |
+| role | varchar | admin, manager, analyst, user |
 | createdAt | timestamp | Default now() |
+
+Also supports OAuth fields (Google, Apple) and Telegram config (botToken, chatId).
 
 #### `alerts`
 | Column | Type | Notes |
 |--------|------|-------|
-| id | serial PK | Auto-increment |
+| id | serial PK | |
 | gameId | varchar | Game identifier |
-| type | varchar | Alert type enum |
+| type | varchar | Alert type |
 | title | varchar | Alert title |
 | message | text | Alert message |
 | sport | varchar | Sport code |
 | score | integer | Confidence score |
-| payload | jsonb | Full alert data |
-| createdAt | timestamp | Default now() |
+| payload | jsonb | Full alert data (context, AI insights, odds) |
+| createdAt | timestamp | |
 
 #### `broadcast_alerts`
 | Column | Type | Notes |
 |--------|------|-------|
-| id | serial PK | Auto-increment |
-| gameId | varchar | Game identifier |
-| alertKey | varchar | Dedup key |
+| id | serial PK | |
+| gameId | varchar | |
+| alertKey | varchar | Deduplication key |
 | type | varchar | Alert type |
-| sport | varchar | Sport code |
+| sport | varchar | |
 | score | integer | Confidence score |
 | payload | jsonb | Full alert data |
 | sequenceNumber | serial | Auto-increment for incremental polling |
-| createdAt | timestamp | Default now() |
+| createdAt | timestamp | |
 
-#### `userMonitoredTeams`
+#### `user_monitored_teams`
 | Column | Type | Notes |
 |--------|------|-------|
-| id | serial PK | Auto-increment |
+| id | serial PK | |
 | userId | varchar | FK to users |
-| gameId | varchar | Game identifier |
-| sport | varchar | Sport code |
-| homeTeamName | varchar | Home team |
-| awayTeamName | varchar | Away team |
-| createdAt | timestamp | Default now() |
+| gameId | varchar | |
+| sport | varchar | |
+| homeTeamName | varchar | |
+| awayTeamName | varchar | |
+| createdAt | timestamp | |
 
-#### `userSettings`
-| Column | Type | Notes |
-|--------|------|-------|
-| id | serial PK | Auto-increment |
-| userId | varchar | FK to users |
-| settings | jsonb | All settings as JSON blob |
-| createdAt | timestamp | Default now() |
-| updatedAt | timestamp | Auto-update |
+#### `user_settings` / `user_preferences`
+Settings and preferences stored as jsonb blobs.
 
-#### `userAlertPreferences`
-| Column | Type | Notes |
-|--------|------|-------|
-| id | serial PK | Auto-increment |
-| userId | varchar | FK to users |
-| sport | varchar | Sport code |
-| alertType | varchar | Alert type |
-| enabled | boolean | Toggle |
-| createdAt | timestamp | Default now() |
+#### `global_alert_settings`
+Admin-controlled toggles for alert types per sport.
+
+#### `game_cache`
+Real-time game state caching in the database.
 
 #### `sessions`
-| Column | Type | Notes |
-|--------|------|-------|
-| sid | varchar PK | Session ID |
-| sess | json | Session data |
-| expire | timestamp | Expiry time |
+Express session storage via `connect-pg-simple`.
 
-### Alert Type Enum Values
-`momentum_shift`, `scoring_surge`, `pitcher_change`, `base_situation`, `close_game`, `blowout`, `weather_impact`, `injury_update`, `comeback_alert`, `record_watch`, `rivalry_alert`, `playoff_implications`
+### Alert Type Values
+`momentum_shift`, `scoring_surge`, `pitcher_change`, `base_situation`, `close_game`, `blowout`, `weather_impact`, `injury_update`, `comeback_alert`, `record_watch`, `rivalry_alert`, `playoff_implications`, plus all sport-specific cylinder types (bases_loaded, red_zone, clutch_time, etc.)
 
 ---
 
-## 7. EXTERNAL API INTEGRATIONS
+## 8. EXTERNAL API INTEGRATIONS
 
 | Service | Base URL | Used For | Auth | Rate Limit |
 |---------|----------|----------|------|-----------|
@@ -502,36 +589,42 @@ When alerts are generated or when client requests `/api/gambling/insights/:gameI
 | ESPN API | `site.api.espn.com/apis/site/v2/sports/` | NFL, NCAAF, NBA, WNBA, CFL scores | None (public) | Respectful polling |
 | The Odds API | `api.the-odds-api.com/v4/` | Betting odds (moneyline, spreads, totals) | API key (user-provided) | 450 req/30 days |
 | OpenWeatherMap | `api.openweathermap.org/data/2.5/` | Weather at stadiums | API key (env var) | Standard tier |
+| OpenAI | `api.openai.com/v1/` | GPT-4o alert enrichment | API key (env var) | Standard tier |
+| Telegram Bot API | `api.telegram.org/bot{token}/` | Push alert delivery | User-provided bot token | Standard |
 | ESPN CDN | `a.espncdn.com/` | Team logos | None (public) | None |
+| Google OAuth | Google endpoints | Social login | OAuth2 credentials | Standard |
 
 ---
 
-## 8. AUTHENTICATION SYSTEM
+## 9. AUTHENTICATION SYSTEM
 
 ### Server Side
-- **Method:** Session-based with `express-session`
-- **Password:** bcrypt hashing (salt rounds in code)
+- **Framework:** Passport.js with local strategy + Google OAuth2
+- **Password:** bcryptjs hashing
+- **CSRF:** csrf package for token generation/validation
+- **OpenID Connect:** openid-client for OAuth2/OIDC flows
 - **Session Store:** PostgreSQL via `connect-pg-simple`
-- **Session Config:** 24-hour expiry, `sameSite: 'lax'`, `secure: false` in dev
-- **Middleware:** `requireAuthentication` checks `req.session.userId`
-- **Unused:** passport and passport-local are installed but not wired up
+- **Security Headers:** Helmet middleware
+- **Roles:** admin, manager, analyst, user
 
 ### Client Side
 - `useAuth()` hook queries `GET /api/auth/user` (cached 5 min)
-- Two-tier check: regular user first, then admin session
-- `ProtectedRoute` component redirects to `/` if not authenticated
+- Two-tier check: regular user session first, then admin session via `/api/admin-auth/verify`
+- `ProtectedRoute` component redirects unauthenticated users to `/`
+- `PublicRoute` redirects authenticated users to `/dashboard`
 - All API calls include `credentials: 'include'` for cookie passthrough
-- Login/signup via `useMutation` with redirect on success
+- Google/Apple social login buttons exist in UI (Google wired, Apple coming soon)
 
 ---
 
-## 9. REAL-TIME ARCHITECTURE
+## 10. REAL-TIME ARCHITECTURE
 
 ### Current: HTTP Polling (No WebSockets, No SSE)
 
 **Server-side polling:**
 - GameStateManager polls sport APIs every 30 seconds
 - CalendarSyncService syncs schedules every 5 minutes
+- EngineLifecycleManager pre-warms engines 15 minutes before game time
 
 **Client-side polling:**
 - Dashboard: alerts every 15s, stats every 60s, monitored games every 30s
@@ -540,40 +633,82 @@ When alerts are generated or when client requests `/api/gambling/insights/:gameI
 
 **Incremental Updates:**
 - `broadcast_alerts` table has auto-incrementing `sequenceNumber`
-- Client sends `?seq=N` to get only alerts newer than N
-- Efficient incremental polling without timestamp drift issues
+- Client sends `?seq=N` to get only alerts newer than sequence N
+- Efficient incremental polling without timestamp drift
 
-**Issues:**
-- `ws` package installed but no WebSocket server or client code exists
-- No SSE implementation
-- Polling at 10-15s intervals = up to 15s latency for real-time sports events
-- Each poll is a full HTTP request/response cycle with auth check + DB query
+**Push Delivery:**
+- Telegram Bot API for users with Telegram configured
+- No web push notifications
+- `ws` package installed but unused
 
 ---
 
-## 10. INFRASTRUCTURE & DEPLOYMENT
+## 11. AI INTEGRATION
 
-### Platform: Replit
+### OpenAI GPT-4o
+
+**UnifiedAIProcessor** (`unified-ai-processor.ts` -- 2,032 lines):
+- Processes alerts with `CrossSportContext` (universal game state)
+- Sends sport-specific prompts to GPT-4o
+- Timeout: 2.5 seconds (fails gracefully to rule-based fallback)
+- Temperature: 0.2 (consistent, factual output)
+- Output: primary insight (max 14 words) + secondary insight (max 18 words)
+
+**AI Scanner Modules** (one per sport):
+- Each sport has an `ai-scanner-module.ts` cylinder
+- Detects unusual situations not covered by rule-based modules
+- Runs as part of the normal cylinder evaluation loop
+
+**Quality Control:**
+- `QualityValidator` validates AI output format
+- XSS protection via Zod schema validation
+- `UnifiedDeduplicator` uses Jaccard similarity (threshold: 0.72) to prevent near-duplicate AI insights
+
+**AI Feature Flags** (`config/ai-features.ts`):
+```typescript
+enableAIEnhancement: true
+enableAIScanner: true
+hideDuplicateInsights: true
+duplicateSimilarityThreshold: 0.72
+maxPrimaryWords: 14
+maxSecondaryWords: 18
+openAITimeoutMs: 2500
+openAITemperature: 0.2
 ```
-run = "npm run dev"
-entrypoint = "server/index.ts"
-modules = ["nodejs-20:v8-20230920-bd784b9"]
-[deployment]
-  run = ["sh", "-c", "npm run start"]
-  build = ["sh", "-c", "npm run build"]
-[[ports]]
-  localPort = 5000
-  externalPort = 80
+
+---
+
+## 12. INFRASTRUCTURE & DEPLOYMENT
+
+### Platform: Replit (Autoscale)
+```
+modules = ["nodejs-20", "web", "postgresql-16", "python-3.11"]
+Port 3000 -> External 8081 (API)
+Port 5000 -> External 80 (Frontend)
+Nix channel: stable-24_05
 ```
 
 ### Build Pipeline
 ```bash
 # Development
-npm run dev    # tsx server/main.ts (runs TypeScript directly)
+npm run dev    # NODE_ENV=development tsx server/index.ts
 
 # Production build
-npm run build  # vite build (client) && esbuild (server) -> dist/
-npm run start  # NODE_ENV=production node dist/index.js
+npm run build  # drizzle-kit push && vite build && esbuild server -> dist/
+
+# Production start
+npm run start  # NODE_ENV=production node dist/index.js (or dist/index.cjs)
+```
+
+### Scripts
+```json
+"dev": "NODE_ENV=development tsx server/index.ts",
+"build": "drizzle-kit push && vite build && esbuild ...",
+"start": "NODE_ENV=production node dist/index.js",
+"check": "tsc",
+"db:push": "drizzle-kit push",
+"validate-cylinders": "node scripts/validate-cylinders.js",
+"create-cylinder": "node scripts/create-cylinder.js"
 ```
 
 ### Environment Variables
@@ -581,199 +716,270 @@ npm run start  # NODE_ENV=production node dist/index.js
 |----------|----------|---------|
 | `DATABASE_URL` | Yes | Neon PostgreSQL connection string |
 | `SESSION_SECRET` | Yes | Express session signing secret |
+| `OPENAI_API_KEY` | Yes | GPT-4o for AI insights |
+| `CANONICAL_ORIGIN` | Yes | Base URL for session/CSRF validation |
 | `PORT` | No | Server port (default 5000) |
 | `NODE_ENV` | No | Environment mode |
 | `OPENWEATHERMAP_API_KEY` | No | Weather data |
+| `ALLOW_DYNAMIC_PORT` | No | Enable dynamic port assignment |
+| `SKIP_SEED_IN_PROD` | No | Skip database seeding |
+
+User-configured (stored in DB, not env):
+- `TELEGRAM_BOT_TOKEN` -- per-user Telegram bot token
+- `TELEGRAM_CHAT_ID` -- per-user Telegram chat ID
+- `ODDS_API_KEY` -- per-user odds API key
 
 **No `.env.example` file exists.**
 
+### Git Hooks (Husky)
+- **pre-commit:** `node scripts/guard-new-files.js` (validates new file additions)
+- **pre-push:** Blocks direct pushes to `main` (enforces feature branch + PR workflow)
+
+### Logging
+- **Pino** v9.9.0 for structured JSON logging
+- **pino-pretty** for development log formatting
+- No centralized log aggregation or error tracking service
+
 ### What's Missing
 - No Docker/containerization
-- No CI/CD pipeline (no GitHub Actions, no deploy scripts)
+- No CI/CD pipeline (no GitHub Actions)
 - No ESLint/Prettier/Biome
-- No `.editorconfig`
-- No health check beyond basic `/api/health`
-- No monitoring/observability (no metrics, no structured logging, no error tracking)
-- No rate limiting on API endpoints (only on outbound API calls)
+- No monitoring/observability beyond UnifiedHealthMonitor
+- No error tracking service (no Sentry)
+- No rate limiting on API endpoints (only outbound API calls)
+- No API versioning (`/api/` not `/api/v1/`)
+- No `.env.example` documentation
 
 ---
 
-## 11. SHARED CODE
+## 13. SHARED CODE
 
 ### `shared/schema.ts` (417 lines)
 - Drizzle ORM table definitions
 - Zod validation schemas (`insertUserSchema`, `insertAlertSchema`, etc.)
-- TypeScript types exported for both client and server
+- TypeScript types + `AlertResult` interface used by engines
+- Exported for both client and server
 
 ### `shared/season-manager.ts` (205 lines)
 - Determines which sports are currently in-season
 - Season date ranges for all 6 sports
-- Used by client to show relevant sport tabs
-- Used by server to prioritize polling
+- Sport accent colors for UI
+- Used by client for sport tab filtering and server for polling priority
 
 ---
 
-## 12. COMPLETE FILE INVENTORY
+## 14. COMPLETE FILE INVENTORY
 
-### Server (~/server/)
+### Server Core
 
 | File | Lines | Purpose |
 |------|-------|---------|
 | `index.ts` | 66 | Server bootstrap |
 | `main.ts` | 11 | Entry wrapper |
-| `routes.ts` | 2,786 | ALL route definitions + middleware + helpers |
-| `storage.ts` | 494 | Database layer (Drizzle) |
-| `vite.ts` | 67 | Vite dev server integration |
-| `services/alert-engine.ts` | 1,093 | Alert detection engine |
-| `services/game-state-manager.ts` | 858 | Live game state tracking |
-| `services/gambling-insights-composer.ts` | 1,345 | Gambling insight generation |
-| `services/base-sport-api.ts` | 489 | Abstract sport API base class |
-| `services/mlb-api.ts` | 724 | MLB Stats API integration |
-| `services/nfl-api.ts` | 365 | NFL via ESPN |
-| `services/ncaaf-api.ts` | 295 | NCAAF via ESPN |
-| `services/nba-api.ts` | 310 | NBA via ESPN |
-| `services/wnba-api.ts` | 265 | WNBA via ESPN |
-| `services/cfl-api.ts` | 248 | CFL via ESPN |
-| `services/odds-api-service.ts` | 380 | The Odds API integration |
-| `services/calendar-sync-service.ts` | 484 | Schedule pre-fetching |
-| `services/weather-service.ts` | 245 | OpenWeatherMap integration |
-| `services/team-logo-service.ts` | 156 | Team logo URL mapping |
-| `services/timeout-possession-tracker.ts` | 312 | Football timeout/possession tracking |
-| `services/notification-service.ts` | 178 | Notification stub |
+| `db.ts` | 20 | Drizzle + Neon connection |
+| `routes.ts` | **5,213** | ALL route definitions |
+| `storage.ts` | **1,156** | Database layer |
+| `seed-database.ts` | 36 | DB seeding |
+| `vite.ts` | 67 | Vite dev integration |
 
-**Server Total: ~10,171 lines**
-
-### Client (~/client/src/)
+### Server Middleware & Config
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `main.tsx` | 43 | React root + global error handlers |
-| `App.tsx` | 107 | Providers + routing |
-| `pages/dashboard.tsx` | 545 | Main dashboard |
-| `pages/landing.tsx` | 730 | Marketing landing page |
-| `pages/login.tsx` | 250 | Login form |
-| `pages/signup.tsx` | 330 | Registration form |
-| `pages/alerts.tsx` | 651 | Alert feed + filtering |
-| `pages/calendar.tsx` | 533 | Game browsing + monitoring |
-| `pages/settings.tsx` | 2,500+ | User settings |
-| `pages/game-narrative.tsx` | 289 | Live game timeline |
-| `pages/not-found.tsx` | ~20 | 404 page |
-| `components/bottom-navigation.tsx` | 126 | Mobile bottom nav |
-| `components/team-logo.tsx` | 912 | Team logos (370+ mappings) |
-| `components/sports-loading.tsx` | 317 | Loading spinners |
-| `components/ui/*.tsx` | ~2,700 | shadcn/ui (33 files) |
-| `hooks/useAuth.ts` | 75 | Auth hook |
-| `hooks/useGamesAvailability.ts` | 43 | Games availability |
-| `hooks/use-toast.ts` | 189 | Toast system |
-| `lib/queryClient.ts` | 167 | React Query setup |
-| `lib/utils.ts` | 6 | cn() helper |
-| `utils/team-utils.ts` | 157 | Team utilities |
-| `utils/error-messages.ts` | 338 | Error parsing |
-| `types/index.ts` | 220 | TypeScript interfaces |
+| `middleware/circuit-breaker.ts` | 190 | Circuit breaker for external APIs |
+| `middleware/memory-manager.ts` | 139 | Memory monitoring |
+| `config/ai-features.ts` | 12 | AI feature flags |
+| `config/runtime.ts` | 170 | Runtime config |
+| `utils/singleton-lock.ts` | 211 | Single-instance enforcement |
+| `utils/timezone.ts` | 32 | Pacific timezone helpers |
 
-**Client Total: ~10,200 lines (excl. shadcn/ui: ~7,500)**
+### Server Services
+
+| Service | Lines | Purpose |
+|---------|-------|---------|
+| `game-state-manager.ts` | 858 | Live game state + user-game associations |
+| `engine-lifecycle-manager.ts` | 1,256 | Dynamic engine start/stop |
+| `unified-ai-processor.ts` | 2,032 | GPT-4o integration |
+| `gambling-insights-composer.ts` | 1,345 | Odds + weather enrichment |
+| `unified-health-monitor.ts` | 718 | Health monitoring + recovery |
+| `unified-settings.ts` | 732 | Centralized settings |
+| `weather-on-live-service.ts` | 957 | Live weather monitoring |
+| `advanced-player-stats.ts` | 534 | Player performance |
+| `calendar-sync-service.ts` | 484 | Schedule pre-fetching |
+| `base-sport-api.ts` | 489 | Abstract sport API base |
+| `mlb-api.ts` | 724 | MLB Stats API |
+| `odds-api-service.ts` | 380 | The Odds API |
+| `nfl-api.ts` | 365 | NFL via ESPN |
+| `nba-api.ts` | 310 | NBA via ESPN |
+| `ncaaf-api.ts` | 295 | NCAAF via ESPN |
+| `telegram.ts` | 268 | Telegram Bot API |
+| `wnba-api.ts` | 265 | WNBA via ESPN |
+| `cfl-api.ts` | 248 | CFL via ESPN |
+| `weather-service.ts` | 245 | OpenWeatherMap |
+| `unified-deduplicator.ts` | 244 | Alert deduplication |
+| `quality-validator.ts` | 210 | AI output validation |
+| `ai-situation-parser.ts` | 205 | AI situation analysis |
+| `game-monitoring-cleanup.ts` | 197 | Stale game cleanup |
+| `sportsdata-api.ts` | 156 | Additional sports data |
+| `alert-cleanup.ts` | 125 | Alert data cleanup |
+| `migration-adapter.ts` | 102 | Data migration |
+| `http.ts` | 71 | HTTP fetch wrapper |
+| `text-utils.ts` | 12 | Jaccard similarity |
+
+### Alert Engine System (94 files, 18,460 lines)
+
+| Component | Files | Lines |
+|-----------|-------|-------|
+| `engines/base-engine.ts` | 1 | 572 |
+| `engines/mlb-engine.ts` | 1 | 309 |
+| `engines/mlb-prob-model.ts` | 1 | 406 |
+| `engines/mlb-performance-tracker.ts` | 1 | 1,353 |
+| `engines/nfl-engine.ts` | 1 | 187 |
+| `engines/nba-engine.ts` | 1 | ~200 |
+| `engines/ncaaf-engine.ts` | 1 | ~200 |
+| `engines/wnba-engine.ts` | 1 | ~200 |
+| `engines/cfl-engine.ts` | 1 | ~200 |
+| MLB cylinder modules | 27 | ~5,000 |
+| NFL cylinder modules | 9 | ~1,800 |
+| NBA cylinder modules | 10 | ~2,000 |
+| NCAAF cylinder modules | 14 | ~2,800 |
+| WNBA cylinder modules | 11 | ~2,200 |
+| CFL cylinder modules | 11 | ~2,200 |
+| AI opportunity scanner | 1 | ~200 |
+
+### Client Pages
+
+| Page | Lines | Purpose |
+|------|-------|---------|
+| `dashboard.tsx` | 545 | Main dashboard |
+| `landing.tsx` | 730 | Marketing landing |
+| `alerts.tsx` | 651 | Alert feed |
+| `calendar.tsx` | 533 | Game browsing |
+| `settings.tsx` | 2,500+ | User settings |
+| `signup.tsx` | 330 | Registration |
+| `game-narrative.tsx` | 289 | Game timeline |
+| `login.tsx` | 250 | Login |
+| `not-found.tsx` | ~20 | 404 |
+
+### Client Components, Hooks, Utils
+- Feature components: ~1,700 lines across 11 files
+- shadcn/ui: ~2,700 lines across 33 files
+- Hooks: ~350 lines across 5 files
+- Utilities: ~720 lines across 6 files
+- Types: 220 lines
 
 ### Shared
-
 | File | Lines | Purpose |
 |------|-------|---------|
-| `shared/schema.ts` | 417 | DB schema + Zod + types |
-| `shared/season-manager.ts` | 205 | Season management |
+| `schema.ts` | 417 | DB schema + Zod + types |
+| `season-manager.ts` | 205 | Season management |
 
-### Config Files
-
-| File | Purpose |
-|------|---------|
-| `package.json` | Dependencies + scripts |
-| `tsconfig.json` | TypeScript config (single for client + server) |
-| `vite.config.ts` | Vite build config |
-| `drizzle.config.ts` | Drizzle ORM config |
-| `tailwind.config.ts` | Tailwind CSS config |
-| `postcss.config.js` | PostCSS config |
-| `theme.json` | shadcn/ui theme |
-| `.replit` | Replit deployment config |
+### Grand Total
+| Category | Files | Lines |
+|----------|-------|-------|
+| Server core | 7 | ~6,570 |
+| Server middleware/config/utils | 6 | ~754 |
+| Server services | 28 | ~12,590 |
+| Alert engine system | 94 | ~18,460 |
+| Client pages | 9 | ~5,850 |
+| Client components | 44 | ~4,400 |
+| Client hooks + utils + types | 12 | ~1,290 |
+| Shared | 2 | 622 |
+| Config files | 7 | ~450 |
+| Scripts | 2 | ~200 |
+| **TOTAL** | **~210** | **~52,500** |
 
 ---
 
-## 13. VERDICT: KEEP vs REPLACE
+## 15. VERDICT: KEEP vs REPLACE
 
 ### KEEP (Solid foundations, 2026-ready or close)
 
 | System | Why Keep |
 |--------|----------|
 | **Drizzle ORM + Neon PostgreSQL** | Drizzle is the modern standard. Neon serverless is excellent. Schema is clean. |
-| **TanStack React Query v5** | Industry standard for server state. Configuration is solid. |
-| **Vite 6** | Current, fast, excellent DX. No change needed. |
-| **Tailwind CSS** | Industry standard. Config is fine. |
-| **shadcn/ui + Radix** | Correct approach (copy components, not npm). Just audit unused ones. |
-| **TypeScript** | Obviously keep. Upgrade to 5.7+ for latest features. |
-| **The base-sport-api pattern** | Abstract base class with retry + cache + rate limiting is sound architecture. |
-| **Sport-specific API services** | MLBApiService, NFLApiService, etc. are well-structured. Minor cleanup needed. |
-| **OddsApiService** | Rate limiting, caching, bookmaker priority -- all well-designed. |
+| **TanStack React Query v5** | Industry standard for server state. Config is solid. |
+| **Vite** | Current, fast, excellent DX. |
+| **Tailwind CSS** | Industry standard. Custom sport theme is well-built. |
+| **shadcn/ui + Radix** | Correct approach (copy components). Audit unused ones. |
+| **TypeScript strict mode** | Obviously keep. |
+| **BaseSportApi pattern** | Abstract base class with retry + cache + rate limiting is sound. |
+| **All 6 sport API services** | Well-structured. Minor cleanup needed. |
+| **OddsApiService** | Rate limiting, caching, bookmaker priority -- well-designed. |
 | **CalendarSyncService** | Smart approach to avoid rate limiting. Keep the concept. |
 | **Broadcast alert architecture** | Store once, filter per-user at query time. Efficient and correct. |
 | **Sequence number polling** | Incremental updates via auto-incrementing seq. Clean pattern. |
-| **Shared schema** | Drizzle + Zod in shared/ for both client and server. Good pattern. |
+| **Alert cylinder module pattern** | Plugin architecture is excellent. Each module is self-contained. Keep the architecture. |
+| **BaseSportEngine** | Well-designed abstract class. Dynamic module loading with caching. |
+| **Sport-specific engines** | Clean separation of concerns. Just need to re-enable non-MLB sports. |
+| **MLB probability model** | RE24, win probability -- solid statistical foundation. |
+| **Pino structured logging** | Already 2026-standard. Keep. |
+| **Helmet security headers** | Good practice. Keep. |
+| **Circuit breaker middleware** | Proper resilience pattern. Keep. |
+| **Husky git hooks** | Pre-push main protection is good. |
+| **Shared Drizzle+Zod schema** | Good pattern for client-server type safety. |
+| **Telegram delivery** | Working push notification channel. |
+| **Singleton lock** | Prevents duplicate background services. |
 | **Season manager** | Simple, useful, correct. |
 | **Team logo system** | ESPN CDN fallback approach works well. |
 
-### REPLACE (Tech debt, outdated patterns, or fundamentally broken)
+### REPLACE (Tech debt, outdated, or fundamentally broken)
 
 | System | Why Replace | 2026 Recommendation |
 |--------|-------------|---------------------|
-| **Express 4** | Express 5 is stable. But consider **Hono** -- it's the 2026 standard for TypeScript backends. Faster, smaller, better typed, built-in middleware. | **Hono** or **Express 5** |
-| **Monolithic routes.ts (2,786 lines)** | Single file with all routes, middleware, service init, helpers. Unmaintainable. | Split into route modules (`routes/auth.ts`, `routes/games.ts`, `routes/alerts.ts`, etc.) with a clean router pattern |
-| **Session-based auth** | Cookie sessions don't work for mobile apps, can't scale horizontally without sticky sessions. | **JWT + refresh tokens** (or Lucia Auth / Better Auth for 2026) |
-| **express-session + connect-pg-simple** | Tight coupling to PostgreSQL sessions table. | JWT eliminates session storage entirely, or use Redis for sessions |
-| **bcrypt password hashing** | Works but `argon2` is the 2026 standard (winner of Password Hashing Competition, more resistant to GPU attacks). | **Argon2id** |
-| **HTTP polling for real-time** | 10-15s latency is unacceptable for live sports. Wastes bandwidth. | **Server-Sent Events (SSE)** for alert streaming. WebSockets only if bidirectional needed. |
-| **setInterval background jobs** | No retry, no dead-letter queue, no graceful shutdown, no monitoring. | **BullMQ** (Redis-backed job queue) or **Trigger.dev** for background jobs |
-| **In-memory game state** | Lost on server restart. Can't scale horizontally. | **Redis** for game state cache (pub/sub for multi-instance) |
-| **No input validation middleware** | Ad-hoc validation in route handlers. | **Zod middleware** (already have Zod) or **tRPC** for end-to-end type safety |
-| **GameStateManager singleton** | Creates new API instances per poll, all state in memory, no DI. | Proper dependency injection, Redis-backed state, reusable service instances |
-| **AlertEngine (1,093 lines in one class)** | All detection logic crammed into one class. Sport-specific logic mixed with generic. | Split into detector plugins: `MomentumDetector`, `ScoringSurgeDetector`, etc. Strategy pattern. |
-| **GamblingInsightsComposer (1,345 lines)** | Largest file. Complex string concatenation. Brittle. | Structured template system with composable sections. Consider LLM-based insight generation. |
-| **Wouter router** | Lightweight but missing features needed at scale: nested layouts, data loaders, error boundaries per route. | **TanStack Router** (type-safe, data loaders, search params) or **React Router 7** |
-| **No testing** | Zero test files. Impossible to refactor safely. | **Vitest** for unit/integration tests. **Playwright** for E2E. Minimum 80% coverage on services. |
-| **No CI/CD** | No automated testing, linting, or deployment. | **GitHub Actions**: lint -> test -> build -> deploy on push |
-| **No linting** | No ESLint, Prettier, or Biome. | **Biome** (2026 standard -- replaces ESLint + Prettier in one tool, 100x faster) |
-| **No monitoring/observability** | No structured logging, no error tracking, no metrics. | **OpenTelemetry** + **Sentry** for error tracking. Structured JSON logging. |
-| **No rate limiting on endpoints** | API endpoints have no rate limiting. | **Rate limiting middleware** (express-rate-limit or built into Hono) |
-| **No API versioning** | All routes under `/api/`. Breaking changes break all clients. | `/api/v1/` prefix with versioning strategy |
-| **Replit-only deployment** | Vendor lock-in, limited scaling, cold starts. | **Docker** + **Railway** or **Fly.io** for containerized deployment. Or Vercel for the frontend + separate API. |
+| **Express 4** | Express 5 is stable, but Hono is the 2026 standard for TypeScript backends. Faster, smaller, better typed, built-in middleware. | **Hono** or **Express 5** |
+| **routes.ts (5,213 lines)** | Single file with ALL routes, middleware, service init, helpers. Completely unmaintainable. | Split into route modules (`routes/auth.ts`, `routes/games.ts`, `routes/alerts.ts`, etc.) |
+| **Session-based auth** | Cookie sessions don't work for mobile apps, can't scale horizontally without sticky sessions. | **JWT + refresh tokens** via Better Auth or Lucia Auth |
+| **bcryptjs** | Works but `argon2` is the 2026 standard (winner of Password Hashing Competition). | **Argon2id** |
+| **HTTP polling for real-time** | 10-15s latency is poor for live sports. Wastes bandwidth with constant requests. | **Server-Sent Events (SSE)** for alert streaming. WebSockets only if bidirectional needed. |
+| **setInterval background jobs** | No retry, no dead-letter queue, no graceful shutdown for job failures. | **BullMQ** (Redis-backed job queue) or **Trigger.dev** |
+| **In-memory game state** | GameStateManager state lost on server restart. Can't scale horizontally. | **Redis** for game state cache + pub/sub for multi-instance |
+| **Ad-hoc input validation** | Validation scattered in route handlers. | **Zod middleware** consistently on all routes, or **tRPC** for end-to-end type safety |
+| **GameStateManager** | Creates new API instances per poll, all state in memory, singleton via module export. | Proper DI container, Redis-backed state, reusable service instances |
+| **GamblingInsightsComposer (1,345 lines)** | Complex string concatenation. Brittle templates. | Structured template system with composable sections. Consider more LLM-based generation. |
+| **storage.ts (1,156 lines)** | Monolithic data access. Some raw SQL mixed with Drizzle. | Split into repository pattern (`UserRepository`, `AlertRepository`, etc.) |
+| **Wouter** | Missing features: nested layouts, data loaders, error boundaries per route. | **TanStack Router** (type-safe, data loaders, search params) or **React Router 7** |
+| **React 18** | Works but React 19 has been stable since 2025. | **React 19** (use() hook, server components readiness, improved Suspense) |
+| **Zero tests** | Impossible to refactor safely. Jest installed but unused. | **Vitest** (faster than Jest, native ESM). **Playwright** for E2E. Target 80% on services. |
+| **No CI/CD** | No automated testing, linting, or deployment pipeline. | **GitHub Actions**: lint -> test -> build -> deploy on push |
+| **No linting** | Code style inconsistency, no error prevention. | **Biome** (2026 standard -- replaces ESLint + Prettier, 100x faster) |
+| **No monitoring/observability** | UnifiedHealthMonitor exists but no external visibility. | **OpenTelemetry** + **Sentry** for error tracking. Ship Pino logs to a service. |
+| **No rate limiting on endpoints** | API endpoints completely unprotected. | Rate limiting middleware (built into Hono, or express-rate-limit) |
+| **No API versioning** | Breaking changes break all clients. | `/api/v1/` prefix with versioning strategy |
+| **Replit-only deployment** | Vendor lock-in, limited scaling options, cold starts. | **Docker** + **Railway** or **Fly.io** for containerized deployment |
 | **Single tsconfig** | Client and server share one config. | Separate `tsconfig.server.json` and `tsconfig.client.json` |
-| **Unused dependencies** | passport, passport-local, ws, memorystore, ~15 shadcn/ui components. | Audit and remove all unused deps |
-| **NotificationService (stub)** | Partially implemented, does nothing useful. | **Web Push API** + **Telegram Bot API** (properly implemented) + **Email via Resend** |
-| **React 18** | Works fine but React 19 has been stable since 2025. | **React 19** (use() hook, server components readiness, improved Suspense) |
-| **No error boundaries** | Only one ErrorBoundary exists (in alerts). | Error boundaries per route/section |
+| **Only MLB engine active** | 5 of 6 sport engines disabled. | Re-enable all sport engines. Fix the issues that caused them to be disabled. |
+| **Unused deps** | ws, memorystore, ~15 shadcn components. | Audit and remove all unused dependencies |
+| **No web push notifications** | Only Telegram. No browser notifications. | **Web Push API** + **Service Worker** for browser push |
+| **No .env.example** | New developers can't onboard. | Create `.env.example` with all required/optional vars |
 
 ---
 
-## 14. 2026 STANDARDS RECOMMENDATIONS
+## 16. 2026 STANDARDS RECOMMENDATIONS
 
-### Architecture: If Starting Over
+### If Starting Over: Recommended Stack
 
 ```
-RECOMMENDED STACK (2026)
-========================
-
 Runtime:        Bun 1.2+ (or Node 22 LTS)
 Language:       TypeScript 5.7+
 Server:         Hono (or tRPC for end-to-end type safety)
-Database:       PostgreSQL (Neon) -- keep
-ORM:            Drizzle -- keep
+Database:       PostgreSQL (Neon) -- KEEP
+ORM:            Drizzle -- KEEP
 Cache/State:    Redis (Upstash for serverless)
 Auth:           Better Auth or Lucia Auth (Argon2id, JWT + refresh)
 Real-time:      SSE for alerts, WebSocket for live game state
 Jobs:           BullMQ (Redis) or Trigger.dev
-Validation:     Zod -- keep (already have it)
+Validation:     Zod -- KEEP
+AI:             OpenAI GPT-4o -- KEEP (consider Claude for some tasks)
 Frontend:       React 19
 Routing:        TanStack Router (type-safe)
-State:          TanStack Query v5 -- keep
-Build:          Vite 6 -- keep
+State:          TanStack Query v5 -- KEEP
+Build:          Vite 6 -- KEEP (upgrade)
 CSS:            Tailwind CSS 4 (new engine)
-Components:     shadcn/ui -- keep (audit unused)
-Animation:      Framer Motion -- keep
+Components:     shadcn/ui -- KEEP (audit unused)
+Animation:      Framer Motion -- KEEP
+Logging:        Pino -- KEEP
+Security:       Helmet -- KEEP
 Testing:        Vitest + Playwright
 Linting:        Biome
 CI/CD:          GitHub Actions
@@ -784,62 +990,74 @@ Deployment:     Docker + Railway/Fly.io
 ### Priority Order for Rebuild
 
 **Phase 1: Foundation (Week 1-2)**
-1. Set up monorepo structure (Turborepo)
+1. Set up monorepo structure (Turborepo or pnpm workspaces)
 2. Biome linting + formatting
-3. Vitest testing framework
-4. GitHub Actions CI pipeline
+3. Vitest testing framework with initial test suite
+4. GitHub Actions CI pipeline (lint -> test -> build)
 5. Docker containerization
 6. Split tsconfig (client/server)
+7. Create `.env.example`
 
 **Phase 2: Server Core (Week 2-4)**
-1. Replace Express with Hono (or tRPC)
-2. Split routes.ts into modules
-3. Implement proper DI container
-4. Replace session auth with JWT (Better Auth or Lucia)
-5. Add Redis for game state + job queue
-6. Implement SSE for real-time alerts
-7. Add rate limiting + input validation middleware
-8. Add API versioning (`/api/v1/`)
+1. Replace Express with Hono
+2. Split routes.ts (5,213 lines) into route modules
+3. Split storage.ts (1,156 lines) into repositories
+4. Implement proper DI container
+5. Replace session auth with JWT (Better Auth or Lucia)
+6. Add Redis for game state + job queue (Upstash)
+7. Implement SSE for real-time alerts
+8. Add rate limiting + consistent Zod validation middleware
+9. Add API versioning (`/api/v1/`)
 
 **Phase 3: Alert Engine (Week 4-5)**
-1. Split AlertEngine into detector plugins
-2. Refactor GamblingInsightsComposer into structured templates
-3. Add BullMQ for background game polling
-4. Move game state to Redis
-5. Add dead-letter queue for failed alerts
+1. Re-enable all 6 sport engines (fix whatever disabled them)
+2. Add BullMQ for background game polling jobs
+3. Move game state from memory to Redis
+4. Add dead-letter queue for failed alerts
+5. Refactor GamblingInsightsComposer into composable template sections
+6. Add retry/recovery for AI processor failures
 
 **Phase 4: Client (Week 5-7)**
 1. Upgrade to React 19
 2. Replace Wouter with TanStack Router
-3. Implement SSE client for real-time alerts
-4. Add error boundaries per route
-5. Audit and remove unused shadcn/ui components
-6. Upgrade Tailwind to v4
+3. Implement SSE client for real-time alerts (replace polling)
+4. Add Web Push notifications via Service Worker
+5. Add error boundaries per route
+6. Audit and remove unused shadcn/ui components
+7. Upgrade Tailwind to v4
 
 **Phase 5: Quality & Deploy (Week 7-8)**
-1. Write tests (target 80% on services)
-2. Add Playwright E2E tests for critical flows
-3. Set up Sentry error tracking
-4. Add OpenTelemetry instrumentation
-5. Deploy to Railway/Fly.io with Docker
-6. Add health checks + readiness probes
-7. Set up structured JSON logging
+1. Write unit tests for all alert cylinder modules (target 80%+)
+2. Write integration tests for API routes
+3. Add Playwright E2E tests for critical flows (auth, monitor game, receive alert)
+4. Set up Sentry error tracking
+5. Add OpenTelemetry instrumentation
+6. Ship Pino logs to aggregation service
+7. Deploy to Railway/Fly.io with Docker
+8. Add health checks + readiness probes
+9. Set up staging environment
 
 ### What to Carry Forward As-Is
 - All Drizzle schema definitions
-- Sport API service implementations (refactor, don't rewrite)
-- OddsApiService (clean, well-designed)
+- All 94 alert cylinder modules (the core IP)
+- BaseSportEngine + sport engine implementations
+- MLB probability model
+- Sport API services (refactor, don't rewrite)
+- OddsApiService
 - CalendarSyncService concept
 - Broadcast alert pattern + sequence number polling
+- Telegram delivery service
+- UnifiedAIProcessor (refactor the 2,032 lines, keep the logic)
+- Pino logging
+- Helmet + circuit breaker middleware
 - Team logo mappings
 - Season manager
-- React Query hooks and caching patterns (adapt to new router)
+- React Query hooks and patterns
 
 ### What to Delete
-- passport / passport-local (unused)
-- ws package (unused)
-- memorystore (unused)
-- Unused shadcn/ui components
-- NotificationService stub
-- All mock/demo data in client pages
-- theme.json (inline into tailwind config)
+- `ws` package (unused)
+- `memorystore` (unused)
+- Unused shadcn/ui components (~15)
+- Demo/mock data in client pages
+- `theme.json` (inline into tailwind config)
+- Any `alert-engine.ts` / `notification-service.ts` stubs superseded by cylinder architecture
